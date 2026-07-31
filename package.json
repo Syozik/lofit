@@ -1,0 +1,14 @@
+{
+    "name": "lofit",
+    "private": true,
+    "packageManager": "pnpm@10.15.0",
+    "scripts": {
+        "dev": "turbo run dev",
+        "build": "turbo run build",
+        "typecheck": "turbo run typecheck"
+    },
+    "devDependencies": {
+        "turbo": "^2.10.8",
+        "typescript": "^5.9.3"
+    }
+}
