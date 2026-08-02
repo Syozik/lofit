@@ -1,8 +1,8 @@
+import { Account } from "./account";
 import { euros } from "./money";
-import type { Account } from "./types";
 
 export const FIXTURE_ACCOUNTS: readonly Account[] = [
-    {
+    new Account({
         id: "ing",
         name: "ING Betaalrekening",
         subtitle: "NL•• 4471 · checking",
@@ -10,8 +10,8 @@ export const FIXTURE_ACCOUNTS: readonly Account[] = [
         balance: euros(3240.18),
         provenance: "synced",
         lastSyncedAt: "2026-08-01T08:12:00Z",
-    },
-    {
+    }),
+    new Account({
         id: "spaar",
         name: "ING Oranje Spaarrekening",
         subtitle: "NL•• 4471 · savings · 1,7%",
@@ -19,8 +19,8 @@ export const FIXTURE_ACCOUNTS: readonly Account[] = [
         balance: euros(18500.0),
         provenance: "synced",
         lastSyncedAt: "2026-08-01T08:12:00Z",
-    },
-    {
+    }),
+    new Account({
         id: "rev",
         name: "Revolut",
         subtitle: "day-to-day card",
@@ -28,8 +28,8 @@ export const FIXTURE_ACCOUNTS: readonly Account[] = [
         balance: euros(842.55),
         provenance: "synced",
         lastSyncedAt: "2026-08-01T07:55:00Z",
-    },
-    {
+    }),
+    new Account({
         id: "degiro",
         name: "DEGIRO",
         subtitle: "brokerage · 3 positions",
@@ -41,8 +41,8 @@ export const FIXTURE_ACCOUNTS: readonly Account[] = [
             { label: "ASML", value: euros(9204.5) },
             { label: "MSFT", value: euros(6316.04) },
         ],
-    },
-    {
+    }),
+    new Account({
         id: "cc",
         name: "Credit card",
         subtitle: "ICS · due 12 Aug",
@@ -50,13 +50,13 @@ export const FIXTURE_ACCOUNTS: readonly Account[] = [
         balance: euros(-1284.4),
         provenance: "synced",
         lastSyncedAt: "2026-08-01T08:12:00Z",
-    },
-    {
+    }),
+    new Account({
         id: "loan",
         name: "Studieschuld",
         subtitle: "DUO · 0,46%",
         group: "debt",
         balance: euros(-8750.0),
         provenance: "manual",
-    },
+    }),
 ];

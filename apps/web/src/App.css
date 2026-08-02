@@ -34,6 +34,184 @@
     padding-bottom: calc(var(--tabbar-h) + var(--space-4));
 }
 
+.home {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+}
+
+.summary {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.kicker {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-neutral-500);
+}
+
+.net-worth {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-heading);
+    font-weight: 500;
+    font-size: 48px;
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+    font-variant-numeric: tabular-nums lining-nums;
+}
+
+.net-worth-currency {
+    font-size: 30px;
+    line-height: 1;
+    letter-spacing: 0;
+    color: var(--color-neutral-500);
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+}
+
+.section-head {
+    display: flex;
+    align-items: center;
+}
+
+.groups {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 2px;
+}
+
+.group-button {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    padding: 4px 10px;
+    border-radius: calc(var(--radius-md) * 0.75);
+    background: transparent;
+    color: var(--color-neutral-400);
+    border: 1px solid var(--color-divider);
+}
+
+.group-button.active {
+    background: var(--color-accent-800);
+    color: var(--color-accent-100);
+    border-color: var(--color-accent-800);
+}
+
+.composition {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    padding: var(--space-2) 0;
+}
+
+.donut {
+    position: relative;
+    width: 152px;
+    height: 152px;
+    flex: none;
+}
+
+.donut-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    transition: background 0.3s;
+}
+
+.donut-hole {
+    position: absolute;
+    inset: 26px;
+    border-radius: 50%;
+    background: var(--color-bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+}
+
+.donut-label {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-neutral-600);
+}
+
+.donut-value {
+    font-family: var(--font-heading);
+    font-weight: 500;
+    font-size: 17px;
+    font-variant-numeric: tabular-nums;
+}
+
+.legend {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-3);
+    flex: 1;
+    min-width: 0;
+    min-height: 152px;
+}
+
+.legend-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.legend-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+}
+
+.legend-name {
+    font-size: 12px;
+    color: var(--color-neutral-400);
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.legend-share {
+    margin-left: auto;
+    flex: none;
+    font-size: 11px;
+    color: var(--color-neutral-600);
+}
+
+.legend-value {
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    padding-left: 16px;
+}
+
+.legend-value.negative {
+    color: var(--color-neutral-400);
+}
+
 .tabs {
     position: absolute;
     inset-inline: 0;
