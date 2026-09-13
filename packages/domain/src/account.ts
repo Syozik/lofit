@@ -1,36 +1,48 @@
-import { v4 as uuidv4 } from "uuid";
+import { addCents, cents, negateCents } from "./money";
 import type { Cents } from "./money";
-import type { GroupKey, Position, Provenance } from "./types";
+import type { AccountChange, AccountDetail, Provenance } from "./types";
 
-type AccountProps = {
-    id?: string;
+export interface Account {
+    id: string;
     name: string;
     subtitle: string;
-    group: GroupKey;
+    groupId: string;
     balance: Cents;
     provenance: Provenance;
     lastSyncedAt?: string;
-    positions?: readonly Position[];
-};
+    statedAt?: string;
+    change?: AccountChange;
+    details?: readonly AccountDetail[];
+}
 
-export class Account {
-    public id: string;
-    public name: string;
-    public subtitle: string;
-    public group: GroupKey;
-    public balance: Cents;
-    public provenance: Provenance;
-    public lastSyncedAt?: string;
-    public positions?: readonly Position[];
+export interface NewAccount {
+    name: string;
+    subtitle: string;
+    groupId: string;
+    balance: Cents;
+}
 
-    constructor(props: AccountProps) {
-        this.id = props.id ?? uuidv4();
-        this.name = props.name;
-        this.subtitle = props.subtitle;
-        this.group = props.group;
-        this.balance = props.balance;
-        this.provenance = props.provenance;
-        if (props.lastSyncedAt) this.lastSyncedAt = props.lastSyncedAt;
-        if (props.positions) this.positions = props.positions;
-    }
+export function withBalance(account: Account, balance: Cents): Account {
+    return { ...account, balance };
+}
+
+const dayFormat = new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+});
+
+export function sinceLabel(instant: string): string {
+    return `since ${dayFormat.format(new Date(instant))}`;
+}
+
+export function restated(account: Account, balance: Cents, at: string, since: string): Account {
+    const amount = addCents(balance, negateCents(account.balance));
+
+    return {
+        ...account,
+        balance,
+        statedAt: at,
+        change: { amount, period: sinceLabel(since), favourable: amount >= cents(0) },
+    };
 }

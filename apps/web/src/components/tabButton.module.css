@@ -1,12 +1,29 @@
 .tabButton {
-    width: 80px;
-    height: 70px;
-    border-radius: 10px;
-    border: 1px solid var(--color-divider);
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 0;
+    border: 0;
+    background: transparent;
     cursor: pointer;
-    background-color: transparent;
+    font-family: var(--font-body);
+    color: var(--color-neutral-600);
 
     &.active {
-        color: royalblue;
+        color: var(--color-accent);
     }
+}
+
+/* Sized and stroked by the component; block keeps the inline-svg baseline gap out. */
+.icon {
+    display: block;
+}
+
+.label {
+    font-size: 10px;
+    letter-spacing: 0.03em;
 }

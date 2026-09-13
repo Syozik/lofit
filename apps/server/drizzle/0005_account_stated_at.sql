@@ -1,0 +1,1 @@
+ALTER TABLE "accounts" ADD COLUMN "stated_at" timestamp with time zone;
