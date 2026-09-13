@@ -1,44 +1,59 @@
-import { useAccounts } from "@lofit/api";
-import { Account, addCents, cents, formatAmount, formatEuros, GROUP_ORDER } from "@lofit/domain";
-import type { Cents, GroupKey } from "@lofit/domain";
-import { useState } from "react";
+import { useAccounts, useGroups, useHoldings, useSnapshots } from "@lofit/api";
+import {
+    addCents,
+    ALL_GROUPS,
+    ALL_GROUPS_LABEL,
+    cents,
+    deltaAt,
+    formatAmount,
+    formatEuros,
+    inRange,
+    itemsInScope,
+    netWorthGroups,
+    netWorthItems,
+    owesMoney,
+    RANGE_LABELS,
+    RANGE_ORDER,
+    seriesFor,
+} from "@lofit/domain";
+import type { Cents, Delta, Group, NetWorthGroup, NetWorthItem, RangeKey, Scope } from "@lofit/domain";
+import { useEffect, useState } from "react";
 import { groupColor, OTHER_COLOR, paletteFor } from "../helpers/palette";
+import { monthName, useSetPeriod } from "../period";
+import { RecentTransactions } from "./recentTransactions";
+import { TrendChart } from "./trendChart";
 
-type Group = {
-    parts: Account[];
-    total: Cents;
-};
+function kickerFor(entry: NetWorthGroup | undefined): string {
+    if (!entry) return "Net worth";
+    return owesMoney(entry.total) ? `${entry.group.name} outstanding` : entry.group.name;
+}
 
-type Groups = Partial<Record<GroupKey, Group>>;
+function centreLabel(entry: NetWorthGroup | undefined): string {
+    return entry ? entry.group.name : "Assets";
+}
 
-type Labels = {
-    title: string;
-    kicker?: string;
-    center?: string;
-};
+type ChartMode = "mix" | "trend";
 
-const GROUP_LABELS: Record<GroupKey, Labels> = {
-    all: {
-        title: "All",
-        kicker: "Net worth",
-        center: "Assets",
-    },
-    cash: { title: "Cash" },
-    inv: {
-        title: "Investments",
-        center: "Invested",
-    },
-    debt: { title: "Debt" },
-};
+const CHART_MODES: readonly ChartMode[] = ["mix", "trend"];
 
-const getLabel = (key: GroupKey, label: "title" | "kicker" | "center") => {
-    return GROUP_LABELS[key][label] ?? GROUP_LABELS[key].title;
-};
+const CHART_LABELS: Record<ChartMode, string> = { mix: "Mix", trend: "Trend" };
+
+const MIX_TITLE = "Made of";
 
 const SEGMENT_GAP_DEG = 1.6;
 
+const DIMMED_COLOR = "var(--color-neutral-900)";
+
 function shortEuros(value: Cents): string {
     return `€ ${Math.round(Math.abs(value) / 100).toLocaleString("en-US")}`;
+}
+
+function signedAmount(value: Cents): string {
+    return `${value < 0 ? "−" : "+"} € ${formatAmount(value)}`;
+}
+
+function signedPercent(value: number): string {
+    return `${value < 0 ? "−" : "+"}${Math.abs(value).toFixed(1)}%`;
 }
 
 type Slice = {
@@ -48,32 +63,47 @@ type Slice = {
     color: string;
 };
 
-function toSlices(group: GroupKey, parts: readonly Account[]): Slice[] {
-    const { slots, cap } = paletteFor(group);
+function toSlices(
+    parts: readonly NetWorthItem[],
+    groups: readonly Group[],
+    owed: boolean,
+): Slice[] {
+    const { slots, cap } = paletteFor(owed);
+    const positionOf = (groupId: string) =>
+        groups.find((group) => group.id === groupId)?.position ?? 0;
 
-    const ranked = [...parts].sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
-    const shown = new Set(ranked.slice(0, cap).map((account) => account.id));
+    const ranked = [...parts].sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+    const shown = new Set(ranked.slice(0, cap).map((item) => item.id));
 
     const colors = new Map<string, string>();
-    for (const account of parts.filter((account) => shown.has(account.id))) {
-        colors.set(account.id, group === "all" ? groupColor(account.group) : slots[colors.size]!);
+    for (const item of parts.filter((item) => shown.has(item.id))) {
+        colors.set(
+            item.id,
+            item.id === item.groupId
+                ? groupColor(positionOf(item.groupId), item.value < 0)
+                : slots[colors.size % slots.length]!,
+        );
     }
 
     const slices: Slice[] = ranked
-        .filter((account) => shown.has(account.id))
-        .map((account) => ({
-            key: account.id,
-            label: account.name,
-            value: account.balance,
-            color: colors.get(account.id)!,
+        .filter((item) => shown.has(item.id))
+        .map((item) => ({
+            key: item.id,
+            label: item.label,
+            value: item.value,
+            color: colors.get(item.id)!,
         }));
 
     const tail = ranked.slice(cap);
-    if (tail.length > 0) {
+    const only = tail.length === 1 ? tail[0] : undefined;
+
+    if (only) {
+        slices.push({ key: only.id, label: only.label, value: only.value, color: OTHER_COLOR });
+    } else if (tail.length > 1) {
         slices.push({
             key: "other",
             label: `Other (${tail.length})`,
-            value: tail.reduce((sum, account) => addCents(sum, account.balance), cents(0)),
+            value: tail.reduce((sum, item) => addCents(sum, item.value), cents(0)),
             color: OTHER_COLOR,
         });
     }
@@ -103,7 +133,9 @@ function wholeShares(weights: readonly number[]): number[] {
 
 type Segment = Slice & {
     share: number;
-    stop: string;
+    from: number;
+    to: number;
+    end: number;
 };
 
 function toSegments(slices: readonly Slice[]): Segment[] {
@@ -120,124 +152,241 @@ function toSegments(slices: readonly Slice[]): Segment[] {
         const from = sweptDeg;
         sweptDeg += sweep;
         const gap = slices.length > 1 ? Math.min(SEGMENT_GAP_DEG, sweep / 3) : 0;
-        const to = sweptDeg - gap;
 
         segments.push({
             ...slice,
             share: shares[index]!,
-            stop:
-                `${slice.color} ${from.toFixed(2)}deg ${to.toFixed(2)}deg, ` +
-                `transparent ${to.toFixed(2)}deg ${sweptDeg.toFixed(2)}deg`,
+            from,
+            to: sweptDeg - gap,
+            end: sweptDeg,
         });
     }
 
     return segments;
 }
 
+function ringGradient(segments: readonly Segment[], focused: string | null): string {
+    const stops = segments.map(({ key, color, from, to, end }) => {
+        const paint = !focused || key === focused ? color : DIMMED_COLOR;
+        return (
+            `${paint} ${from.toFixed(2)}deg ${to.toFixed(2)}deg, ` +
+            `transparent ${to.toFixed(2)}deg ${end.toFixed(2)}deg`
+        );
+    });
+
+    return `conic-gradient(from -90deg, ${stops.join(", ")})`;
+}
+
+function DeltaLine({ delta, previous }: { delta: Delta; previous: string }) {
+    return (
+        <div className={`delta ${delta.favourable ? "up" : ""}`}>
+            <span className="delta-amount">{signedAmount(delta.amount)}</span>
+            <span className="delta-pct">{signedPercent(delta.pct)}</span>
+            <span className="delta-vs">vs {previous}</span>
+        </div>
+    );
+}
+
 export function NetWorthTab() {
-    const { data: accounts, isPending, isError } = useAccounts();
-    const [selectedGroup, setSelectedGroup] = useState<GroupKey>("all");
+    const accounts = useAccounts();
+    const holdings = useHoldings();
+    const snapshots = useSnapshots();
+    const groupRows = useGroups();
 
-    if (isPending) return <div className="tab-content">Loading…</div>;
-    if (isError) return <div className="tab-content">Could not load accounts</div>;
-    const groups: Groups = {};
-    for (const account of accounts) {
-        if (!(account.group in groups)) {
-            groups[account.group] = { parts: [], total: cents(0) };
-        }
-        const group = groups[account.group]!;
-        group.parts.push(account);
-        group.total = addCents(group.total, account.balance);
+    const [scope, setScope] = useState<Scope>(ALL_GROUPS);
+    const [mode, setMode] = useState<ChartMode>("mix");
+    const [range, setRange] = useState<RangeKey>("1y");
+    const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+    const [focusedSlice, setFocusedSlice] = useState<string | null>(null);
+
+    const allMonths = snapshots.data ?? [];
+    const months = inRange(allMonths, range);
+    const focusIndex = (mode === "trend" ? selectedIndex : null) ?? months.length - 1;
+    const offset = allMonths.length - months.length;
+    const period = months[focusIndex]?.period;
+
+    const setHeaderPeriod = useSetPeriod();
+    useEffect(() => {
+        if (period) setHeaderPeriod(period);
+    }, [period, setHeaderPeriod]);
+
+    if (accounts.isPending || holdings.isPending || snapshots.isPending || groupRows.isPending) {
+        return <div className="tab-content">Loading…</div>;
+    }
+    if (accounts.isError || holdings.isError || snapshots.isError || groupRows.isError) {
+        return <div className="tab-content">Could not load accounts</div>;
     }
 
-    groups.all = { parts: [], total: cents(0) };
-    for (const group of GROUP_ORDER) {
-        if (group !== "all" && groups[group]?.total) {
-            groups.all.parts.push(
-                new Account({
-                    id: group,
-                    name: getLabel(group, "title"),
-                    subtitle: "",
-                    group,
-                    balance: groups[group].total,
-                    provenance: "derived",
-                }),
-            );
-            groups.all.total = addCents(groups.all.total, groups[group].total);
-        }
-    }
+    const allGroups = groupRows.data;
+    const groups = netWorthGroups(netWorthItems(accounts.data, holdings.data), allGroups);
+    const selected = groups.find((entry) => entry.group.id === scope);
+    const scoped = itemsInScope(groups, scope);
+    const live = scoped.reduce((sum, item) => addCents(sum, item.value), cents(0));
+    const segments = toSegments(
+        toSlices(scoped, allGroups, selected ? owesMoney(selected.total) : false),
+    );
 
-    const selected = groups[selectedGroup];
-    const total = selected?.total ?? cents(0);
-    const segments = toSegments(toSlices(selectedGroup, selected?.parts ?? []));
+    const fullSeries = seriesFor(allMonths, scope);
+    const series = fullSeries.slice(offset);
+    const delta = deltaAt(fullSeries, offset + focusIndex);
+    const previous = allMonths[offset + focusIndex - 1]?.period;
+    const total = (mode === "trend" ? series[focusIndex] : undefined) ?? live;
+
+    const kicker = kickerFor(selected);
+
+    const snapshot = months[focusIndex];
+    const liveAssets = groups
+        .filter((entry) => !owesMoney(entry.total))
+        .reduce((sum, entry) => addCents(sum, entry.total), cents(0));
+    const ownedThatMonth = snapshot
+        ? snapshot.groups
+              .filter((entry) => entry.amount > 0)
+              .reduce((sum, entry) => addCents(sum, entry.amount), cents(0))
+        : cents(0);
+    const centre =
+        scope !== ALL_GROUPS
+            ? total
+            : mode === "trend" && snapshot
+              ? ownedThatMonth
+              : liveAssets;
 
     return (
         <div className="tab-content">
             <div className="home">
                 <div className="summary">
                     <div className="groups">
-                        {GROUP_ORDER.map((group) => (
+                        <button
+                            className={`group-button ${scope === ALL_GROUPS ? "active" : ""}`}
+                            onClick={() => {
+                                setScope(ALL_GROUPS);
+                                setFocusedSlice(null);
+                            }}
+                        >
+                            {ALL_GROUPS_LABEL}
+                        </button>
+                        {allGroups.map((group) => (
                             <button
-                                key={group}
-                                className={`group-button ${selectedGroup === group ? "active" : ""}`}
-                                onClick={() => setSelectedGroup(group)}
+                                key={group.id}
+                                className={`group-button ${scope === group.id ? "active" : ""}`}
+                                onClick={() => {
+                                    setScope(group.id);
+                                    setFocusedSlice(null);
+                                }}
                             >
-                                {getLabel(group, "title")}
+                                {group.name}
                             </button>
                         ))}
                     </div>
-                    <span className="kicker">{getLabel(selectedGroup, "kicker")}</span>
+                    <span className="kicker">{kicker}</span>
                     <div className="net-worth">
                         <span className="net-worth-currency">{total < 0 ? "−€" : "€"}</span>
                         <span>{formatAmount(total)}</span>
                     </div>
+                    {delta && (
+                        <DeltaLine
+                            delta={delta}
+                            previous={previous ? monthName(previous, "long") : "start"}
+                        />
+                    )}
                 </div>
 
-                {selected && (
+                {scoped.length > 0 && (
                     <div className="section">
-                        <div className="section-head">
-                            <span className="kicker">Made of</span>
-                        </div>
-                        <div className="composition">
-                            <div className="donut">
-                                <div
-                                    className="donut-ring"
-                                    style={{
-                                        background: `conic-gradient(from -90deg, ${segments.map((s) => s.stop).join(", ")})`,
-                                    }}
-                                />
-                                <div className="donut-hole">
-                                    <span className="donut-label">
-                                        {getLabel(selectedGroup, "center")}
-                                    </span>
-                                    <span className="donut-value">{shortEuros(total)}</span>
-                                </div>
-                            </div>
-
-                            <div className="legend">
-                                {segments.map(({ key, label, value, color, share }) => (
-                                    <div key={key} className="legend-item">
-                                        <div className="legend-head">
-                                            <span
-                                                className="legend-dot"
-                                                style={{ background: color }}
-                                            />
-                                            <span className="legend-name" title={label}>
-                                                {label}
-                                            </span>
-                                            <span className="legend-share">{share}%</span>
-                                        </div>
-                                        <span
-                                            className={`legend-value ${value < 0 ? "negative" : ""}`}
+                        <div className="chart-head">
+                            {mode === "trend" ? (
+                                <div className="ranges">
+                                    {RANGE_ORDER.map((option) => (
+                                        <button
+                                            key={option}
+                                            className={`tag range-chip ${range === option ? "selected" : ""}`}
+                                            onClick={() => {
+                                                setRange(option);
+                                                setSelectedIndex(null);
+                                            }}
                                         >
-                                            {formatEuros(value)}
-                                        </span>
-                                    </div>
+                                            {RANGE_LABELS[option]}
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <span className="kicker">{MIX_TITLE}</span>
+                            )}
+                            <div className="seg chart-modes">
+                                {CHART_MODES.map((option) => (
+                                    <label key={option} className="seg-opt">
+                                        <input
+                                            type="radio"
+                                            name="chart-mode"
+                                            checked={mode === option}
+                                            onChange={() => setMode(option)}
+                                        />
+                                        {CHART_LABELS[option]}
+                                    </label>
                                 ))}
                             </div>
                         </div>
+
+                        {mode === "trend" ? (
+                            <TrendChart
+                                snapshots={months}
+                                groups={allGroups}
+                                series={series}
+                                selectedIndex={focusIndex}
+                                onSelect={setSelectedIndex}
+                            />
+                        ) : (
+                            <div className="composition">
+                                <div className="donut">
+                                    <div
+                                        className="donut-ring"
+                                        style={{
+                                            background: ringGradient(segments, focusedSlice),
+                                        }}
+                                    />
+                                    <div className="donut-hole">
+                                        <span className="donut-label">
+                                            {centreLabel(selected)}
+                                        </span>
+                                        <span className="donut-value">{shortEuros(centre)}</span>
+                                    </div>
+                                </div>
+
+                                <div
+                                className={`legend ${scope === ALL_GROUPS ? "" : "scoped"}`}
+                            >
+                                    {segments.map(({ key, label, value, color, share }) => (
+                                        <button
+                                            key={key}
+                                            className={`legend-item ${focusedSlice && focusedSlice !== key ? "dimmed" : ""}`}
+                                            aria-pressed={focusedSlice === key}
+                                            onClick={() =>
+                                                setFocusedSlice(focusedSlice === key ? null : key)
+                                            }
+                                        >
+                                            <span className="legend-head">
+                                                <span
+                                                    className="legend-dot"
+                                                    style={{ background: color }}
+                                                />
+                                                <span className="legend-name" title={label}>
+                                                    {label}
+                                                </span>
+                                                <span className="legend-share">{share}%</span>
+                                            </span>
+                                            <span
+                                                className={`legend-value ${value < 0 ? "negative" : ""}`}
+                                            >
+                                                {formatEuros(value)}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
+
+                <RecentTransactions accounts={accounts.data} scope={scope} />
             </div>
         </div>
     );

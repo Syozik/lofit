@@ -1,6 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+# esbuild ships its binary as an optional dependency, so its install script
+# is not needed; keeping it off leaves dependency scripts disabled.
+allowBuilds:
+  esbuild: false
 linkWorkspacePackages: true
 minimumReleaseAgeExclude:
   - '@turbo/darwin-64@2.10.8'

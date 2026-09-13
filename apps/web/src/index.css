@@ -6,6 +6,7 @@
   --color-text: #22242c;
   --color-accent: #3f66cf;
   --color-accent-2: #a7a1db;
+  --color-danger: #d1453b;
   --color-divider: color-mix(in srgb, #22242c 14%, transparent);
 
   --color-neutral-100: #292b31;

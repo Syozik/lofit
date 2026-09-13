@@ -39,3 +39,14 @@ export function formatAmount(value: Cents): string {
 export function formatEuros(value: Cents): string {
     return `${value < 0 ? "− € " : "€ "}${formatAmount(value)}`;
 }
+
+export const EURO = "EUR";
+
+export const CURRENCIES = [EURO, "USD"] as const;
+
+export type Currency = (typeof CURRENCIES)[number];
+
+export function toEuros(amount: Cents, perEuro: number): Cents {
+    if (perEuro <= 0) throw new RangeError(`A rate must be positive, got ${perEuro}`);
+    return cents(Math.round(amount / perEuro));
+}
