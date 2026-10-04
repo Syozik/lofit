@@ -27,6 +27,7 @@ import { useToast } from "../toast";
 import { ACTION_WIDTH, useSwipe } from "../useSwipe";
 import { AccountSheet } from "./accountSheet";
 import { HoldingSheet } from "./holdingSheet";
+import { PortfolioChart } from "./portfolioChart";
 
 const timeFormat = new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
@@ -185,7 +186,7 @@ type HoldingRowProps = {
 };
 
 function HoldingRow({ holding, onOpen, onDelete }: HoldingRowProps) {
-    const { offset, dragging, handlers } = useSwipe({ enabled: true, actions: 2 });
+    const { offset, dragging, handlers } = useSwipe({ enabled: true, actions: 2, onTap: onOpen });
 
     return (
         <div className={`acct-card txn-swipe ${dragging ? "dragging" : ""}`}>
@@ -269,6 +270,8 @@ export function AccountsTab() {
                         {formatEuros(netWorth(accounts, holdings))}
                     </span>
                 </div>
+
+                {holdings.length > 0 && <PortfolioChart holdings={holdings} />}
 
                 {byPosition(groups).map((group: Group) => {
                     const stated = byGroup.find((entry) => entry.group.id === group.id);

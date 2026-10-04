@@ -63,7 +63,7 @@
   --shadow-lg: 0 0 0 1px rgba(34, 36, 44, .10), 0 16px 40px rgba(34, 36, 44, .16);
 }
 
-*, *::before, *::after { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 body {
   margin: 0;

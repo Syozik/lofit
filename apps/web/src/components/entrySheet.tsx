@@ -300,7 +300,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                                     placeholder="New tag"
                                     value={newTag}
                                     onChange={(event) => setNewTag(event.target.value)}
-                                    onBlur={() => setNewTag(undefined)}
+                                    onBlur={createTag}
                                     onKeyDown={(event) => {
                                         if (event.key === "Enter") {
                                             event.preventDefault();

@@ -1,7 +1,8 @@
-import { useDeleteHolding, useSellHolding, useUpdateHolding } from "@lofit/api";
-import { euros, formatAmount, formatEuros, holdingValue } from "@lofit/domain";
+import { useDeleteHolding, useHoldingHistory, useSellHolding, useUpdateHolding } from "@lofit/api";
+import { euros, formatAmount, formatEuros, holdingValue, unitCost } from "@lofit/domain";
 import type { Holding } from "@lofit/domain";
 import { useState } from "react";
+import { PriceChart } from "./priceChart";
 
 const dayFormat = new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
@@ -33,6 +34,7 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
     const update = useUpdateHolding();
     const sell = useSellHolding();
     const remove = useDeleteHolding();
+    const history = useHoldingHistory(holding.id);
 
     const [selling, setSelling] = useState(false);
     const [quantity, setQuantity] = useState(String(holding.quantity));
@@ -103,6 +105,19 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
                         {dayFormat.format(new Date(holding.heldSince))}
                     </span>
                 </div>
+
+                {holding.quote &&
+                    (history.data && history.data.length > 1 ? (
+                        <PriceChart
+                            points={history.data}
+                            cost={holding.cost > 0 ? unitCost(holding) : undefined}
+                            heldSince={holding.heldSince}
+                        />
+                    ) : (
+                        <div className="price-chart price-pending">
+                            {history.isPending ? "Loading prices…" : "No price history for this symbol"}
+                        </div>
+                    ))}
 
                 <div className="seg sheet-kinds">
                     <label className="seg-opt">

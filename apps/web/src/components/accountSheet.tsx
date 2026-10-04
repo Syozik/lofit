@@ -90,7 +90,6 @@ export function AccountSheet({ account, onClose, onSaved }: Props) {
                     <h4 className="sheet-title">
                         {editing ? `Update ${account.name}` : "Add an account"}
                     </h4>
-                    {editing && <span className="sheet-note">What does it say right now?</span>}
                 </div>
                 {!editing && (
                     <div className="sheet-tags">

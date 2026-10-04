@@ -32,3 +32,15 @@ export function groupColor(position: number, owed: boolean): string {
     if (owed) return GREYS[0];
     return OWNED[position % OWNED.length]!;
 }
+
+const RANKED = [
+    "var(--color-accent-300)",
+    "var(--color-accent-400)",
+    "var(--color-accent-600)",
+    "var(--color-accent-700)",
+] as const;
+
+export function rankColor(rank: number, isOther: boolean): string {
+    if (isOther) return OTHER_COLOR;
+    return RANKED[Math.min(rank, RANKED.length - 1)]!;
+}

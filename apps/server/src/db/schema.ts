@@ -294,3 +294,21 @@ export const fxRates = pgTable(
     },
     (t) => [primaryKey({ columns: [t.day, t.currency] })],
 );
+
+export const priceSeries = pgTable("price_series", {
+    key: text("key").primaryKey(),
+    currency: text("currency").notNull(),
+    fetchedAt: instant("fetched_at").notNull(),
+});
+
+export const priceCloses = pgTable(
+    "price_closes",
+    {
+        key: text("key")
+            .notNull()
+            .references(() => priceSeries.key, { onDelete: "cascade" }),
+        day: date("day", { mode: "string" }).notNull(),
+        close: money("close").notNull(),
+    },
+    (t) => [primaryKey({ columns: [t.key, t.day] })],
+);

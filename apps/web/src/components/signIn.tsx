@@ -1,4 +1,5 @@
 import { signIn, signUp } from "@lofit/api";
+import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 
 const MIN_PASSWORD = 8;
@@ -8,6 +9,7 @@ export function SignIn() {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [isPasswordVisible, setPasswordVisible] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [pending, setPending] = useState(false);
 
@@ -74,13 +76,23 @@ export function SignIn() {
 
                 <label className="field">
                     <span>Password</span>
-                    <input
-                        className="input"
-                        type="password"
-                        autoComplete={joining ? "new-password" : "current-password"}
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                    />
+                    <div className="password-wrap">
+                        <input
+                            className="input"
+                            type={isPasswordVisible ? "text" : "password"}
+                            autoComplete={joining ? "new-password" : "current-password"}
+                            value={password}
+                            onChange={(event) => setPassword(event.target.value)}
+                        />
+                        <button
+                            className="password-toggle"
+                            type="button"
+                            aria-label={isPasswordVisible ? "Hide password" : "Show password"}
+                            onClick={() => setPasswordVisible(!isPasswordVisible)}
+                        >
+                            {isPasswordVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                    </div>
                     {joining && short && (
                         <span className="gate-hint">At least {MIN_PASSWORD} characters.</span>
                     )}

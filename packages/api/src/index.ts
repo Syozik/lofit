@@ -14,7 +14,15 @@ export { useTransactions } from "./useTransactions";
 export { useAddTransaction } from "./useAddTransaction";
 export { useDeleteTransaction } from "./useDeleteTransaction";
 export { useUpdateTransaction } from "./useUpdateTransaction";
-export { addHolding, deleteHolding, fetchHoldings, sellHolding, updateHolding } from "./holdings";
+export {
+    addHolding,
+    deleteHolding,
+    fetchHoldingHistory,
+    fetchHoldings,
+    sellHolding,
+    updateHolding,
+} from "./holdings";
+export { useHoldingHistory } from "./useHoldingHistory";
 export type { RefreshReport } from "./prices";
 export { refreshPrices } from "./prices";
 export { useRefreshPrices } from "./useRefreshPrices";

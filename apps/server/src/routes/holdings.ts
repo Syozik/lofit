@@ -13,6 +13,7 @@ import type { AuthEnv } from "../auth/session";
 import { db } from "../db/client";
 import { toHolding } from "../db/mappers";
 import { accounts, holdings } from "../db/schema";
+import { priceHistory } from "../prices/history";
 import { perEuro } from "../prices/rates";
 import { invalidBody } from "../http";
 
@@ -92,6 +93,23 @@ export const holdingsRoute = new Hono<AuthEnv>()
 
             const { created, ...holding } = row;
             return c.json(toHolding(holding), created ? 201 : 200);
+        },
+    )
+    .get(
+        "/:id/history",
+        zValidator("param", z.object({ id: z.uuid() }), (result) => {
+            if (!result.success) throw new HTTPException(404, { message: "No such holding" });
+        }),
+        async (c) => {
+            const [held] = await db
+                .select({ quote: holdings.quote })
+                .from(holdings)
+                .where(and(eq(holdings.id, c.req.param("id")), eq(holdings.userId, c.var.userId)))
+                .limit(1);
+
+            if (!held) throw new HTTPException(404, { message: "No such holding" });
+
+            return c.json(held.quote ? await priceHistory(held.quote) : []);
         },
     )
     .patch(

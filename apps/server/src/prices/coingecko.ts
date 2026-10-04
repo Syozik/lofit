@@ -1,7 +1,8 @@
 import { cents } from "@lofit/domain";
 import type { Cents } from "@lofit/domain";
+import type { Close } from "./yahoo";
 
-const ENDPOINT = "https://api.coingecko.com/api/v3/simple/price";
+const API = "https://api.coingecko.com/api/v3";
 
 export async function fetchCoingeckoPrices(
     ids: readonly string[],
@@ -10,7 +11,7 @@ export async function fetchCoingeckoPrices(
     if (ids.length === 0) return prices;
 
     const query = `ids=${encodeURIComponent(ids.join(","))}&vs_currencies=eur`;
-    const response = await fetch(`${ENDPOINT}?${query}`, { headers: { accept: "application/json" } });
+    const response = await fetch(`${API}/simple/price?${query}`, { headers: { accept: "application/json" } });
     if (!response.ok) return prices;
 
     const body = (await response.json()) as Record<string, { eur?: number }>;
@@ -19,4 +20,20 @@ export async function fetchCoingeckoPrices(
     }
 
     return prices;
+}
+
+export async function fetchCoingeckoHistory(id: string): Promise<Close[] | undefined> {
+    const response = await fetch(
+        `${API}/coins/${encodeURIComponent(id)}/market_chart?vs_currency=eur&days=365&interval=daily`,
+        { headers: { accept: "application/json" } },
+    );
+    if (!response.ok) return undefined;
+
+    const body = (await response.json()) as { prices?: [number, number][] };
+    const byDay = new Map<string, Cents>();
+    for (const [stamp, value] of body.prices ?? []) {
+        byDay.set(new Date(stamp).toISOString().slice(0, 10), cents(Math.round(value * 100)));
+    }
+
+    return [...byDay].map(([day, close]) => ({ day, close }));
 }

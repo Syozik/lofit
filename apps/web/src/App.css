@@ -1109,6 +1109,33 @@ button.sheet-currency.switchable:hover {
     color: color-mix(in srgb, var(--color-text) 70%, transparent);
 }
 
+.password-wrap {
+    position: relative;
+}
+
+.password-wrap .input {
+    padding-right: 36px;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 36px;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-neutral-600);
+    cursor: pointer;
+}
+
+.password-toggle:hover {
+    color: var(--color-text);
+}
+
 .gate-hint {
     display: block;
     margin-top: 5px;
@@ -1205,9 +1232,13 @@ button.sheet-currency.switchable:hover {
 }
 
 .acct-holdings {
-    padding-left: 14px;
+    padding-left: 6px;
+    padding-right: 16px;
     border-left: 2px solid var(--color-neutral-800);
     margin: 4px 0 2px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
 }
 
 .acct-group-note {
@@ -1234,4 +1265,221 @@ button.sheet-currency.switchable:hover {
     to {
         transform: rotate(360deg);
     }
+}
+
+/* — price chart — */
+
+.price-chart {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.price-pending {
+    min-height: 196px;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--color-neutral-600);
+}
+
+.price-readout {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.price-value {
+    font-size: 20px;
+    font-variant-numeric: tabular-nums;
+}
+
+.price-change {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-neutral-600);
+}
+
+.price-change.up {
+    color: var(--color-accent-300);
+}
+
+.price-day {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--color-neutral-600);
+}
+
+.price-plot {
+    position: relative;
+    height: 132px;
+    touch-action: pan-y;
+    cursor: crosshair;
+}
+
+.price-plot svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.price-line {
+    fill: none;
+    stroke: var(--color-accent);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+
+.price-area {
+    fill: color-mix(in srgb, var(--color-accent) 9%, transparent);
+}
+
+.price-cost {
+    stroke: var(--color-neutral-500);
+    stroke-width: 1;
+    stroke-dasharray: 4 3;
+    vector-effect: non-scaling-stroke;
+}
+
+.price-bought {
+    stroke: var(--color-divider);
+    stroke-width: 1;
+    stroke-dasharray: 2 3;
+    vector-effect: non-scaling-stroke;
+}
+
+.price-cross {
+    stroke: var(--color-neutral-500);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+}
+
+.price-dot {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    box-shadow: 0 0 0 2px var(--color-surface);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.price-cost-label {
+    position: absolute;
+    right: 0;
+    transform: translateY(-120%);
+    font-size: 10.5px;
+    color: var(--color-neutral-500);
+    background: color-mix(in srgb, var(--color-surface) 85%, transparent);
+    padding: 0 3px;
+    pointer-events: none;
+}
+
+.price-axis {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10.5px;
+    color: var(--color-neutral-600);
+}
+
+/* — portfolio — */
+
+.portfolio {
+    gap: var(--space-4);
+    padding-bottom: var(--space-6);
+    border-bottom: 1px solid var(--color-divider);
+}
+
+.portfolio .chart-head {
+    align-items: flex-start;
+}
+
+.portfolio-head {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.portfolio-value {
+    font-size: 20px;
+    font-variant-numeric: tabular-nums;
+}
+
+.portfolio-gain {
+    font-size: 11px;
+    color: var(--color-neutral-600);
+}
+
+.portfolio-gain.up {
+    color: var(--color-accent-300);
+}
+
+.portfolio-empty {
+    font-size: 12px;
+    color: var(--color-neutral-600);
+}
+
+.gain-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.gain-row {
+    display: grid;
+    grid-template-columns: 52px 1fr 52px 64px;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.gain-name {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gain-track {
+    position: relative;
+    height: 10px;
+}
+
+.gain-track.diverging::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -3px;
+    bottom: -3px;
+    width: 1px;
+    background: var(--color-divider);
+}
+
+.gain-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 4px;
+    background: var(--color-neutral-500);
+}
+
+.gain-fill.up {
+    background: var(--color-accent-400);
+}
+
+.gain-pct {
+    text-align: right;
+    color: var(--color-neutral-600);
+}
+
+.gain-pct.up {
+    color: var(--color-accent-300);
+}
+
+.gain-amount {
+    text-align: right;
+    color: var(--color-neutral-600);
 }

@@ -99,6 +99,13 @@
       "when": 1791123010023,
       "tag": "0013_fx_rates",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791131922026,
+      "tag": "0014_price_history",
+      "breakpoints": true
     }
   ]
 }
