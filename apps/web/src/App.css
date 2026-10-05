@@ -1658,3 +1658,18 @@ button.sheet-currency.switchable:hover {
 .history-net.up {
     color: var(--color-accent-300);
 }
+
+.acct-actions .acct-delete {
+    flex: none;
+    width: 38px;
+    padding: 0;
+    color: var(--color-danger);
+    border-color: color-mix(in srgb, var(--color-danger) 35%, transparent);
+}
+
+.sheet-warning {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-neutral-400);
+}

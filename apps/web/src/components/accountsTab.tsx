@@ -25,6 +25,7 @@ import type { Account, AccountChange, Cents, Group, Holding } from "@lofit/domai
 import { useState } from "react";
 import { useToast } from "../toast";
 import { ACTION_WIDTH, useSwipe } from "../useSwipe";
+import { AccountDelete } from "./accountDelete";
 import { AccountHistory } from "./accountHistory";
 import { AccountSheet } from "./accountSheet";
 import { HoldingSheet } from "./holdingSheet";
@@ -108,6 +109,7 @@ type AccountCardProps = {
     onToggle: () => void;
     onUpdate: () => void;
     onHistory: () => void;
+    onDelete: () => void;
     children?: React.ReactNode;
 };
 
@@ -118,6 +120,7 @@ function AccountCard({
     onToggle,
     onUpdate,
     onHistory,
+    onDelete,
     children,
 }: AccountCardProps) {
     const positions = sumItems(netWorthItems([], holdings));
@@ -170,6 +173,13 @@ function AccountCard({
                         </button>
                         <button className="btn btn-secondary" onClick={onUpdate}>
                             Update balance
+                        </button>
+                        <button
+                            className="btn btn-secondary acct-delete"
+                            aria-label={`Delete ${account.name}`}
+                            onClick={onDelete}
+                        >
+                            <Trash2 size={14} strokeWidth={1.5} aria-hidden />
                         </button>
                     </div>
                 </div>
@@ -247,6 +257,7 @@ export function AccountsTab() {
     const [openId, setOpenId] = useState<string | null>(null);
     const [editing, setEditing] = useState<Account | null>(null);
     const [history, setHistory] = useState<Account | null>(null);
+    const [deleting, setDeleting] = useState<Account | null>(null);
     const [adding, setAdding] = useState(false);
     const [position, setPosition] = useState<Holding | null>(null);
     const show = useToast();
@@ -331,6 +342,7 @@ export function AccountsTab() {
                                         }
                                         onUpdate={() => setEditing(account)}
                                         onHistory={() => setHistory(account)}
+                                        onDelete={() => setDeleting(account)}
                                     >
                                         <div className="acct-holdings">
                                             {holdingsFor(holdings, account.id).map((holding) => (
@@ -372,6 +384,17 @@ export function AccountsTab() {
                     }
                     onClose={() => setPosition(null)}
                     onDone={show}
+                />
+            )}
+
+            {deleting && (
+                <AccountDelete
+                    account={deleting}
+                    onClose={() => setDeleting(null)}
+                    onDeleted={(message) => {
+                        setOpenId(null);
+                        show(message);
+                    }}
                 />
             )}
 

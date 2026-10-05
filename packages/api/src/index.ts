@@ -1,6 +1,7 @@
 export { configureApi } from "./client";
 export { configureAuth, signIn, signOut, signUp, useSession } from "./auth";
-export { addAccount, fetchAccounts, updateAccountBalance } from "./accounts";
+export { addAccount, deleteAccount, fetchAccounts, updateAccountBalance } from "./accounts";
+export { useDeleteAccount } from "./useDeleteAccount";
 export { useAccounts } from "./useAccounts";
 export { useAddAccount } from "./useAddAccount";
 export { useUpdateAccountBalance } from "./useUpdateAccountBalance";

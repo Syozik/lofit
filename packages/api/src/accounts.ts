@@ -24,3 +24,9 @@ export async function updateAccountBalance(update: {
     if (!response.ok) throw await apiError(response);
     return fromJson(await response.json());
 }
+
+export async function deleteAccount(id: string): Promise<{ transactions: number; holdings: number }> {
+    const response = await api().accounts[":id"].$delete({ param: { id } });
+    if (!response.ok) throw await apiError(response);
+    return fromJson(await response.json());
+}
