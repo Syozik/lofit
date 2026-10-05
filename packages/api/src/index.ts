@@ -39,3 +39,5 @@ export { fetchBudgets } from "./budgets";
 export { useBudgets } from "./useBudgets";
 export { fetchSnapshots } from "./snapshots";
 export { useSnapshots } from "./useSnapshots";
+export { fetchPortfolioHistory, fetchPortfolioIntraday } from "./portfolio";
+export { usePortfolioHistory } from "./usePortfolioHistory";

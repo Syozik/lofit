@@ -1,15 +1,3 @@
-import { createContext, useContext } from "react";
-
-export const PeriodContext = createContext<(period: string) => void>(() => {});
-
-export function useSetPeriod() {
-    return useContext(PeriodContext);
-}
-
-export function currentPeriod(): string {
-    return new Date().toISOString().slice(0, 7);
-}
-
 const MONTH_NAMES = {
     short: new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" }),
     long: new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" }),

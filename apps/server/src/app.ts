@@ -8,6 +8,7 @@ import { accountsRoute } from "./routes/accounts";
 import { budgetsRoute } from "./routes/budgets";
 import { groupsRoute } from "./routes/groups";
 import { holdingsRoute } from "./routes/holdings";
+import { portfolioRoute } from "./routes/portfolio";
 import { pricesRoute } from "./routes/prices";
 import { snapshotsRoute } from "./routes/snapshots";
 import { tagsRoute } from "./routes/tags";
@@ -17,6 +18,7 @@ const resources = new Hono<AuthEnv>()
     .use(requireSession)
     .route("/accounts", accountsRoute)
     .route("/holdings", holdingsRoute)
+    .route("/portfolio", portfolioRoute)
     .route("/transactions", transactionsRoute)
     .route("/tags", tagsRoute)
     .route("/groups", groupsRoute)

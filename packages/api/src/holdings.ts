@@ -1,4 +1,4 @@
-import type { Holding, NewHolding, PricePoint } from "@lofit/domain";
+import type { Holding, NewHolding, PriceHistory } from "@lofit/domain";
 import { api, apiError, fromJson } from "./client";
 
 export async function fetchHoldings(): Promise<readonly Holding[]> {
@@ -45,7 +45,7 @@ export async function deleteHolding(id: string): Promise<void> {
     if (!response.ok) throw await apiError(response);
 }
 
-export async function fetchHoldingHistory(id: string): Promise<readonly PricePoint[]> {
+export async function fetchHoldingHistory(id: string): Promise<PriceHistory | null> {
     const response = await api().holdings[":id"].history.$get({ param: { id } });
     if (!response.ok) throw await apiError(response);
     return fromJson(await response.json());

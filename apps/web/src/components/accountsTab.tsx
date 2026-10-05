@@ -262,16 +262,11 @@ export function AccountsTab() {
         <div className="tab-content">
             <div className="accounts">
                 <div className="accounts-head">
-                    <span className="kicker">
-                        {accounts.length} accounts · {holdings.length} holdings
-                        {synced ? ` · synced ${formatSync(synced)}` : ""}
-                    </span>
+                    {synced && <span className="kicker">Synced {formatSync(synced)}</span>}
                     <span className="accounts-total">
                         {formatEuros(netWorth(accounts, holdings))}
                     </span>
                 </div>
-
-                {holdings.length > 0 && <PortfolioChart holdings={holdings} />}
 
                 {byPosition(groups).map((group: Group) => {
                     const stated = byGroup.find((entry) => entry.group.id === group.id);
@@ -313,6 +308,7 @@ export function AccountsTab() {
                                 </span>
                             )}
                             <div className="acct-list">
+                                {held.length > 0 && <PortfolioChart holdings={held} />}
                                 {stated.accounts.map((account) => (
                                     <AccountCard
                                         key={account.id}

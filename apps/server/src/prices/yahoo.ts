@@ -63,3 +63,25 @@ export async function fetchYahooHistory(
 
     return { currency: currency.toUpperCase(), closes };
 }
+
+export interface Tick {
+    at: number;
+    price: Cents;
+}
+
+export async function fetchYahooIntraday(
+    symbol: string,
+): Promise<{ currency: string; ticks: Tick[] } | undefined> {
+    const result = await fetchChart(symbol, "interval=5m&range=5d");
+    const currency = result?.meta?.currency;
+    if (!result || !currency) return undefined;
+
+    const values = result.indicators?.quote?.[0]?.close ?? [];
+    const ticks = (result.timestamp ?? []).flatMap((stamp, index) => {
+        const value = values[index];
+        if (typeof value !== "number") return [];
+        return [{ at: stamp * 1000, price: cents(Math.round(value * 100)) }];
+    });
+
+    return { currency: currency.toUpperCase(), ticks };
+}

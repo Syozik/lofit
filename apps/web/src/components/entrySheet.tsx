@@ -25,6 +25,7 @@ import type {
     TransactionKind,
 } from "@lofit/domain";
 import { useState } from "react";
+import { Sheet } from "./sheet";
 
 type EntryMode = TransactionKind | "holding";
 
@@ -207,272 +208,262 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     }
 
     return (
-        <div className="sheet-layer">
-            <button className="sheet-scrim" aria-label="Close" onClick={onClose} />
+        <Sheet label={editing ? "Edit entry" : "Log an entry"} onClose={onClose}>
+            <div className="sheet-head">
+                <h4 className="sheet-title">{editing ? "Edit entry" : "Log an entry"}</h4>
+                <span className="sheet-note">
+                    {isHolding
+                        ? "Manual · price per unit"
+                        : "Manual"}
+                </span>
+            </div>
 
-            <div
-                className="sheet"
-                role="dialog"
-                aria-label={editing ? "Edit entry" : "Log an entry"}
-            >
-                <span className="sheet-grip" />
+            <div className="seg sheet-kinds">
+                {(editing ? TRANSACTION_MODES : MODES).map((option) => (
+                    <label key={option} className="seg-opt">
+                        <input
+                            type="radio"
+                            name="entry-mode"
+                            checked={mode === option}
+                            onChange={() => setMode(option)}
+                        />
+                        {MODE_LABELS[option]}
+                    </label>
+                ))}
+            </div>
 
-                <div className="sheet-head">
-                    <h4 className="sheet-title">{editing ? "Edit entry" : "Log an entry"}</h4>
-                    <span className="sheet-note">
-                        {isHolding
-                            ? "Manual · price per unit"
-                            : "Manual"}
-                    </span>
-                </div>
+            <div className="sheet-amount">
+                {isHolding ? (
+                    <button
+                        className="sheet-currency switchable"
+                        aria-label={`Priced in ${currency}, tap to change`}
+                        onClick={nextCurrency}
+                    >
+                        {CURRENCY_SYMBOLS[currency]}
+                    </button>
+                ) : (
+                    <span className="sheet-currency">€</span>
+                )}
+                <input
+                    className="sheet-amount-input"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    aria-label={isHolding ? "Price per unit" : "Amount"}
+                    value={amount}
+                    onChange={(event) => setAmount(event.target.value)}
+                />
+            </div>
 
-                <div className="seg sheet-kinds">
-                    {(editing ? TRANSACTION_MODES : MODES).map((option) => (
-                        <label key={option} className="seg-opt">
-                            <input
-                                type="radio"
-                                name="entry-mode"
-                                checked={mode === option}
-                                onChange={() => setMode(option)}
-                            />
-                            {MODE_LABELS[option]}
-                        </label>
+            {isHolding ? (
+                <div className="sheet-chips">
+                    {ASSET_TYPES.map((key) => (
+                        <button
+                            key={key}
+                            className={`tag sheet-chip ${assetType === key ? "selected" : ""}`}
+                            onClick={() => setAssetType(key)}
+                        >
+                            {ASSET_TYPE_LABELS[key]}
+                        </button>
                     ))}
                 </div>
-
-                <div className="sheet-amount">
-                    {isHolding ? (
-                        <button
-                            className="sheet-currency switchable"
-                            aria-label={`Priced in ${currency}, tap to change`}
-                            onClick={nextCurrency}
-                        >
-                            {CURRENCY_SYMBOLS[currency]}
-                        </button>
-                    ) : (
-                        <span className="sheet-currency">€</span>
-                    )}
-                    <input
-                        className="sheet-amount-input"
-                        inputMode="decimal"
-                        placeholder="0.00"
-                        aria-label={isHolding ? "Price per unit" : "Amount"}
-                        value={amount}
-                        onChange={(event) => setAmount(event.target.value)}
-                    />
-                </div>
-
-                {isHolding ? (
+            ) : (
+                <div className="sheet-tags">
                     <div className="sheet-chips">
-                        {ASSET_TYPES.map((key) => (
-                            <button
-                                key={key}
-                                className={`tag sheet-chip ${assetType === key ? "selected" : ""}`}
-                                onClick={() => setAssetType(key)}
-                            >
-                                {ASSET_TYPE_LABELS[key]}
-                            </button>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="sheet-tags">
-                        <div className="sheet-chips">
-                            {(tags ?? []).map((tag) => {
-                                const chosen = tagIds.indexOf(tag.id);
-                                return (
-                                    <button
-                                        key={tag.id}
-                                        className={`tag sheet-chip ${chosen === 0 ? "selected owner" : chosen > 0 ? "selected" : ""}`}
-                                        onClick={() => toggleTag(tag.id)}
-                                    >
-                                        {tag.name}
-                                    </button>
-                                );
-                            })}
-                            {newTag === undefined ? (
-                                <button className="tag sheet-chip" onClick={() => setNewTag("")}>
-                                    + New tag
+                        {(tags ?? []).map((tag) => {
+                            const chosen = tagIds.indexOf(tag.id);
+                            return (
+                                <button
+                                    key={tag.id}
+                                    className={`tag sheet-chip ${chosen === 0 ? "selected owner" : chosen > 0 ? "selected" : ""}`}
+                                    onClick={() => toggleTag(tag.id)}
+                                >
+                                    {tag.name}
                                 </button>
-                            ) : (
-                                <input
-                                    className="input sheet-new-tag"
-                                    autoFocus
-                                    placeholder="New tag"
-                                    value={newTag}
-                                    onChange={(event) => setNewTag(event.target.value)}
-                                    onBlur={createTag}
-                                    onKeyDown={(event) => {
-                                        if (event.key === "Enter") {
-                                            event.preventDefault();
-                                            void createTag();
-                                        }
-                                        if (event.key === "Escape") setNewTag(undefined);
-                                    }}
-                                />
-                            )}
-                        </div>
-                        {owner && <span className="sheet-hint">{owner} owns this entry</span>}
+                            );
+                        })}
+                        {newTag === undefined ? (
+                            <button className="tag sheet-chip" onClick={() => setNewTag("")}>
+                                + New tag
+                            </button>
+                        ) : (
+                            <input
+                                className="input sheet-new-tag"
+                                autoFocus
+                                placeholder="New tag"
+                                value={newTag}
+                                onChange={(event) => setNewTag(event.target.value)}
+                                onBlur={createTag}
+                                onKeyDown={(event) => {
+                                    if (event.key === "Enter") {
+                                        event.preventDefault();
+                                        void createTag();
+                                    }
+                                    if (event.key === "Escape") setNewTag(undefined);
+                                }}
+                            />
+                        )}
                     </div>
-                )}
+                    {owner && <span className="sheet-hint">{owner} owns this entry</span>}
+                </div>
+            )}
 
-                <div className="sheet-fields">
-                    {isHolding ? (
-                        <>
-                            <div className="sheet-pair">
-                                <label className="field">
-                                    <span>Symbol</span>
-                                    <input
-                                        className="input sheet-symbol"
-                                        placeholder="VWRL"
-                                        value={symbol}
-                                        onChange={(event) => setSymbol(event.target.value)}
-                                    />
-                                </label>
-                                <label className="field">
-                                    <span>Quantity</span>
-                                    <input
-                                        className="input"
-                                        inputMode="decimal"
-                                        placeholder="10"
-                                        value={quantity}
-                                        onChange={(event) => setQuantity(event.target.value)}
-                                    />
-                                </label>
-
-                            </div>
-
+            <div className="sheet-fields">
+                {isHolding ? (
+                    <>
+                        <div className="sheet-pair">
                             <label className="field">
-                                <span>Name</span>
-                                <input
-                                    className="input"
-                                    placeholder="Vanguard FTSE All-World"
-                                    value={name}
-                                    onChange={(event) => setName(event.target.value)}
-                                />
-                            </label>
-
-                            <label className="field">
-                                <span>Live price symbol</span>
+                                <span>Symbol</span>
                                 <input
                                     className="input sheet-symbol"
-                                    placeholder={assetType === "crypto" ? "bitcoin" : "GOOGL"}
-                                    value={ticker}
-                                    onChange={(event) => {
-                                        setOwnTicker(true);
-                                        setLiveSymbol(event.target.value);
-                                    }}
+                                    placeholder="VWRL"
+                                    value={symbol}
+                                    onChange={(event) => setSymbol(event.target.value)}
                                 />
-                                <span className="sheet-hint">
-                                    {assetType === "crypto"
-                                        ? "CoinGecko id · empty keeps the price you typed"
-                                        : "NASDAQ and NYSE need no suffix · European listings do, like VWRL.AS"}
-                                </span>
+                            </label>
+                            <label className="field">
+                                <span>Quantity</span>
+                                <input
+                                    className="input"
+                                    inputMode="decimal"
+                                    placeholder="10"
+                                    value={quantity}
+                                    onChange={(event) => setQuantity(event.target.value)}
+                                />
                             </label>
 
+                        </div>
+
+                        <label className="field">
+                            <span>Name</span>
+                            <input
+                                className="input"
+                                placeholder="Vanguard FTSE All-World"
+                                value={name}
+                                onChange={(event) => setName(event.target.value)}
+                            />
+                        </label>
+
+                        <label className="field">
+                            <span>Live price symbol</span>
+                            <input
+                                className="input sheet-symbol"
+                                placeholder={assetType === "crypto" ? "bitcoin" : "GOOGL"}
+                                value={ticker}
+                                onChange={(event) => {
+                                    setOwnTicker(true);
+                                    setLiveSymbol(event.target.value);
+                                }}
+                            />
+                            <span className="sheet-hint">
+                                {assetType === "crypto"
+                                    ? "CoinGecko id · empty keeps the price you typed"
+                                    : "NASDAQ and NYSE need no suffix · European listings do, like VWRL.AS"}
+                            </span>
+                        </label>
+
+                        <label className="field">
+                            <span>Held at</span>
+                            <select
+                                className="input"
+                                value={heldAt}
+                                onChange={(event) => setCustodianId(event.target.value)}
+                            >
+                                {brokerages.map((account) => (
+                                    <option key={account.id} value={account.id}>
+                                        {account.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+
+                        <label className="field">
+                            <span>Bought on</span>
+                            <input
+                                className="input"
+                                type="date"
+                                max={today()}
+                                value={day}
+                                onChange={(event) => setDay(event.target.value)}
+                            />
+                        </label>
+
+                        {value && units && (
+                            <span className="sheet-total">
+                                Position value {money(currency, value * units)}
+                            </span>
+                        )}
+                    </>
+                ) : (
+                    <>
+                        <label className="field">
+                            <span>Description</span>
+                            <input
+                                className="input"
+                                placeholder="Albert Heijn"
+                                value={name}
+                                onChange={(event) => setName(event.target.value)}
+                            />
+                        </label>
+
+                        <label className="field">
+                            <span>{mode === "transfer" ? "From" : "Account"}</span>
+                            <select
+                                className="input"
+                                value={from}
+                                onChange={(event) => setFromId(event.target.value)}
+                            >
+                                {accounts?.map((account) => (
+                                    <option key={account.id} value={account.id}>
+                                        {account.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+
+                        {mode === "transfer" && (
                             <label className="field">
-                                <span>Held at</span>
+                                <span>To</span>
                                 <select
                                     className="input"
-                                    value={heldAt}
-                                    onChange={(event) => setCustodianId(event.target.value)}
+                                    value={to}
+                                    onChange={(event) => setToId(event.target.value)}
                                 >
-                                    {brokerages.map((account) => (
-                                        <option key={account.id} value={account.id}>
-                                            {account.name}
-                                        </option>
-                                    ))}
+                                    {accounts
+                                        ?.filter((account) => account.id !== from)
+                                        .map((account) => (
+                                            <option key={account.id} value={account.id}>
+                                                {account.name}
+                                            </option>
+                                        ))}
                                 </select>
                             </label>
+                        )}
 
-                            <label className="field">
-                                <span>Bought on</span>
-                                <input
-                                    className="input"
-                                    type="date"
-                                    max={today()}
-                                    value={day}
-                                    onChange={(event) => setDay(event.target.value)}
-                                />
-                            </label>
-
-                            {value && units && (
-                                <span className="sheet-total">
-                                    Position value {money(currency, value * units)}
-                                </span>
-                            )}
-                        </>
-                    ) : (
-                        <>
-                            <label className="field">
-                                <span>Description</span>
-                                <input
-                                    className="input"
-                                    placeholder="Albert Heijn"
-                                    value={name}
-                                    onChange={(event) => setName(event.target.value)}
-                                />
-                            </label>
-
-                            <label className="field">
-                                <span>{mode === "transfer" ? "From" : "Account"}</span>
-                                <select
-                                    className="input"
-                                    value={from}
-                                    onChange={(event) => setFromId(event.target.value)}
-                                >
-                                    {accounts?.map((account) => (
-                                        <option key={account.id} value={account.id}>
-                                            {account.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-
-                            {mode === "transfer" && (
-                                <label className="field">
-                                    <span>To</span>
-                                    <select
-                                        className="input"
-                                        value={to}
-                                        onChange={(event) => setToId(event.target.value)}
-                                    >
-                                        {accounts
-                                            ?.filter((account) => account.id !== from)
-                                            .map((account) => (
-                                                <option key={account.id} value={account.id}>
-                                                    {account.name}
-                                                </option>
-                                            ))}
-                                    </select>
-                                </label>
-                            )}
-
-                            <label className="field">
-                                <span>Date</span>
-                                <input
-                                    className="input"
-                                    type="date"
-                                    value={day}
-                                    onChange={(event) => setDay(event.target.value)}
-                                />
-                            </label>
-                        </>
-                    )}
-                </div>
-
-                <div className="sheet-actions">
-                    <button className="btn btn-secondary" onClick={onClose}>
-                        Cancel
-                    </button>
-                    <button
-                        className="btn btn-primary sheet-save"
-                        disabled={blocked || pending}
-                        onClick={save}
-                    >
-                        {isHolding ? "Add holding" : value ? "Save entry" : "Enter an amount"}
-                    </button>
-                </div>
+                        <label className="field">
+                            <span>Date</span>
+                            <input
+                                className="input"
+                                type="date"
+                                value={day}
+                                onChange={(event) => setDay(event.target.value)}
+                            />
+                        </label>
+                    </>
+                )}
             </div>
-        </div>
+
+            <div className="sheet-actions">
+                <button className="btn btn-secondary" onClick={onClose}>
+                    Cancel
+                </button>
+                <button
+                    className="btn btn-primary sheet-save"
+                    disabled={blocked || pending}
+                    onClick={save}
+                >
+                    {isHolding ? "Add holding" : value ? "Save entry" : "Enter an amount"}
+                </button>
+            </div>
+        </Sheet>
     );
 }

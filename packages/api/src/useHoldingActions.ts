@@ -10,6 +10,7 @@ function useHoldingMutation<Input, Output>(run: (input: Input) => Promise<Output
             await Promise.all([
                 client.invalidateQueries({ queryKey: ["holdings"] }),
                 client.invalidateQueries({ queryKey: ["accounts"] }),
+                client.invalidateQueries({ queryKey: ["portfolio"] }),
             ]);
         },
     });

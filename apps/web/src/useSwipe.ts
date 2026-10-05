@@ -30,11 +30,11 @@ export function useSwipe({ enabled, actions = 1, onTap }: Options) {
         const dy = event.clientY - started.y;
 
         if (!dragging) {
+            if (Math.max(Math.abs(dx), Math.abs(dy)) < DRAG_SLOP) return;
             if (Math.abs(dy) > Math.abs(dx)) {
                 drag.current = null;
                 return;
             }
-            if (Math.abs(dx) < DRAG_SLOP) return;
             setDragging(true);
             event.currentTarget.setPointerCapture(event.pointerId);
         }
@@ -60,6 +60,13 @@ export function useSwipe({ enabled, actions = 1, onTap }: Options) {
         onTap?.();
     }
 
+    function onPointerCancel() {
+        drag.current = null;
+        if (!dragging) return;
+        setDragging(false);
+        setOffset(offset < -width / 2 ? -width : 0);
+    }
+
     return {
         offset,
         dragging,
@@ -68,7 +75,7 @@ export function useSwipe({ enabled, actions = 1, onTap }: Options) {
             onPointerDown,
             onPointerMove,
             onPointerUp,
-            onPointerCancel: onPointerUp,
+            onPointerCancel,
         },
     };
 }

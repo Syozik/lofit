@@ -11,10 +11,8 @@ import { AccountsTab } from "./components/accountsTab";
 import { SpendingTab } from "./components/spendingTab";
 import { TabButton } from "./components/tabButton";
 import { Indicator } from "./components/indicator";
-import { MonthDate } from "./components/month_date";
 import { NavigationContext } from "./navigation";
 import type { TabName } from "./navigation";
-import { currentPeriod, PeriodContext } from "./period";
 import { ToastContext } from "./toast";
 import type { ToastAction } from "./toast";
 
@@ -36,10 +34,7 @@ function AppShell() {
     const queryClient = useQueryClient();
     const [currentTab, setCurrentTab] = useState<TabName>("netWorth");
     const [sheetOpen, setSheetOpen] = useState(false);
-    const [toast, setToast] = useState<{ message: string; action?: ToastAction } | null>(
-        null,
-    );
-    const [period, setPeriod] = useState(currentPeriod);
+    const [toast, setToast] = useState<{ message: string; action?: ToastAction } | null>(null);
     const ActiveTab = TABS[currentTab].Component;
 
     useEffect(() => {
@@ -49,7 +44,8 @@ function AppShell() {
     }, [toast]);
 
     const show = useCallback(
-        (message: string, action?: ToastAction) => setToast(action ? { message, action } : { message }),
+        (message: string, action?: ToastAction) =>
+            setToast(action ? { message, action } : { message }),
         [],
     );
 
@@ -60,15 +56,14 @@ function AppShell() {
 
     return (
         <NavigationContext.Provider value={setCurrentTab}>
-            <PeriodContext.Provider value={setPeriod}>
-                <ToastContext.Provider value={show}>
+            <ToastContext.Provider value={show}>
                 <main className="main-container">
                     <div className="app-header">
                         <span className="wordmark">lofit</span>
                         <Indicator />
-                        <MonthDate period={period} />
                         <button
                             className="btn btn-ghost btn-icon"
+                            style={{ marginLeft: "auto" }}
                             aria-label="Sign out"
                             onClick={() => void leave()}
                         >
@@ -112,12 +107,9 @@ function AppShell() {
                         </div>
                     )}
 
-                    {sheetOpen && (
-                        <EntrySheet onClose={() => setSheetOpen(false)} onSaved={show} />
-                    )}
+                    {sheetOpen && <EntrySheet onClose={() => setSheetOpen(false)} onSaved={show} />}
                 </main>
-                </ToastContext.Provider>
-            </PeriodContext.Provider>
+            </ToastContext.Provider>
         </NavigationContext.Provider>
     );
 }

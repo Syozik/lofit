@@ -7,8 +7,16 @@ export type { QuoteRef, QuoteSource } from "./quote";
 export { QUOTE_SOURCES, quoteKey } from "./quote";
 export type { Sale } from "./holding";
 export { addUnits, holdingGain, holdingValue, paidFor, sellUnits } from "./holding";
-export type { HistoryRange, PricePoint } from "./history";
-export { HISTORY_RANGE_LABELS, HISTORY_RANGES, historyIn, unitCost } from "./history";
+export type { DayWindow, HistoryRange, PriceHistory, PricePoint, ValuePoint } from "./history";
+export {
+    HISTORY_RANGE_LABELS,
+    historyIn,
+    pointsWithin,
+    PORTFOLIO_RANGES,
+    PRICE_RANGES,
+    rangeWindow,
+    unitCost,
+} from "./history";
 export type { HoldingGain, Share } from "./portfolio";
 export { allocation, gainsBySymbol, portfolioGain } from "./portfolio";
 export type { BalanceChange, NewTransaction, Transaction } from "./transaction";

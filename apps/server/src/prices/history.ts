@@ -1,6 +1,6 @@
-import { EURO, quoteKey, toEuros } from "@lofit/domain";
-import type { PricePoint, QuoteRef } from "@lofit/domain";
-import { asc, eq, max, min, sql } from "drizzle-orm";
+import { EURO, quoteKey } from "@lofit/domain";
+import type { PriceHistory, QuoteRef } from "@lofit/domain";
+import { and, asc, desc, eq, lte, max, min, sql } from "drizzle-orm";
 import { db } from "../db/client";
 import { fxRates, priceCloses, priceSeries } from "../db/schema";
 import { fetchCoingeckoHistory } from "./coingecko";
@@ -89,28 +89,27 @@ async function ensureRatesSince(currency: string, day: string): Promise<void> {
     );
 }
 
-async function inEuros(currency: string, closes: readonly Close[]): Promise<PricePoint[]> {
-    if (currency === EURO) return closes.map(({ day, close }) => ({ day, price: close }));
+async function rateOn(currency: string, day: string): Promise<number | undefined> {
+    if (currency === EURO) return 1;
 
-    const rates = await db
-        .select({ day: fxRates.day, perEuro: fxRates.perEuro })
+    const [before] = await db
+        .select({ perEuro: fxRates.perEuro })
+        .from(fxRates)
+        .where(and(eq(fxRates.currency, currency), lte(fxRates.day, day)))
+        .orderBy(desc(fxRates.day))
+        .limit(1);
+    if (before) return before.perEuro;
+
+    const [after] = await db
+        .select({ perEuro: fxRates.perEuro })
         .from(fxRates)
         .where(eq(fxRates.currency, currency))
-        .orderBy(asc(fxRates.day));
-
-    const points: PricePoint[] = [];
-    let next = 0;
-    let rate = rates[0]?.perEuro;
-
-    for (const { day, close } of closes) {
-        while (next < rates.length && rates[next]!.day <= day) rate = rates[next++]!.perEuro;
-        if (rate) points.push({ day, price: toEuros(close, rate) });
-    }
-
-    return points;
+        .orderBy(asc(fxRates.day))
+        .limit(1);
+    return after?.perEuro;
 }
 
-export async function priceHistory(ref: QuoteRef): Promise<PricePoint[]> {
+export async function priceHistory(ref: QuoteRef, heldSince: string): Promise<PriceHistory | null> {
     const key = quoteKey(ref);
 
     let pending = inFlight.get(key);
@@ -121,16 +120,17 @@ export async function priceHistory(ref: QuoteRef): Promise<PricePoint[]> {
     await pending;
 
     const [series] = await db.select().from(priceSeries).where(eq(priceSeries.key, key));
-    if (!series) return [];
+    if (!series) return null;
 
     const closes = await db
-        .select({ day: priceCloses.day, close: priceCloses.close })
+        .select({ day: priceCloses.day, price: priceCloses.close })
         .from(priceCloses)
         .where(eq(priceCloses.key, key))
         .orderBy(asc(priceCloses.day));
 
-    const first = closes[0];
-    if (first) await ensureRatesSince(series.currency, first.day);
+    await ensureRatesSince(series.currency, heldSince);
+    const perEuro = await rateOn(series.currency, heldSince);
+    if (!perEuro) return null;
 
-    return inEuros(series.currency, closes);
+    return { currency: series.currency, points: closes, perEuroWhenBought: perEuro };
 }

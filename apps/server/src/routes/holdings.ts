@@ -102,14 +102,14 @@ export const holdingsRoute = new Hono<AuthEnv>()
         }),
         async (c) => {
             const [held] = await db
-                .select({ quote: holdings.quote })
+                .select({ quote: holdings.quote, heldSince: holdings.heldSince })
                 .from(holdings)
                 .where(and(eq(holdings.id, c.req.param("id")), eq(holdings.userId, c.var.userId)))
                 .limit(1);
 
             if (!held) throw new HTTPException(404, { message: "No such holding" });
 
-            return c.json(held.quote ? await priceHistory(held.quote) : []);
+            return c.json(held.quote ? await priceHistory(held.quote, held.heldSince) : null);
         },
     )
     .patch(

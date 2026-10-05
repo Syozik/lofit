@@ -1,6 +1,6 @@
 import { cents } from "@lofit/domain";
 import type { Cents } from "@lofit/domain";
-import type { Close } from "./yahoo";
+import type { Close, Tick } from "./yahoo";
 
 const API = "https://api.coingecko.com/api/v3";
 
@@ -36,4 +36,15 @@ export async function fetchCoingeckoHistory(id: string): Promise<Close[] | undef
     }
 
     return [...byDay].map(([day, close]) => ({ day, close }));
+}
+
+export async function fetchCoingeckoIntraday(id: string): Promise<Tick[] | undefined> {
+    const response = await fetch(
+        `${API}/coins/${encodeURIComponent(id)}/market_chart?vs_currency=eur&days=1`,
+        { headers: { accept: "application/json" } },
+    );
+    if (!response.ok) return undefined;
+
+    const body = (await response.json()) as { prices?: [number, number][] };
+    return (body.prices ?? []).map(([at, value]) => ({ at, price: cents(Math.round(value * 100)) }));
 }

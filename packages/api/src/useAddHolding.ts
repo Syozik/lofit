@@ -7,7 +7,10 @@ export function useAddHolding() {
     return useMutation({
         mutationFn: addHolding,
         onSuccess: async () => {
-            await client.invalidateQueries({ queryKey: ["holdings"] });
+            await Promise.all([
+                client.invalidateQueries({ queryKey: ["holdings"] }),
+                client.invalidateQueries({ queryKey: ["portfolio"] }),
+            ]);
         },
     });
 }

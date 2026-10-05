@@ -2,6 +2,7 @@ import { useAddAccount, useAddGroup, useGroups, useUpdateAccountBalance } from "
 import { euros } from "@lofit/domain";
 import type { Account } from "@lofit/domain";
 import { useState } from "react";
+import { Sheet } from "./sheet";
 
 function parseAmount(input: string): number | undefined {
     const typed = input.replace(",", ".").replace(/[\u2212\u2013\u2014]/g, "-");
@@ -76,113 +77,103 @@ export function AccountSheet({ account, onClose, onSaved }: Props) {
     }
 
     return (
-        <div className="sheet-layer">
-            <button className="sheet-scrim" aria-label="Close" onClick={onClose} />
-
-            <div
-                className="sheet"
-                role="dialog"
-                aria-label={editing ? "Update balance" : "Add an account"}
-            >
-                <span className="sheet-grip" />
-
-                <div className="sheet-head">
-                    <h4 className="sheet-title">
-                        {editing ? `Update ${account.name}` : "Add an account"}
-                    </h4>
+        <Sheet label={editing ? "Update balance" : "Add an account"} onClose={onClose}>
+            <div className="sheet-head">
+                <h4 className="sheet-title">
+                    {editing ? `Update ${account.name}` : "Add an account"}
+                </h4>
+            </div>
+            {!editing && (
+                <div className="sheet-tags">
+                    <div className="sheet-chips">
+                        {(groups ?? []).map((group) => (
+                            <button
+                                key={group.id}
+                                className={`tag sheet-chip ${chosen === group.id ? "selected" : ""}`}
+                                onClick={() => setGroupId(group.id)}
+                            >
+                                {group.name}
+                            </button>
+                        ))}
+                        {newGroup === undefined ? (
+                            <button className="tag sheet-chip" onClick={() => setNewGroup("")}>
+                                + New group
+                            </button>
+                        ) : (
+                            <span className="sheet-new-group">
+                                <input
+                                    className="input sheet-new-tag"
+                                    autoFocus
+                                    placeholder="New group"
+                                    value={newGroup}
+                                    onChange={(event) => setNewGroup(event.target.value)}
+                                    onKeyDown={(event) => {
+                                        if (event.key === "Enter") {
+                                            event.preventDefault();
+                                            void createGroup();
+                                        }
+                                        if (event.key === "Escape") setNewGroup(undefined);
+                                    }}
+                                />
+                                <button className="btn btn-ghost" onClick={() => void createGroup()}>
+                                    Add
+                                </button>
+                            </span>
+                        )}
+                    </div>
                 </div>
+            )}
+            <div className="sheet-amount">
+                <span className="sheet-currency">€</span>
+                <input
+                    className="sheet-amount-input"
+                    inputMode="text"
+                    placeholder="0.00"
+                    aria-label="Balance"
+                    autoFocus={editing}
+                    value={amount}
+                    onChange={(event) => setAmount(event.target.value)}
+                />
+            </div>
+
+            <div className="sheet-fields">
                 {!editing && (
-                    <div className="sheet-tags">
-                        <div className="sheet-chips">
-                            {(groups ?? []).map((group) => (
-                                <button
-                                    key={group.id}
-                                    className={`tag sheet-chip ${chosen === group.id ? "selected" : ""}`}
-                                    onClick={() => setGroupId(group.id)}
-                                >
-                                    {group.name}
-                                </button>
-                            ))}
-                            {newGroup === undefined ? (
-                                <button className="tag sheet-chip" onClick={() => setNewGroup("")}>
-                                    + New group
-                                </button>
-                            ) : (
-                                <span className="sheet-new-group">
-                                    <input
-                                        className="input sheet-new-tag"
-                                        autoFocus
-                                        placeholder="New group"
-                                        value={newGroup}
-                                        onChange={(event) => setNewGroup(event.target.value)}
-                                        onKeyDown={(event) => {
-                                            if (event.key === "Enter") {
-                                                event.preventDefault();
-                                                void createGroup();
-                                            }
-                                            if (event.key === "Escape") setNewGroup(undefined);
-                                        }}
-                                    />
-                                    <button className="btn btn-ghost" onClick={() => void createGroup()}>
-                                        Add
-                                    </button>
-                                </span>
-                            )}
-                        </div>
-                    </div>
+                    <>
+                        <label className="field">
+                            <span>Name</span>
+                            <input
+                                className="input"
+                                placeholder="Monobank"
+                                value={name}
+                                onChange={(event) => setName(event.target.value)}
+                            />
+                        </label>
+
+                        <label className="field">
+                            <span>Subtitle</span>
+                            <input
+                                className="input"
+                                placeholder="UA•• 4471 · checking"
+                                value={subtitle}
+                                onChange={(event) => setSubtitle(event.target.value)}
+                            />
+                        </label>
+                    </>
                 )}
-                <div className="sheet-amount">
-                    <span className="sheet-currency">€</span>
-                    <input
-                        className="sheet-amount-input"
-                        inputMode="text"
-                        placeholder="0.00"
-                        aria-label="Balance"
-                        autoFocus={editing}
-                        value={amount}
-                        onChange={(event) => setAmount(event.target.value)}
-                    />
-                </div>
 
-                <div className="sheet-fields">
-                    {!editing && (
-                        <>
-                            <label className="field">
-                                <span>Name</span>
-                                <input
-                                    className="input"
-                                    placeholder="Monobank"
-                                    value={name}
-                                    onChange={(event) => setName(event.target.value)}
-                                />
-                            </label>
-
-                            <label className="field">
-                                <span>Subtitle</span>
-                                <input
-                                    className="input"
-                                    placeholder="UA•• 4471 · checking"
-                                    value={subtitle}
-                                    onChange={(event) => setSubtitle(event.target.value)}
-                                />
-                            </label>
-                        </>
-                    )}
-
-                    <div className="sheet-actions">
-                        <button className="btn btn-secondary" onClick={onClose}>
-                            Cancel
-                        </button>
-                        <button
-                            className="btn btn-primary sheet-save"
-                            disabled={blocked}
-                            onClick={save}
-                        >
-                            {pending ? "Saving…" : editing ? "Update balance" : "Add account"}
-                        </button>
-                    </div>
+                <div className="sheet-actions">
+                    <button className="btn btn-secondary" onClick={onClose}>
+                        Cancel
+                    </button>
+                    <button
+                        className="btn btn-primary sheet-save"
+                        disabled={blocked}
+                        onClick={save}
+                    >
+                        {pending ? "Saving…" : editing ? "Update balance" : "Add account"}
+                    </button>
                 </div>
             </div>
-        </div>
+        </Sheet>
     );
 }

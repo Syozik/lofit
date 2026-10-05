@@ -17,9 +17,10 @@ import {
     seriesFor,
 } from "@lofit/domain";
 import type { Cents, Delta, Group, NetWorthGroup, NetWorthItem, RangeKey, Scope } from "@lofit/domain";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { groupColor, OTHER_COLOR, paletteFor } from "../helpers/palette";
-import { monthName, useSetPeriod } from "../period";
+import { monthName } from "../period";
+import { InvestmentTrend, useInvestmentTrend } from "./investmentTrend";
 import { RecentTransactions } from "./recentTransactions";
 import { TrendChart } from "./trendChart";
 
@@ -203,12 +204,12 @@ export function NetWorthTab() {
     const months = inRange(allMonths, range);
     const focusIndex = (mode === "trend" ? selectedIndex : null) ?? months.length - 1;
     const offset = allMonths.length - months.length;
-    const period = months[focusIndex]?.period;
 
-    const setHeaderPeriod = useSetPeriod();
-    useEffect(() => {
-        if (period) setHeaderPeriod(period);
-    }, [period, setHeaderPeriod]);
+    const investingScope =
+        mode === "trend"
+            ? groupRows.data?.find((group) => group.id === scope && group.invests)?.id
+            : undefined;
+    const investments = useInvestmentTrend(investingScope);
 
     if (accounts.isPending || holdings.isPending || snapshots.isPending || groupRows.isPending) {
         return <div className="tab-content">Loading…</div>;
@@ -228,9 +229,12 @@ export function NetWorthTab() {
 
     const fullSeries = seriesFor(allMonths, scope);
     const series = fullSeries.slice(offset);
-    const delta = deltaAt(fullSeries, offset + focusIndex);
     const previous = allMonths[offset + focusIndex - 1]?.period;
-    const total = (mode === "trend" ? series[focusIndex] : undefined) ?? live;
+    const delta = investments.active ? investments.delta : deltaAt(fullSeries, offset + focusIndex);
+    const since = investments.active ? investments.since : previous ? monthName(previous, "long") : "start";
+    const total = investments.active
+        ? (investments.shown?.value ?? live)
+        : ((mode === "trend" ? series[focusIndex] : undefined) ?? live);
 
     const kicker = kickerFor(selected);
 
@@ -282,18 +286,15 @@ export function NetWorthTab() {
                         <span className="net-worth-currency">{total < 0 ? "−€" : "€"}</span>
                         <span>{formatAmount(total)}</span>
                     </div>
-                    {delta && (
-                        <DeltaLine
-                            delta={delta}
-                            previous={previous ? monthName(previous, "long") : "start"}
-                        />
-                    )}
+                    {delta && <DeltaLine delta={delta} previous={since} />}
                 </div>
 
                 {scoped.length > 0 && (
                     <div className="section">
                         <div className="chart-head">
-                            {mode === "trend" ? (
+                            {investments.active ? (
+                                <span className="kicker">{investments.focusLabel}</span>
+                            ) : mode === "trend" ? (
                                 <div className="ranges">
                                     {RANGE_ORDER.map((option) => (
                                         <button
@@ -326,7 +327,9 @@ export function NetWorthTab() {
                             </div>
                         </div>
 
-                        {mode === "trend" ? (
+                        {investments.active ? (
+                            <InvestmentTrend trend={investments} />
+                        ) : mode === "trend" ? (
                             <TrendChart
                                 snapshots={months}
                                 groups={allGroups}
