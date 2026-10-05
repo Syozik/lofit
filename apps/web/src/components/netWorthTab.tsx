@@ -6,7 +6,6 @@ import {
     cents,
     deltaAt,
     formatAmount,
-    formatEuros,
     inRange,
     itemsInScope,
     netWorthGroups,
@@ -20,6 +19,8 @@ import type { Cents, Delta, Group, NetWorthGroup, NetWorthItem, RangeKey, Scope 
 import { useState } from "react";
 import { groupColor, OTHER_COLOR, paletteFor } from "../helpers/palette";
 import { monthName } from "../period";
+import { Donut } from "./donut";
+import type { Slice } from "./donut";
 import { InvestmentTrend, useInvestmentTrend } from "./investmentTrend";
 import { RecentTransactions } from "./recentTransactions";
 import { TrendChart } from "./trendChart";
@@ -41,10 +42,6 @@ const CHART_LABELS: Record<ChartMode, string> = { mix: "Mix", trend: "Trend" };
 
 const MIX_TITLE = "Made of";
 
-const SEGMENT_GAP_DEG = 1.6;
-
-const DIMMED_COLOR = "var(--color-neutral-900)";
-
 function shortEuros(value: Cents): string {
     return `€ ${Math.round(Math.abs(value) / 100).toLocaleString("en-US")}`;
 }
@@ -56,13 +53,6 @@ function signedAmount(value: Cents): string {
 function signedPercent(value: number): string {
     return `${value < 0 ? "−" : "+"}${Math.abs(value).toFixed(1)}%`;
 }
-
-type Slice = {
-    key: string;
-    label: string;
-    value: Cents;
-    color: string;
-};
 
 function toSlices(
     parts: readonly NetWorthItem[],
@@ -112,72 +102,6 @@ function toSlices(
     return slices;
 }
 
-function wholeShares(weights: readonly number[]): number[] {
-    const total = weights.reduce((sum, weight) => sum + weight, 0);
-    if (total === 0) return weights.map(() => 0);
-
-    const exact = weights.map((weight) => (weight / total) * 100);
-    const shares = exact.map((value) => Math.floor(value));
-    const byRemainder = exact
-        .map((value, index) => ({ index, remainder: value - Math.floor(value) }))
-        .sort((a, b) => b.remainder - a.remainder);
-
-    let left = 100 - shares.reduce((sum, share) => sum + share, 0);
-    for (const { index } of byRemainder) {
-        if (left <= 0) break;
-        shares[index]! += 1;
-        left -= 1;
-    }
-
-    return shares;
-}
-
-type Segment = Slice & {
-    share: number;
-    from: number;
-    to: number;
-    end: number;
-};
-
-function toSegments(slices: readonly Slice[]): Segment[] {
-    const weights = slices.map((slice) => Math.abs(slice.value));
-    const total = weights.reduce((sum, weight) => sum + weight, 0);
-    if (total === 0) return [];
-
-    const shares = wholeShares(weights);
-    const segments: Segment[] = [];
-    let sweptDeg = 0;
-
-    for (const [index, slice] of slices.entries()) {
-        const sweep = (weights[index]! / total) * 360;
-        const from = sweptDeg;
-        sweptDeg += sweep;
-        const gap = slices.length > 1 ? Math.min(SEGMENT_GAP_DEG, sweep / 3) : 0;
-
-        segments.push({
-            ...slice,
-            share: shares[index]!,
-            from,
-            to: sweptDeg - gap,
-            end: sweptDeg,
-        });
-    }
-
-    return segments;
-}
-
-function ringGradient(segments: readonly Segment[], focused: string | null): string {
-    const stops = segments.map(({ key, color, from, to, end }) => {
-        const paint = !focused || key === focused ? color : DIMMED_COLOR;
-        return (
-            `${paint} ${from.toFixed(2)}deg ${to.toFixed(2)}deg, ` +
-            `transparent ${to.toFixed(2)}deg ${end.toFixed(2)}deg`
-        );
-    });
-
-    return `conic-gradient(from -90deg, ${stops.join(", ")})`;
-}
-
 function DeltaLine({ delta, previous }: { delta: Delta; previous: string }) {
     return (
         <div className={`delta ${delta.favourable ? "up" : ""}`}>
@@ -223,9 +147,7 @@ export function NetWorthTab() {
     const selected = groups.find((entry) => entry.group.id === scope);
     const scoped = itemsInScope(groups, scope);
     const live = scoped.reduce((sum, item) => addCents(sum, item.value), cents(0));
-    const segments = toSegments(
-        toSlices(scoped, allGroups, selected ? owesMoney(selected.total) : false),
-    );
+    const slices = toSlices(scoped, allGroups, selected ? owesMoney(selected.total) : false);
 
     const fullSeries = seriesFor(allMonths, scope);
     const series = fullSeries.slice(offset);
@@ -338,53 +260,14 @@ export function NetWorthTab() {
                                 onSelect={setSelectedIndex}
                             />
                         ) : (
-                            <div className="composition">
-                                <div className="donut">
-                                    <div
-                                        className="donut-ring"
-                                        style={{
-                                            background: ringGradient(segments, focusedSlice),
-                                        }}
-                                    />
-                                    <div className="donut-hole">
-                                        <span className="donut-label">
-                                            {centreLabel(selected)}
-                                        </span>
-                                        <span className="donut-value">{shortEuros(centre)}</span>
-                                    </div>
-                                </div>
-
-                                <div
-                                className={`legend ${scope === ALL_GROUPS ? "" : "scoped"}`}
-                            >
-                                    {segments.map(({ key, label, value, color, share }) => (
-                                        <button
-                                            key={key}
-                                            className={`legend-item ${focusedSlice && focusedSlice !== key ? "dimmed" : ""}`}
-                                            aria-pressed={focusedSlice === key}
-                                            onClick={() =>
-                                                setFocusedSlice(focusedSlice === key ? null : key)
-                                            }
-                                        >
-                                            <span className="legend-head">
-                                                <span
-                                                    className="legend-dot"
-                                                    style={{ background: color }}
-                                                />
-                                                <span className="legend-name" title={label}>
-                                                    {label}
-                                                </span>
-                                                <span className="legend-share">{share}%</span>
-                                            </span>
-                                            <span
-                                                className={`legend-value ${value < 0 ? "negative" : ""}`}
-                                            >
-                                                {formatEuros(value)}
-                                            </span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                            <Donut
+                                slices={slices}
+                                focused={focusedSlice}
+                                onFocus={setFocusedSlice}
+                                label={centreLabel(selected)}
+                                value={shortEuros(centre)}
+                                scoped={scope !== ALL_GROUPS}
+                            />
                         )}
                     </div>
                 )}

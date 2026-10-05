@@ -6,7 +6,7 @@ const SHADES = [
 
 const GREYS = ["var(--color-neutral-700)", "var(--color-neutral-800)"] as const;
 
-const OWNED = [
+export const CATEGORY_COLORS = [
     "var(--color-accent-400)",
     "var(--color-accent-600)",
     "var(--color-accent-2-400)",
@@ -15,6 +15,8 @@ const OWNED = [
 ] as const;
 
 export const OTHER_COLOR = "var(--color-neutral-600)";
+
+export const UNTAGGED_COLOR = "var(--color-neutral-700)";
 
 const VISIBLE_CAP = 4;
 
@@ -30,7 +32,7 @@ export function paletteFor(owed: boolean): Palette {
 
 export function groupColor(position: number, owed: boolean): string {
     if (owed) return GREYS[0];
-    return OWNED[position % OWNED.length]!;
+    return CATEGORY_COLORS[position % CATEGORY_COLORS.length]!;
 }
 
 const RANKED = [
