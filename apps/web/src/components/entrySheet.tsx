@@ -357,7 +357,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                             <span className="sheet-hint">
                                 {assetType === "crypto"
                                     ? "CoinGecko id · empty keeps the price you typed"
-                                    : "NASDAQ and NYSE need no suffix · European listings do, like VWRL.AS"}
+                                    : "NASDAQ and NYSE need no suffix · European listings do, e.g. VWRL.AS"}
                             </span>
                         </label>
 
