@@ -25,6 +25,7 @@ import type { Account, AccountChange, Cents, Group, Holding } from "@lofit/domai
 import { useState } from "react";
 import { useToast } from "../toast";
 import { ACTION_WIDTH, useSwipe } from "../useSwipe";
+import { AccountHistory } from "./accountHistory";
 import { AccountSheet } from "./accountSheet";
 import { HoldingSheet } from "./holdingSheet";
 import { PortfolioChart } from "./portfolioChart";
@@ -106,10 +107,19 @@ type AccountCardProps = {
     open: boolean;
     onToggle: () => void;
     onUpdate: () => void;
+    onHistory: () => void;
     children?: React.ReactNode;
 };
 
-function AccountCard({ account, holdings, open, onToggle, onUpdate, children }: AccountCardProps) {
+function AccountCard({
+    account,
+    holdings,
+    open,
+    onToggle,
+    onUpdate,
+    onHistory,
+    children,
+}: AccountCardProps) {
     const positions = sumItems(netWorthItems([], holdings));
     const worth = addCents(account.balance, positions);
     return (
@@ -155,7 +165,7 @@ function AccountCard({ account, holdings, open, onToggle, onUpdate, children }: 
                         </div>
                     ))}
                     <div className="acct-actions">
-                        <button className="btn btn-secondary" disabled>
+                        <button className="btn btn-secondary" onClick={onHistory}>
                             History
                         </button>
                         <button className="btn btn-secondary" onClick={onUpdate}>
@@ -236,6 +246,7 @@ export function AccountsTab() {
     const refresh = useRefreshPrices();
     const [openId, setOpenId] = useState<string | null>(null);
     const [editing, setEditing] = useState<Account | null>(null);
+    const [history, setHistory] = useState<Account | null>(null);
     const [adding, setAdding] = useState(false);
     const [position, setPosition] = useState<Holding | null>(null);
     const show = useToast();
@@ -319,6 +330,7 @@ export function AccountsTab() {
                                             setOpenId(openId === account.id ? null : account.id)
                                         }
                                         onUpdate={() => setEditing(account)}
+                                        onHistory={() => setHistory(account)}
                                     >
                                         <div className="acct-holdings">
                                             {holdingsFor(holdings, account.id).map((holding) => (
@@ -361,6 +373,10 @@ export function AccountsTab() {
                     onClose={() => setPosition(null)}
                     onDone={show}
                 />
+            )}
+
+            {history && (
+                <AccountHistory account={history} accounts={accounts} onClose={() => setHistory(null)} />
             )}
 
             {editing && (

@@ -1647,3 +1647,14 @@ button.sheet-currency.switchable:hover {
 .trend-key.invested::before {
     border-top: 1.25px dashed var(--color-neutral-500);
 }
+
+.history-net {
+    margin-left: auto;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-neutral-600);
+}
+
+.history-net.up {
+    color: var(--color-accent-300);
+}
