@@ -19,7 +19,8 @@ export default function SignInScreen() {
     const [pending, setPending] = useState(false);
 
     const short = password.length > 0 && password.length < MIN_PASSWORD;
-    const blocked = pending || !email.trim() || password.length < MIN_PASSWORD || (joining && !name.trim());
+    const blocked =
+        pending || !email.trim() || password.length < MIN_PASSWORD || (joining && !name.trim());
 
     async function submit() {
         if (blocked) return;
@@ -39,17 +40,25 @@ export default function SignInScreen() {
     return (
         <SafeAreaView style={styles.screen}>
             <KeyboardAvoidingView style={styles.screen} behavior="height">
-                <ScrollView contentContainerStyle={styles.center} keyboardShouldPersistTaps="handled">
+                <ScrollView
+                    contentContainerStyle={styles.center}
+                    keyboardShouldPersistTaps="handled"
+                >
                     <View style={styles.card}>
                         <View style={styles.head}>
                             <Text style={styles.wordmark}>lofit</Text>
                             <Text style={styles.note}>
-                                {joining ? "Everything in euros, in one place." : "Welcome back."}
+                                {joining ? "All your financials, in one place." : "Welcome back."}
                             </Text>
                         </View>
 
                         {joining && (
-                            <Field label="Name" value={name} onChangeText={setName} autoComplete="name" />
+                            <Field
+                                label="Name"
+                                value={name}
+                                onChangeText={setName}
+                                autoComplete="name"
+                            />
                         )}
 
                         <Field
@@ -73,7 +82,11 @@ export default function SignInScreen() {
                             autoCapitalize="none"
                             autoCorrect={false}
                             onSubmitEditing={() => void submit()}
-                            hint={joining && short ? `At least ${MIN_PASSWORD} characters.` : undefined}
+                            hint={
+                                joining && short
+                                    ? `At least ${MIN_PASSWORD} characters.`
+                                    : undefined
+                            }
                             trailing={
                                 <Pressable
                                     accessibilityLabel={visible ? "Hide password" : "Show password"}

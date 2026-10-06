@@ -3,6 +3,7 @@ import type { Transaction } from "@lofit/domain";
 import { amountFor, monogram, transactionMeta } from "@lofit/view";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, fonts, radius } from "../theme";
+import { SwipeRow } from "./SwipeRow";
 
 type Props = {
     transaction: Transaction;
@@ -10,12 +11,24 @@ type Props = {
     tagNames: ReadonlyMap<string, string>;
     viewedFrom?: string;
     onPress?: (transaction: Transaction) => void;
+    onEdit?: (transaction: Transaction) => void;
+    onDelete?: (transaction: Transaction) => void;
+    surface?: string;
 };
 
-export function TransactionRow({ transaction, accountNames, tagNames, viewedFrom, onPress }: Props) {
+export function TransactionRow({
+    transaction,
+    accountNames,
+    tagNames,
+    viewedFrom,
+    onPress,
+    onEdit,
+    onDelete,
+    surface,
+}: Props) {
     const amount = amountFor(transaction, viewedFrom);
 
-    return (
+    const row = (
         <Pressable
             disabled={!onPress}
             onPress={() => onPress?.(transaction)}
@@ -37,6 +50,19 @@ export function TransactionRow({ transaction, accountNames, tagNames, viewedFrom
                 {formatAmount(cents(amount))}
             </Text>
         </Pressable>
+    );
+
+    if (!onDelete) return row;
+
+    return (
+        <SwipeRow
+            label={transaction.name}
+            onEdit={onEdit ? () => onEdit(transaction) : undefined}
+            onDelete={() => onDelete(transaction)}
+            {...(surface ? { surface } : {})}
+        >
+            {row}
+        </SwipeRow>
     );
 }
 
@@ -64,6 +90,11 @@ const styles = StyleSheet.create({
     text: { flex: 1, minWidth: 0, gap: 2 },
     name: { fontFamily: fonts.regular, fontSize: 14, color: colors.text },
     meta: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
-    amount: { fontFamily: fonts.regular, fontSize: 14, color: colors.text, fontVariant: ["tabular-nums"] },
+    amount: {
+        fontFamily: fonts.regular,
+        fontSize: 14,
+        color: colors.text,
+        fontVariant: ["tabular-nums"],
+    },
     positive: { color: colors.accentStrong },
 });

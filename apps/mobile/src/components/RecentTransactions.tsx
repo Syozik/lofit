@@ -3,6 +3,8 @@ import { ALL_GROUPS, byRecency, forAccounts } from "@lofit/domain";
 import type { Account, Scope } from "@lofit/domain";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useOpenEntry } from "../context/entry";
+import { useRemoveTransaction } from "../hooks/useRemoveTransaction";
 import { colors, fonts, space } from "../theme";
 import { text } from "./Screen";
 import { TransactionRow } from "./TransactionRow";
@@ -17,6 +19,8 @@ type Props = {
 export function RecentTransactions({ accounts, scope }: Props) {
     const transactions = useTransactions();
     const tags = useTags();
+    const remove = useRemoveTransaction();
+    const openEntry = useOpenEntry();
 
     if (transactions.isPending) return null;
     if (transactions.isError) return <Text style={text.muted}>Could not load activity</Text>;
@@ -50,6 +54,8 @@ export function RecentTransactions({ accounts, scope }: Props) {
                             transaction={transaction}
                             accountNames={accountNames}
                             tagNames={tagNames}
+                            onEdit={openEntry}
+                            onDelete={remove}
                         />
                     ))}
                 </View>

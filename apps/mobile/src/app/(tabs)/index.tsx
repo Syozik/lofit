@@ -13,7 +13,15 @@ import {
     seriesFor,
 } from "@lofit/domain";
 import type { Delta, Scope } from "@lofit/domain";
-import { centreLabel, kickerFor, monthName, netWorthSlices, shortEuros, signedAmount, signedPercent } from "@lofit/view";
+import {
+    centreLabel,
+    kickerFor,
+    monthName,
+    netWorthSlices,
+    shortEuros,
+    signedAmount,
+    signedPercent,
+} from "@lofit/view";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Donut } from "../../components/Donut";
@@ -84,14 +92,23 @@ export default function NetWorthScreen() {
     return (
         <Screen refreshing={refreshing} onRefresh={refresh}>
             <View style={styles.summary}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.groups}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.groups}
+                >
                     {[{ id: ALL_GROUPS, name: ALL_GROUPS_LABEL }, ...allGroups].map((group) => (
                         <Pressable
                             key={group.id}
                             onPress={() => choose(group.id)}
                             style={[styles.group, scope === group.id && styles.groupActive]}
                         >
-                            <Text style={[styles.groupText, scope === group.id && styles.groupTextActive]}>
+                            <Text
+                                style={[
+                                    styles.groupText,
+                                    scope === group.id && styles.groupTextActive,
+                                ]}
+                            >
                                 {group.name}
                             </Text>
                         </Pressable>
@@ -104,7 +121,12 @@ export default function NetWorthScreen() {
                         {formatAmount(total)}
                     </Text>
                 </View>
-                {delta && <DeltaLine delta={delta} previous={previous ? monthName(previous, "long") : "start"} />}
+                {delta && (
+                    <DeltaLine
+                        delta={delta}
+                        previous={previous ? monthName(previous, "long") : "start"}
+                    />
+                )}
             </View>
 
             {scoped.length > 0 && (
@@ -128,9 +150,20 @@ export default function NetWorthScreen() {
 const styles = StyleSheet.create({
     summary: { gap: 6 },
     groups: { gap: 6, marginBottom: 2 },
-    group: { paddingVertical: 5, paddingHorizontal: 10, borderRadius: radius.md * 0.75 },
-    groupActive: { backgroundColor: colors.accentSoft },
-    groupText: { fontFamily: fonts.regular, fontSize: 12, color: colors.quiet },
+    group: {
+        paddingVertical: 4,
+        paddingHorizontal: 10,
+        borderRadius: radius.md * 0.75,
+        borderWidth: 1,
+        borderColor: colors.divider,
+    },
+    groupActive: { backgroundColor: colors.accentSoft, borderColor: colors.accentSoft },
+    groupText: {
+        fontFamily: fonts.regular,
+        fontSize: 11.5,
+        letterSpacing: 0.2,
+        color: colors.quiet,
+    },
     groupTextActive: { color: colors.accentInk },
     netWorth: { flexDirection: "row", alignItems: "center", gap: 8 },
     currency: { fontFamily: fonts.medium, fontSize: 30, color: colors.subtle },
@@ -143,7 +176,12 @@ const styles = StyleSheet.create({
         fontVariant: ["tabular-nums", "lining-nums"],
     },
     delta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 2 },
-    deltaAmount: { fontFamily: fonts.regular, fontSize: 13, color: colors.text, fontVariant: ["tabular-nums"] },
+    deltaAmount: {
+        fontFamily: fonts.regular,
+        fontSize: 13,
+        color: colors.text,
+        fontVariant: ["tabular-nums"],
+    },
     deltaPct: { fontFamily: fonts.regular, fontSize: 13, color: colors.text, opacity: 0.7 },
     deltaVs: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
     up: { color: colors.accentStrong },

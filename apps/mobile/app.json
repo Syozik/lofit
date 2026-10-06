@@ -1,34 +1,35 @@
 {
-  "expo": {
-    "name": "lofit",
-    "slug": "lofit",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#F6F7FC",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      },
-      "predictiveBackGestureEnabled": false,
-      "package": "app.lofit",
-      "softwareKeyboardLayoutMode": "resize"
-    },
-    "plugins": [
-      "expo-router",
-      "expo-secure-store",
-      "expo-web-browser",
-      "expo-font"
-    ],
-    "scheme": "lofit",
-    "experiments": {
-      "typedRoutes": true
+    "expo": {
+        "name": "lofit",
+        "slug": "lofit",
+        "version": "1.0.0",
+        "orientation": "portrait",
+        "icon": "./assets/icon.png",
+        "userInterfaceStyle": "light",
+        "ios": {
+            "supportsTablet": true
+        },
+        "android": {
+            "adaptiveIcon": {
+                "backgroundColor": "#F6F7FC",
+                "foregroundImage": "./assets/android-icon-foreground.png",
+                "backgroundImage": "./assets/android-icon-background.png",
+                "monochromeImage": "./assets/android-icon-monochrome.png"
+            },
+            "predictiveBackGestureEnabled": false,
+            "package": "app.lofit",
+            "softwareKeyboardLayoutMode": "resize"
+        },
+        "plugins": [
+            "expo-router",
+            "expo-secure-store",
+            "expo-web-browser",
+            "expo-font",
+            "@react-native-community/datetimepicker"
+        ],
+        "scheme": "lofit",
+        "experiments": {
+            "typedRoutes": true
+        }
     }
-  }
 }

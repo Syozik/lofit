@@ -12,6 +12,7 @@ import { useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { ToastProvider } from "../components/Toast";
 import { colors } from "../theme";
 
 function Routes() {
@@ -47,8 +48,10 @@ export default function RootLayout() {
         <GestureHandlerRootView style={styles.root}>
             <SafeAreaProvider>
                 <QueryClientProvider client={client}>
-                    <StatusBar style="dark" />
-                    {fontsLoaded ? <Routes /> : <View style={styles.splash} />}
+                    <ToastProvider>
+                        <StatusBar style="dark" />
+                        {fontsLoaded ? <Routes /> : <View style={styles.splash} />}
+                    </ToastProvider>
                 </QueryClientProvider>
             </SafeAreaProvider>
         </GestureHandlerRootView>
