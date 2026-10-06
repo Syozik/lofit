@@ -1,4 +1,4 @@
-import { formatAmount, KIND_LABELS } from "@lofit/domain";
+import { balanceChanges, cents, formatAmount, KIND_LABELS } from "@lofit/domain";
 import type { Transaction } from "@lofit/domain";
 import { Pencil, Trash2 } from "lucide-react";
 import { ACTION_WIDTH, useSwipe } from "../useSwipe";
@@ -13,15 +13,24 @@ function metaLine(
     transaction: Transaction,
     accountNames: Map<string, string>,
     tagNames: Map<string, string>,
+    viewedFrom?: string,
 ): string {
     const labels = transaction.tagIds.map((id) => tagNames.get(id) ?? "Unknown tag");
     const what = labels.length > 0 ? labels.join(" · ") : KIND_LABELS[transaction.kind];
 
     const from = accountNames.get(transaction.accountId) ?? "Unknown account";
     const to = transaction.toAccountId ? accountNames.get(transaction.toAccountId) : undefined;
-    const where = to ? `${from} → ${to}` : from;
+    const where = viewedFrom
+        ? transaction.toAccountId === viewedFrom
+            ? `from ${from}`
+            : to
+              ? `to ${to}`
+              : ""
+        : to
+          ? `${from} → ${to}`
+          : from;
 
-    return `${dayFormat.format(new Date(transaction.occurredAt))} · ${what} · ${where}`;
+    return [dayFormat.format(new Date(transaction.occurredAt)), what, where].filter(Boolean).join(" · ");
 }
 
 type Props = {
@@ -30,6 +39,7 @@ type Props = {
     tagNames: Map<string, string>;
     onEdit?: (transaction: Transaction) => void;
     onDelete?: (transaction: Transaction) => void;
+    viewedFrom?: string;
 };
 
 export function TransactionRow({
@@ -38,7 +48,14 @@ export function TransactionRow({
     tagNames,
     onEdit,
     onDelete,
+    viewedFrom,
 }: Props) {
+    const amount = viewedFrom
+        ? balanceChanges(transaction)
+              .filter((change) => change.accountId === viewedFrom)
+              .reduce((sum, change) => sum + change.delta, 0)
+        : transaction.amount;
+
     const actionable = onDelete !== undefined && onEdit !== undefined;
     const { offset, dragging, handlers } = useSwipe({ enabled: actionable, actions: 2 });
 
@@ -53,11 +70,11 @@ export function TransactionRow({
                 <span className="recent-name" title={transaction.name}>
                     {transaction.name}
                 </span>
-                <span className="recent-meta">{metaLine(transaction, accountNames, tagNames)}</span>
+                <span className="recent-meta">{metaLine(transaction, accountNames, tagNames, viewedFrom)}</span>
             </span>
-            <span className={`recent-amount ${transaction.amount > 0 ? "positive" : ""}`}>
-                {transaction.amount > 0 ? "+ € " : "− € "}
-                {formatAmount(transaction.amount)}
+            <span className={`recent-amount ${amount > 0 ? "positive" : ""}`}>
+                {amount > 0 ? "+ € " : "− € "}
+                {formatAmount(cents(amount))}
             </span>
         </div>
     );

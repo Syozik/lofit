@@ -1673,3 +1673,7 @@ button.sheet-currency.switchable:hover {
     line-height: 1.5;
     color: var(--color-neutral-400);
 }
+
+.sheet .txn-swipe .recent-row {
+    background: var(--color-surface);
+}

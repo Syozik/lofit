@@ -96,6 +96,7 @@ export function AccountHistory({ account, accounts, onClose }: Props) {
                                         tagNames={tagNames}
                                         onEdit={setEditing}
                                         onDelete={remove}
+                                        viewedFrom={account.id}
                                     />
                                 ))}
                             </div>
