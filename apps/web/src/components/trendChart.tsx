@@ -2,16 +2,18 @@ import { amountIn, byPosition, formatEuros } from "@lofit/domain";
 import type { Cents, Group, Snapshot } from "@lofit/domain";
 import { groupColor } from "@lofit/view";
 import { cssColor } from "../helpers/palette";
-import { monthName } from "../period";
+import { monthName, yearOf } from "../period";
+import { useDesktop } from "../useDesktop";
 
 const BAR_FLOOR = 26;
 const BAR_RANGE = 58;
+const BAR_FLOOR_SHARE = 24;
 const BASELINE_SLACK = 0.972;
 
 type Bar = {
     period: string;
     label: string;
-    height: number;
+    level: number;
 };
 
 function labelStride(count: number): number {
@@ -32,7 +34,7 @@ function toBars(snapshots: readonly Snapshot[], series: readonly Cents[]): Bar[]
     return snapshots.map((snapshot, index) => ({
         period: snapshot.period,
         label: (last - index) % stride === 0 ? monthName(snapshot.period, "short") : "",
-        height: Math.round(BAR_FLOOR + (((magnitudes[index] ?? 0) - lo) / span) * BAR_RANGE),
+        level: ((magnitudes[index] ?? 0) - lo) / span,
     }));
 }
 
@@ -67,6 +69,7 @@ type Props = {
 };
 
 export function TrendChart({ snapshots, groups, series, selectedIndex, onSelect }: Props) {
+    const desktop = useDesktop();
     const selected = snapshots[selectedIndex];
     if (!selected) return null;
 
@@ -83,7 +86,14 @@ export function TrendChart({ snapshots, groups, series, selectedIndex, onSelect 
                         aria-pressed={index === selectedIndex}
                         onClick={() => onSelect(index)}
                     >
-                        <span className="trend-fill" style={{ height: bar.height }} />
+                        <span
+                            className="trend-fill"
+                            style={{
+                                height: desktop
+                                    ? `${BAR_FLOOR_SHARE + bar.level * (100 - BAR_FLOOR_SHARE)}%`
+                                    : Math.round(BAR_FLOOR + bar.level * BAR_RANGE),
+                            }}
+                        />
                         {bar.label && <span className="trend-label">{bar.label}</span>}
                     </button>
                 ))}
@@ -99,6 +109,11 @@ export function TrendChart({ snapshots, groups, series, selectedIndex, onSelect 
             </div>
 
             <div className="trend-parts">
+                {desktop && (
+                    <span className="trend-month">
+                        {monthName(selected.period, "short")} {yearOf(selected.period)}
+                    </span>
+                )}
                 {parts.map((part) => (
                     <div key={part.label} className="trend-part">
                         <span className="trend-dot" style={{ background: part.color }} />

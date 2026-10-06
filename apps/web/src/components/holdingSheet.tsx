@@ -3,6 +3,7 @@ import { euros, formatAmount, formatEuros, holdingValue, unitCost } from "@lofit
 import type { Holding } from "@lofit/domain";
 import { dayFormat, inCurrency, parsePositive } from "@lofit/view";
 import { useState } from "react";
+import { useDesktop } from "../useDesktop";
 import { PriceChart } from "./priceChart";
 import { Sheet } from "./sheet";
 
@@ -18,6 +19,7 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
     const sell = useSellHolding();
     const remove = useDeleteHolding();
     const history = useHoldingHistory(holding.id);
+    const desktop = useDesktop();
 
     const [selling, setSelling] = useState(false);
     const [quantity, setQuantity] = useState(String(holding.quantity));
@@ -76,10 +78,12 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
 
     return (
         <Sheet label={holding.symbol} onClose={onClose}>
-            <div className="sheet-head">
+            <div className={desktop ? "sheet-head holding-head" : "sheet-head"}>
                 <h4 className="sheet-title">{holding.symbol}</h4>
+                {desktop && <span className="holding-head-name">{holding.name}</span>}
                 <span className="sheet-note">
-                    {holding.name} · {accountName} · worth {formatEuros(holdingValue(holding))} ·
+                    {!desktop && `${holding.name} · `}
+                    {accountName} · worth {formatEuros(holdingValue(holding))} ·
                     since {dayFormat.format(new Date(holding.heldSince))}
                 </span>
             </div>

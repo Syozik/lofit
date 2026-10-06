@@ -17,11 +17,12 @@ import {
 } from "@lofit/domain";
 import type { Delta, RangeKey, Scope } from "@lofit/domain";
 import { useState } from "react";
-import { monthName } from "../period";
+import { monthName, yearOf } from "../period";
 import { centreLabel, kickerFor, netWorthSlices, shortEuros, signedAmount, signedPercent } from "@lofit/view";
 import { Donut } from "./donut";
+import { useDesktop } from "../useDesktop";
 import { useInvestmentTrend } from "../useInvestmentTrend";
-import { InvestmentTrend } from "./investmentTrend";
+import { InvestmentRanges, InvestmentTrend } from "./investmentTrend";
 import { RecentTransactions } from "./recentTransactions";
 import { TrendChart } from "./trendChart";
 
@@ -54,16 +55,18 @@ export function NetWorthTab() {
     const [range, setRange] = useState<RangeKey>("1y");
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
     const [focusedSlice, setFocusedSlice] = useState<string | null>(null);
+    const desktop = useDesktop();
+    const showTrend = desktop || mode === "trend";
+    const picked = desktop ? selectedIndex !== null : mode === "trend";
 
     const allMonths = snapshots.data ?? [];
     const months = inRange(allMonths, range);
-    const focusIndex = (mode === "trend" ? selectedIndex : null) ?? months.length - 1;
+    const focusIndex = (showTrend ? selectedIndex : null) ?? months.length - 1;
     const offset = allMonths.length - months.length;
 
-    const investingScope =
-        mode === "trend"
-            ? groupRows.data?.find((group) => group.id === scope && group.invests)?.id
-            : undefined;
+    const investingScope = showTrend
+        ? groupRows.data?.find((group) => group.id === scope && group.invests)?.id
+        : undefined;
     const investments = useInvestmentTrend(investingScope);
 
     if (accounts.isPending || holdings.isPending || snapshots.isPending || groupRows.isPending) {
@@ -87,25 +90,57 @@ export function NetWorthTab() {
     const since = investments.active ? investments.since : previous ? monthName(previous, "long") : "start";
     const total = investments.active
         ? (investments.shown?.value ?? live)
-        : ((mode === "trend" ? series[focusIndex] : undefined) ?? live);
+        : ((picked ? series[focusIndex] : undefined) ?? live);
 
-    const kicker = kickerFor(selected);
+    const history = desktop && !investments.active && selectedIndex !== null ? months[focusIndex] : undefined;
+    const kicker = history
+        ? `${kickerFor(selected)} · ${monthName(history.period, "short")} ${yearOf(history.period)}`
+        : kickerFor(selected);
 
-    const snapshot = months[focusIndex];
     const liveAssets = groups
         .filter((entry) => !owesMoney(entry.total))
         .reduce((sum, entry) => addCents(sum, entry.total), cents(0));
-    const ownedThatMonth = snapshot
-        ? snapshot.groups
-              .filter((entry) => entry.amount > 0)
-              .reduce((sum, entry) => addCents(sum, entry.amount), cents(0))
-        : cents(0);
-    const centre =
-        scope !== ALL_GROUPS
-            ? total
-            : mode === "trend" && snapshot
-              ? ownedThatMonth
-              : liveAssets;
+    const centre = scope !== ALL_GROUPS ? live : liveAssets;
+
+    const rangeChips = (
+        <div className="ranges">
+            {RANGE_ORDER.map((option) => (
+                <button
+                    key={option}
+                    className={`tag range-chip ${range === option ? "selected" : ""}`}
+                    onClick={() => {
+                        setRange(option);
+                        setSelectedIndex(null);
+                    }}
+                >
+                    {RANGE_LABELS[option]}
+                </button>
+            ))}
+        </div>
+    );
+
+    const trend = investments.active ? (
+        <InvestmentTrend trend={investments} ranges={!desktop} />
+    ) : (
+        <TrendChart
+            snapshots={months}
+            groups={allGroups}
+            series={series}
+            selectedIndex={focusIndex}
+            onSelect={setSelectedIndex}
+        />
+    );
+
+    const mix = (
+        <Donut
+            slices={slices}
+            focused={focusedSlice}
+            onFocus={setFocusedSlice}
+            label={centreLabel(selected)}
+            value={shortEuros(centre)}
+            scoped={scope !== ALL_GROUPS}
+        />
+    );
 
     return (
         <div className="tab-content">
@@ -142,66 +177,57 @@ export function NetWorthTab() {
                     {delta && <DeltaLine delta={delta} previous={since} />}
                 </div>
 
-                {scoped.length > 0 && (
-                    <div className="section">
-                        <div className="chart-head">
-                            {investments.active ? (
-                                <span className="kicker">{investments.focusLabel}</span>
-                            ) : mode === "trend" ? (
-                                <div className="ranges">
-                                    {RANGE_ORDER.map((option) => (
-                                        <button
-                                            key={option}
-                                            className={`tag range-chip ${range === option ? "selected" : ""}`}
-                                            onClick={() => {
-                                                setRange(option);
-                                                setSelectedIndex(null);
-                                            }}
-                                        >
-                                            {RANGE_LABELS[option]}
-                                        </button>
-                                    ))}
+                {scoped.length > 0 &&
+                    (desktop ? (
+                        <div className="nw-charts">
+                            <div className="section panel nw-trend">
+                                <div className="chart-head">
+                                    {investments.active ? (
+                                        <>
+                                            <span className="kicker">{investments.focusLabel}</span>
+                                            <InvestmentRanges trend={investments} />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="kicker">Trend</span>
+                                            {rangeChips}
+                                        </>
+                                    )}
                                 </div>
-                            ) : (
+                                {trend}
+                            </div>
+                            <div className="section panel nw-mix">
                                 <span className="kicker">{MIX_TITLE}</span>
-                            )}
-                            <div className="seg chart-modes">
-                                {CHART_MODES.map((option) => (
-                                    <label key={option} className="seg-opt">
-                                        <input
-                                            type="radio"
-                                            name="chart-mode"
-                                            checked={mode === option}
-                                            onChange={() => setMode(option)}
-                                        />
-                                        {CHART_LABELS[option]}
-                                    </label>
-                                ))}
+                                {mix}
                             </div>
                         </div>
-
-                        {investments.active ? (
-                            <InvestmentTrend trend={investments} />
-                        ) : mode === "trend" ? (
-                            <TrendChart
-                                snapshots={months}
-                                groups={allGroups}
-                                series={series}
-                                selectedIndex={focusIndex}
-                                onSelect={setSelectedIndex}
-                            />
-                        ) : (
-                            <Donut
-                                slices={slices}
-                                focused={focusedSlice}
-                                onFocus={setFocusedSlice}
-                                label={centreLabel(selected)}
-                                value={shortEuros(centre)}
-                                scoped={scope !== ALL_GROUPS}
-                            />
-                        )}
-                    </div>
-                )}
+                    ) : (
+                        <div className="section">
+                            <div className="chart-head">
+                                {investments.active ? (
+                                    <span className="kicker">{investments.focusLabel}</span>
+                                ) : mode === "trend" ? (
+                                    rangeChips
+                                ) : (
+                                    <span className="kicker">{MIX_TITLE}</span>
+                                )}
+                                <div className="seg chart-modes">
+                                    {CHART_MODES.map((option) => (
+                                        <label key={option} className="seg-opt">
+                                            <input
+                                                type="radio"
+                                                name="chart-mode"
+                                                checked={mode === option}
+                                                onChange={() => setMode(option)}
+                                            />
+                                            {CHART_LABELS[option]}
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                            {mode === "trend" ? trend : mix}
+                        </div>
+                    ))}
 
                 <RecentTransactions accounts={accounts.data} scope={scope} />
             </div>

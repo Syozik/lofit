@@ -10,6 +10,60 @@ import { EntrySheet } from "./entrySheet";
 import { Sheet } from "./sheet";
 import { TransactionRow } from "./transactionRow";
 
+type ActivityProps = {
+    account: Account;
+    accounts: readonly Account[];
+    onEdit: (transaction: Transaction) => void;
+};
+
+export function AccountActivity({ account, accounts, onEdit }: ActivityProps) {
+    const transactions = useTransactions();
+    const { data: tags } = useTags();
+    const remove = useRemoveTransaction();
+
+    if (transactions.isPending) return <span className="recent-empty">Loading…</span>;
+    if (transactions.isError) return <span className="recent-empty">Could not load activity</span>;
+
+    const accountNames = new Map(accounts.map((entry) => [entry.id, entry.name]));
+    const tagNames = new Map((tags ?? []).map((tag) => [tag.id, tag.name]));
+    const months = historyByMonth(
+        forAccounts(transactions.data, new Set([account.id])),
+        account.id,
+    );
+    const thisYear = new Date().getUTCFullYear().toString();
+
+    if (months.length === 0) {
+        return <span className="recent-empty">No activity on this account yet</span>;
+    }
+
+    return months.map((month) => (
+        <div key={month.period} className="section recent-section tight">
+            <div className="section-head">
+                <span className="kicker">
+                    {monthName(month.period, "long")}
+                    {yearOf(month.period) === thisYear ? "" : ` ${yearOf(month.period)}`}
+                </span>
+                <span className={`history-net ${month.net > 0 ? "up" : ""}`}>
+                    {signedAmount(cents(month.net))}
+                </span>
+            </div>
+            <div className="recent">
+                {month.entries.map((transaction) => (
+                    <TransactionRow
+                        key={transaction.id}
+                        transaction={transaction}
+                        accountNames={accountNames}
+                        tagNames={tagNames}
+                        onEdit={onEdit}
+                        onDelete={remove}
+                        viewedFrom={account.id}
+                    />
+                ))}
+            </div>
+        </div>
+    ));
+}
+
 type Props = {
     account: Account;
     accounts: readonly Account[];
@@ -18,16 +72,9 @@ type Props = {
 
 export function AccountHistory({ account, accounts, onClose }: Props) {
     const transactions = useTransactions();
-    const { data: tags } = useTags();
-    const remove = useRemoveTransaction();
     const show = useToast();
     const [editing, setEditing] = useState<Transaction | null>(null);
-
-    const accountNames = new Map(accounts.map((entry) => [entry.id, entry.name]));
-    const tagNames = new Map((tags ?? []).map((tag) => [tag.id, tag.name]));
-    const mine = forAccounts(transactions.data ?? [], new Set([account.id]));
-    const months = historyByMonth(mine, account.id);
-    const thisYear = new Date().getUTCFullYear().toString();
+    const count = forAccounts(transactions.data ?? [], new Set([account.id])).length;
 
     return (
         <>
@@ -35,46 +82,11 @@ export function AccountHistory({ account, accounts, onClose }: Props) {
                 <div className="sheet-head">
                     <h4 className="sheet-title">{account.name}</h4>
                     <span className="sheet-note">
-                        {mine.length} {mine.length === 1 ? "entry" : "entries"}
+                        {count} {count === 1 ? "entry" : "entries"}
                     </span>
                 </div>
 
-                {transactions.isPending ? (
-                    <span className="recent-empty">Loading…</span>
-                ) : transactions.isError ? (
-                    <span className="recent-empty">Could not load activity</span>
-                ) : months.length === 0 ? (
-                    <span className="recent-empty">No activity on this account yet</span>
-                ) : (
-                    months.map((month) => (
-                        <div key={month.period} className="section recent-section tight">
-                            <div className="section-head">
-                                <span className="kicker">
-                                    {monthName(month.period, "long")}
-                                    {yearOf(month.period) === thisYear
-                                        ? ""
-                                        : ` ${yearOf(month.period)}`}
-                                </span>
-                                <span className={`history-net ${month.net > 0 ? "up" : ""}`}>
-                                    {signedAmount(cents(month.net))}
-                                </span>
-                            </div>
-                            <div className="recent">
-                                {month.entries.map((transaction) => (
-                                    <TransactionRow
-                                        key={transaction.id}
-                                        transaction={transaction}
-                                        accountNames={accountNames}
-                                        tagNames={tagNames}
-                                        onEdit={setEditing}
-                                        onDelete={remove}
-                                        viewedFrom={account.id}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    ))
-                )}
+                <AccountActivity account={account} accounts={accounts} onEdit={setEditing} />
             </Sheet>
 
             {editing && (

@@ -39,7 +39,7 @@ export function RecentTransactions({ accounts, scope }: Props) {
     const recent = byRecency(scoped).slice(0, recentCount);
 
     return (
-        <div className="section recent-section">
+        <div className="section recent-section panel">
             <div className="section-head">
                 <span className="kicker">Recent</span>
                 <button
@@ -67,9 +67,8 @@ export function RecentTransactions({ accounts, scope }: Props) {
                     </div>
                     {recentCount < scoped.length && (
                         <button
-                            className="btn btn-ghost"
+                            className="btn btn-ghost recent-more"
                             onClick={() => setRecentCount(recentCount + STEP)}
-                            style={{ marginRight: "auto" }}
                         >
                             Load more
                         </button>

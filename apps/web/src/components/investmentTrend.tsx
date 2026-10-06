@@ -2,7 +2,25 @@ import type { InvestmentTrendState } from "../useInvestmentTrend";
 import { LineChart } from "./lineChart";
 import { RangePicker } from "./rangePicker";
 
-export function InvestmentTrend({ trend }: { trend: InvestmentTrendState }) {
+export function InvestmentRanges({ trend }: { trend: InvestmentTrendState }) {
+    return (
+        <RangePicker
+            ranges={trend.ranges}
+            active={trend.range}
+            onSelect={trend.selectRange}
+            custom={trend.custom}
+            onCustom={trend.setCustom}
+            bounds={trend.bounds}
+        />
+    );
+}
+
+type Props = {
+    trend: InvestmentTrendState;
+    ranges?: boolean;
+};
+
+export function InvestmentTrend({ trend, ranges = true }: Props) {
     const values = trend.points.map((point) => point.value);
     const low = Math.min(...values);
     const high = Math.max(...values);
@@ -18,6 +36,7 @@ export function InvestmentTrend({ trend }: { trend: InvestmentTrendState }) {
                     points={trend.points.map((point) => ({ t: Date.parse(point.at), value: point.value }))}
                     hover={trend.hover}
                     onHover={trend.setHover}
+                    grid
                     {...(showInvested
                         ? { guide: trend.points.map((point) => ({ t: Date.parse(point.at), value: point.invested })) }
                         : {})}
@@ -35,14 +54,7 @@ export function InvestmentTrend({ trend }: { trend: InvestmentTrendState }) {
                 </div>
             )}
 
-            <RangePicker
-                ranges={trend.ranges}
-                active={trend.range}
-                onSelect={trend.selectRange}
-                custom={trend.custom}
-                onCustom={trend.setCustom}
-                bounds={trend.bounds}
-            />
+            {ranges && <InvestmentRanges trend={trend} />}
         </div>
     );
 }

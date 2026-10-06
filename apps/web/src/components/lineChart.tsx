@@ -23,6 +23,7 @@ type Props = {
     level?: { value: number; label: string };
     marker?: number;
     currency?: string;
+    grid?: boolean;
 };
 
 export function LineChart({
@@ -33,6 +34,7 @@ export function LineChart({
     level,
     marker,
     currency = "EUR",
+    grid = false,
 }: Props) {
     const clipId = useId();
     const scale = lineScale(points, level ? [level.value] : [], WIDTH, HEIGHT);
@@ -67,6 +69,17 @@ export function LineChart({
                     <clipPath id={clipId}>
                         <rect x={0} y={0} width={WIDTH} height={HEIGHT} />
                     </clipPath>
+                    {grid &&
+                        ticks.map((tick) => (
+                            <line
+                                key={tick}
+                                className="price-grid"
+                                x1={0}
+                                x2={WIDTH}
+                                y1={y(tick)}
+                                y2={y(tick)}
+                            />
+                        ))}
                     <path className="price-area" d={area} />
                     {level && (
                         <line

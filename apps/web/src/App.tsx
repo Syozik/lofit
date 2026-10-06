@@ -11,10 +11,13 @@ import { AccountsTab } from "./components/accountsTab";
 import { SpendingTab } from "./components/spendingTab";
 import { TabButton } from "./components/tabButton";
 import { Indicator } from "./components/indicator";
+import { Sidebar } from "./components/sidebar";
 import { NavigationContext } from "./navigation";
 import type { TabName } from "./navigation";
 import { ToastContext } from "./toast";
 import type { ToastAction } from "./toast";
+import { isSheetOpen } from "./sheets";
+import { useDesktop } from "./useDesktop";
 
 type Tab = {
     label: string;
@@ -36,6 +39,21 @@ function AppShell() {
     const [sheetOpen, setSheetOpen] = useState(false);
     const [toast, setToast] = useState<{ message: string; action?: ToastAction } | null>(null);
     const ActiveTab = TABS[currentTab].Component;
+    const desktop = useDesktop();
+
+    useEffect(() => {
+        if (!desktop) return;
+        function onKey(event: KeyboardEvent) {
+            if (event.key !== "n" || event.metaKey || event.ctrlKey || event.altKey) return;
+            if (isSheetOpen()) return;
+            if ((event.target as HTMLElement).closest("input, textarea, select, [contenteditable]"))
+                return;
+            event.preventDefault();
+            setSheetOpen(true);
+        }
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [desktop]);
 
     useEffect(() => {
         if (!toast) return;
@@ -58,37 +76,49 @@ function AppShell() {
         <NavigationContext.Provider value={setCurrentTab}>
             <ToastContext.Provider value={show}>
                 <main className="main-container">
-                    <div className="app-header">
-                        <span className="wordmark">lofit</span>
-                        <Indicator />
-                        <button
-                            className="btn btn-ghost btn-icon"
-                            style={{ marginLeft: "auto" }}
-                            aria-label="Sign out"
-                            onClick={() => void leave()}
-                        >
-                            <LogOut size={16} strokeWidth={1.5} aria-hidden />
-                        </button>
-                    </div>
+                    {desktop ? (
+                        <Sidebar
+                            items={TABS}
+                            current={currentTab}
+                            onSelect={setCurrentTab}
+                            onAdd={() => setSheetOpen(true)}
+                            onSignOut={() => void leave()}
+                        />
+                    ) : (
+                        <div className="app-header">
+                            <span className="wordmark">lofit</span>
+                            <Indicator />
+                            <button
+                                className="btn btn-ghost btn-icon"
+                                style={{ marginLeft: "auto" }}
+                                aria-label="Sign out"
+                                onClick={() => void leave()}
+                            >
+                                <LogOut size={16} strokeWidth={1.5} aria-hidden />
+                            </button>
+                        </div>
+                    )}
                     <ActiveTab />
-                    <div className="tabs">
-                        {Object.entries(TABS).map(([name, tab]) => (
-                            <TabButton
-                                key={name}
-                                title={tab.label}
-                                icon={tab.Icon}
-                                onClick={() => setCurrentTab(name as TabName)}
-                                isActive={currentTab === name}
-                            />
-                        ))}
-                        <button
-                            className="tab-add"
-                            aria-label="Log an entry"
-                            onClick={() => setSheetOpen(true)}
-                        >
-                            <Plus size={22} strokeWidth={1.5} aria-hidden />
-                        </button>
-                    </div>
+                    {!desktop && (
+                        <div className="tabs">
+                            {Object.entries(TABS).map(([name, tab]) => (
+                                <TabButton
+                                    key={name}
+                                    title={tab.label}
+                                    icon={tab.Icon}
+                                    onClick={() => setCurrentTab(name as TabName)}
+                                    isActive={currentTab === name}
+                                />
+                            ))}
+                            <button
+                                className="tab-add"
+                                aria-label="Log an entry"
+                                onClick={() => setSheetOpen(true)}
+                            >
+                                <Plus size={22} strokeWidth={1.5} aria-hidden />
+                            </button>
+                        </div>
+                    )}
 
                     {toast && (
                         <div className="toast">

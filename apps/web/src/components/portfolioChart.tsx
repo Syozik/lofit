@@ -8,6 +8,7 @@ import type { Cents, Delta, Holding, HoldingGain } from "@lofit/domain";
 import { useState } from "react";
 import { rankColor } from "@lofit/view";
 import { cssColor } from "../helpers/palette";
+import { useDesktop } from "../useDesktop";
 
 type Mode = "allocation" | "gains";
 
@@ -95,10 +96,54 @@ function Gains({ holdings }: { holdings: readonly Holding[] }) {
     );
 }
 
+type ModeSwitchProps = {
+    mode: Mode;
+    className?: string;
+    onChange: (mode: Mode) => void;
+};
+
+function ModeSwitch({ mode, className, onChange }: ModeSwitchProps) {
+    return (
+        <div className={`seg chart-modes ${className ?? ""}`}>
+            {MODES.map((option) => (
+                <label key={option} className="seg-opt">
+                    <input
+                        type="radio"
+                        name="portfolio-mode"
+                        checked={mode === option}
+                        onChange={() => onChange(option)}
+                    />
+                    {MODE_LABELS[option]}
+                </label>
+            ))}
+        </div>
+    );
+}
+
 export function PortfolioChart({ holdings }: { holdings: readonly Holding[] }) {
+    const desktop = useDesktop();
     const [open, setOpen] = useState(false);
     const [mode, setMode] = useState<Mode>("allocation");
     const gain = portfolioGain(holdings);
+    const chart =
+        mode === "allocation" ? (
+            <Allocation holdings={holdings} />
+        ) : (
+            <Gains holdings={holdings} />
+        );
+
+    if (desktop) {
+        return (
+            <div className="panel portfolio-panel">
+                <div className="chart-head portfolio-head">
+                    <span className="kicker">Portfolio</span>
+                    {gain && <GainSummary gain={gain} />}
+                    <ModeSwitch mode={mode} onChange={setMode} />
+                </div>
+                {chart}
+            </div>
+        );
+    }
 
     return (
         <div className={`acct-card portfolio ${open ? "open" : ""}`}>
@@ -110,21 +155,8 @@ export function PortfolioChart({ holdings }: { holdings: readonly Holding[] }) {
 
             {open && (
                 <div className="portfolio-body">
-                    <div className="seg chart-modes portfolio-modes">
-                        {MODES.map((option) => (
-                            <label key={option} className="seg-opt">
-                                <input
-                                    type="radio"
-                                    name="portfolio-mode"
-                                    checked={mode === option}
-                                    onChange={() => setMode(option)}
-                                />
-                                {MODE_LABELS[option]}
-                            </label>
-                        ))}
-                    </div>
-
-                    {mode === "allocation" ? <Allocation holdings={holdings} /> : <Gains holdings={holdings} />}
+                    <ModeSwitch mode={mode} className="portfolio-modes" onChange={setMode} />
+                    {chart}
                 </div>
             )}
         </div>

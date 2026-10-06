@@ -1,5 +1,8 @@
 import { useRef, useState } from "react";
 import type { PointerEvent, ReactNode } from "react";
+import { X } from "lucide-react";
+import { useEscapeToClose } from "../sheets";
+import { useDesktop } from "../useDesktop";
 
 const CLOSE_DISTANCE = 96;
 const CLOSE_SPEED = 0.6;
@@ -15,6 +18,9 @@ export function Sheet({ label, onClose, children }: Props) {
     const [offset, setOffset] = useState(0);
     const [settling, setSettling] = useState(false);
     const start = useRef<{ y: number; at: number } | null>(null);
+    const desktop = useDesktop();
+
+    useEscapeToClose(onClose);
 
     function grab(event: PointerEvent<HTMLDivElement>) {
         start.current = { y: event.clientY, at: event.timeStamp };
@@ -65,7 +71,11 @@ export function Sheet({ label, onClose, children }: Props) {
                 className="sheet"
                 role="dialog"
                 aria-label={label}
-                style={offset > 0 || settling ? { transform: `translateY(${offset}px)`, transition: `transform ${transition}` } : undefined}
+                style={
+                    offset > 0 || settling
+                        ? { transform: `translateY(${offset}px)`, transition: `transform ${transition}` }
+                        : undefined
+                }
             >
                 <div
                     className="sheet-grip"
@@ -74,6 +84,11 @@ export function Sheet({ label, onClose, children }: Props) {
                     onPointerUp={release}
                     onPointerCancel={cancel}
                 />
+                {desktop && (
+                    <button className="btn btn-icon sheet-close" aria-label="Close" onClick={onClose}>
+                        <X size={18} strokeWidth={1.5} aria-hidden />
+                    </button>
+                )}
                 {children}
             </div>
         </div>

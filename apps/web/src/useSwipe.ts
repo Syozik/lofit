@@ -1,25 +1,42 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 
 export const ACTION_WIDTH = 56;
 
 const DRAG_SLOP = 4;
 
+const hoverMedia = window.matchMedia("(min-width: 1024px) and (hover: hover)");
+
+function subscribe(onChange: () => void) {
+    hoverMedia.addEventListener("change", onChange);
+    return () => hoverMedia.removeEventListener("change", onChange);
+}
+
+function useHover(): boolean {
+    return useSyncExternalStore(subscribe, () => hoverMedia.matches);
+}
+
 type Options = {
     enabled: boolean;
     actions?: number;
-    onTap?: () => void;
+    onTap?: (() => void) | undefined;
 };
 
 export function useSwipe({ enabled, actions = 1, onTap }: Options) {
     const width = ACTION_WIDTH * actions;
+    const hover = useHover();
 
     const [offset, setOffset] = useState(0);
     const [dragging, setDragging] = useState(false);
-    const drag = useRef<{ x: number; y: number; from: number } | null>(null);
+    const drag = useRef<{ x: number; y: number; from: number; tapOnly: boolean } | null>(null);
 
     function onPointerDown(event: React.PointerEvent<HTMLDivElement>) {
-        if (!enabled) return;
-        drag.current = { x: event.clientX, y: event.clientY, from: offset };
+        if (!enabled || event.button !== 0) return;
+        drag.current = {
+            x: event.clientX,
+            y: event.clientY,
+            from: offset,
+            tapOnly: hover && event.pointerType === "mouse",
+        };
     }
 
     function onPointerMove(event: React.PointerEvent<HTMLDivElement>) {
@@ -31,7 +48,7 @@ export function useSwipe({ enabled, actions = 1, onTap }: Options) {
 
         if (!dragging) {
             if (Math.max(Math.abs(dx), Math.abs(dy)) < DRAG_SLOP) return;
-            if (Math.abs(dy) > Math.abs(dx)) {
+            if (started.tapOnly || Math.abs(dy) > Math.abs(dx)) {
                 drag.current = null;
                 return;
             }
@@ -71,6 +88,8 @@ export function useSwipe({ enabled, actions = 1, onTap }: Options) {
         offset,
         dragging,
         width,
+        hover,
+        revealed: hover || offset !== 0,
         handlers: {
             onPointerDown,
             onPointerMove,

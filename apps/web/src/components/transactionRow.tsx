@@ -2,6 +2,7 @@ import { cents, formatAmount } from "@lofit/domain";
 import type { Transaction } from "@lofit/domain";
 import { amountFor, monogram, transactionMeta } from "@lofit/view";
 import { Pencil, Trash2 } from "lucide-react";
+import { useDesktop } from "../useDesktop";
 import { ACTION_WIDTH, useSwipe } from "../useSwipe";
 
 type Props = {
@@ -23,8 +24,37 @@ export function TransactionRow({
 }: Props) {
     const amount = amountFor(transaction, viewedFrom);
 
+    const desktop = useDesktop();
     const actionable = onDelete !== undefined && onEdit !== undefined;
-    const { offset, dragging, handlers } = useSwipe({ enabled: actionable, actions: 2 });
+    const { offset, dragging, hover, revealed, handlers } = useSwipe({
+        enabled: actionable,
+        actions: 2,
+        onTap: desktop ? () => onEdit?.(transaction) : undefined,
+    });
+    const inline = actionable && hover;
+
+    function actions(tabbable: boolean) {
+        return (
+            <>
+                <button
+                    className="row-action"
+                    aria-label={`Edit ${transaction.name}`}
+                    tabIndex={tabbable ? 0 : -1}
+                    onClick={() => onEdit?.(transaction)}
+                >
+                    <Pencil size={16} strokeWidth={1.5} aria-hidden />
+                </button>
+                <button
+                    className="row-action danger"
+                    aria-label={`Delete ${transaction.name}`}
+                    tabIndex={tabbable ? 0 : -1}
+                    onClick={() => onDelete?.(transaction)}
+                >
+                    <Trash2 size={16} strokeWidth={1.5} aria-hidden />
+                </button>
+            </>
+        );
+    }
 
     const row = (
         <div
@@ -39,6 +69,14 @@ export function TransactionRow({
                 </span>
                 <span className="recent-meta">{transactionMeta(transaction, accountNames, tagNames, viewedFrom)}</span>
             </span>
+            {inline && (
+                <span
+                    className="row-inline-actions"
+                    onPointerDown={(event) => event.stopPropagation()}
+                >
+                    {actions(true)}
+                </span>
+            )}
             <span className={`recent-amount ${amount > 0 ? "positive" : ""}`}>
                 {amount > 0 ? "+ € " : "− € "}
                 {formatAmount(cents(amount))}
@@ -51,24 +89,11 @@ export function TransactionRow({
     return (
         <div className={`txn-swipe ${dragging ? "dragging" : ""}`}>
             {row}
-            <div className="row-actions" style={{ width: ACTION_WIDTH * 2 }}>
-                <button
-                    className="row-action"
-                    aria-label={`Edit ${transaction.name}`}
-                    tabIndex={offset === 0 ? -1 : 0}
-                    onClick={() => onEdit(transaction)}
-                >
-                    <Pencil size={16} strokeWidth={1.5} aria-hidden />
-                </button>
-                <button
-                    className="row-action danger"
-                    aria-label={`Delete ${transaction.name}`}
-                    tabIndex={offset === 0 ? -1 : 0}
-                    onClick={() => onDelete(transaction)}
-                >
-                    <Trash2 size={16} strokeWidth={1.5} aria-hidden />
-                </button>
-            </div>
+            {!inline && (
+                <div className="row-actions" style={{ width: ACTION_WIDTH * 2 }}>
+                    {actions(revealed)}
+                </div>
+            )}
         </div>
     );
 }
