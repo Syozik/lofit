@@ -102,6 +102,7 @@ export function AccountSheet({ account, onClose, onSaved }: Props) {
                         ) : (
                             <span className="sheet-new-group">
                                 <input
+                                    autoComplete="off"
                                     className="input sheet-new-tag"
                                     autoFocus
                                     placeholder="New group"
@@ -126,6 +127,7 @@ export function AccountSheet({ account, onClose, onSaved }: Props) {
             <div className="sheet-amount">
                 <span className="sheet-currency">€</span>
                 <input
+                    autoComplete="off"
                     className="sheet-amount-input"
                     inputMode="text"
                     placeholder="0.00"
@@ -142,6 +144,7 @@ export function AccountSheet({ account, onClose, onSaved }: Props) {
                         <label className="field">
                             <span>Name</span>
                             <input
+                                autoComplete="off"
                                 className="input"
                                 placeholder="Monobank"
                                 value={name}
@@ -152,6 +155,7 @@ export function AccountSheet({ account, onClose, onSaved }: Props) {
                         <label className="field">
                             <span>Subtitle</span>
                             <input
+                                autoComplete="off"
                                 className="input"
                                 placeholder="UA•• 4471 · checking"
                                 value={subtitle}

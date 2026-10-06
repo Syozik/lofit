@@ -33,6 +33,7 @@ export function RangePicker({ ranges, active, onSelect, custom, onCustom, bounds
             {active === "custom" && (
                 <span className="range-custom">
                     <input
+                        autoComplete="off"
                         className="range-date"
                         type="date"
                         aria-label="From"
@@ -43,6 +44,7 @@ export function RangePicker({ ranges, active, onSelect, custom, onCustom, bounds
                     />
                     <span className="range-to">–</span>
                     <input
+                        autoComplete="off"
                         className="range-date"
                         type="date"
                         aria-label="To"

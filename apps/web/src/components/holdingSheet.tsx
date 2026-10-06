@@ -144,6 +144,7 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
                             <label className="field">
                                 <span>Units to sell</span>
                                 <input
+                                    autoComplete="off"
                                     className="input"
                                     inputMode="decimal"
                                     autoFocus
@@ -155,6 +156,7 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
                             <label className="field">
                                 <span>Price each</span>
                                 <input
+                                    autoComplete="off"
                                     className="input"
                                     inputMode="decimal"
                                     value={price}
@@ -188,6 +190,7 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
                             <label className="field">
                                 <span>Units held</span>
                                 <input
+                                    autoComplete="off"
                                     className="input"
                                     inputMode="decimal"
                                     value={quantity}
@@ -197,6 +200,7 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
                             <label className="field">
                                 <span>Paid, in total</span>
                                 <input
+                                    autoComplete="off"
                                     className="input"
                                     inputMode="decimal"
                                     value={paid}
@@ -208,6 +212,7 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
                         <label className="field">
                             <span>Held since</span>
                             <input
+                                autoComplete="off"
                                 className="input"
                                 type="date"
                                 value={since}

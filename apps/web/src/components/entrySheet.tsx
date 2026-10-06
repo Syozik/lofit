@@ -275,6 +275,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                     <span className="sheet-currency">€</span>
                 )}
                 <input
+                    autoComplete="off"
                     className="sheet-amount-input"
                     inputMode="decimal"
                     placeholder="0.00"
@@ -304,6 +305,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                             if (renaming?.id === tag.id) {
                                 return (
                                     <input
+                                        autoComplete="off"
                                         key={tag.id}
                                         className="input sheet-new-tag"
                                         autoFocus
@@ -343,6 +345,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                             </button>
                         ) : (
                             <input
+                                autoComplete="off"
                                 className="input sheet-new-tag"
                                 autoFocus
                                 placeholder="New tag"
@@ -369,6 +372,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                             <label className="field">
                                 <span>Symbol</span>
                                 <input
+                                    autoComplete="off"
                                     className="input sheet-symbol"
                                     placeholder="VWRL"
                                     value={symbol}
@@ -378,6 +382,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                             <label className="field">
                                 <span>Quantity</span>
                                 <input
+                                    autoComplete="off"
                                     className="input"
                                     inputMode="decimal"
                                     placeholder="10"
@@ -391,6 +396,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                         <label className="field">
                             <span>Name</span>
                             <input
+                                autoComplete="off"
                                 className="input"
                                 placeholder="Vanguard FTSE All-World"
                                 value={name}
@@ -401,6 +407,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                         <label className="field">
                             <span>Live price symbol</span>
                             <input
+                                autoComplete="off"
                                 className="input sheet-symbol"
                                 placeholder={assetType === "crypto" ? "bitcoin" : "GOOGL"}
                                 value={ticker}
@@ -434,6 +441,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                         <label className="field">
                             <span>Bought on</span>
                             <input
+                                autoComplete="off"
                                 className="input"
                                 type="date"
                                 max={today()}
@@ -453,6 +461,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                         <label className="field">
                             <span>Description</span>
                             <input
+                                autoComplete="off"
                                 className="input"
                                 placeholder="Albert Heijn"
                                 value={name}
@@ -497,6 +506,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                         <label className="field">
                             <span>Date</span>
                             <input
+                                autoComplete="off"
                                 className="input"
                                 type="date"
                                 value={day}
