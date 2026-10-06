@@ -9,6 +9,7 @@ export function useRemoveTransaction() {
 
     return (transaction: Transaction) => {
         const { id: _id, ...draft } = transaction;
+        void _id;
 
         remove.mutate(transaction.id, {
             onSuccess: () => {
