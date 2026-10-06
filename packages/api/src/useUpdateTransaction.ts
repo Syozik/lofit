@@ -1,16 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updateTransaction } from "./transactions";
+import type { Transaction } from "@lofit/domain";
+import { useMutation } from "@tanstack/react-query";
+import { MUTATIONS } from "./mutations";
+import type { TransactionUpdate } from "./mutations";
 
 export function useUpdateTransaction() {
-    const client = useQueryClient();
-
-    return useMutation({
-        mutationFn: updateTransaction,
-        onSuccess: async () => {
-            await Promise.all([
-                client.invalidateQueries({ queryKey: ["transactions"] }),
-                client.invalidateQueries({ queryKey: ["accounts"] }),
-            ]);
-        },
-    });
+    return useMutation<Transaction, Error, TransactionUpdate>({ mutationKey: MUTATIONS.updateTransaction });
 }

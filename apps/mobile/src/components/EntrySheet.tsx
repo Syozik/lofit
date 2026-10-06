@@ -29,6 +29,7 @@ import { Chip, ChipRow, Segmented } from "./Choices";
 import { Field, fieldStyles } from "./Field";
 import { pickDay } from "./RangePicker";
 import { Sheet, SheetActions } from "./Sheet";
+import { useOnline } from "../connectivity";
 import { useToast } from "./Toast";
 
 type EntryMode = TransactionKind | "holding";
@@ -111,6 +112,7 @@ export function EntrySheet({ entry, onClose }: Props) {
     const rename = useRenameTag();
     const updateEntry = useUpdateTransaction();
     const show = useToast();
+    const online = useOnline();
 
     const [mode, setMode] = useState<EntryMode>(entry?.kind ?? "expense");
     const [amount, setAmount] = useState(entry ? (Math.abs(entry.amount) / 100).toFixed(2) : "");
@@ -153,6 +155,7 @@ export function EntrySheet({ entry, onClose }: Props) {
         : !value || !name.trim() || !from || (mode === "transfer" && (!to || to === from));
 
     const pending = addEntry.isPending || addPosition.isPending || updateEntry.isPending;
+    const needsConnection = isHolding && !online;
 
     function nextCurrency() {
         const at = CURRENCIES.indexOf(currency);
@@ -180,10 +183,7 @@ export function EntrySheet({ entry, onClose }: Props) {
         setRenaming(null);
         if (!wanted || wanted === original) return;
 
-        rename.mutate(
-            { id: renaming.id, name: wanted },
-            { onError: (error) => show(error.message.replace(/^API \d+: /, "")) },
-        );
+        rename.mutate({ id: renaming.id, name: wanted });
     }
 
     async function createTag() {
@@ -240,24 +240,13 @@ export function EntrySheet({ entry, onClose }: Props) {
         };
 
         if (entry) {
-            updateEntry.mutate(
-                { id: entry.id, draft: transaction },
-                {
-                    onSuccess: () => {
-                        show(`Updated ${name.trim()}`);
-                        onClose();
-                    },
-                },
-            );
-            return;
+            updateEntry.mutate({ id: entry.id, draft: transaction });
+            show(`Updated ${name.trim()}`);
+        } else {
+            addEntry.mutate(transaction);
+            show(`Saved ${name.trim()}`);
         }
-
-        addEntry.mutate(transaction, {
-            onSuccess: () => {
-                show(`Saved ${name.trim()}`);
-                onClose();
-            },
-        });
+        onClose();
     }
 
     function save() {
@@ -428,8 +417,16 @@ export function EntrySheet({ entry, onClose }: Props) {
             <SheetActions>
                 <Button variant="secondary" label="Cancel" onPress={onClose} style={{ flex: 1 }} />
                 <Button
-                    label={isHolding ? "Add holding" : value ? "Save entry" : "Enter an amount"}
-                    disabled={blocked || pending}
+                    label={
+                        needsConnection
+                            ? "Holdings need a connection"
+                            : isHolding
+                              ? "Add holding"
+                              : value
+                                ? "Save entry"
+                                : "Enter an amount"
+                    }
+                    disabled={blocked || pending || needsConnection}
                     onPress={save}
                     style={{ flex: 2 }}
                 />

@@ -11,6 +11,7 @@ import { Field, fieldStyles } from "./Field";
 import { PriceChart } from "./PriceChart";
 import { pickDay } from "./RangePicker";
 import { Sheet, SheetActions } from "./Sheet";
+import { useOnline } from "../connectivity";
 import { useToast } from "./Toast";
 
 type Mode = "correct" | "sell";
@@ -34,6 +35,7 @@ export function HoldingSheet({ holding, accountName, onClose }: Props) {
     const remove = useDeleteHolding();
     const history = useHoldingHistory(holding.id);
     const show = useToast();
+    const online = useOnline();
 
     const [mode, setMode] = useState<Mode>("correct");
     const [quantity, setQuantity] = useState(String(holding.quantity));
@@ -107,7 +109,9 @@ export function HoldingSheet({ holding, accountName, onClose }: Props) {
                     <View style={styles.pending}>
                         <Text style={styles.pendingText}>
                             {history.isPending
-                                ? "Loading prices…"
+                                ? online
+                                    ? "Loading prices…"
+                                    : "Price history needs a connection"
                                 : "No price history for this symbol"}
                         </Text>
                     </View>
@@ -150,8 +154,8 @@ export function HoldingSheet({ holding, accountName, onClose }: Props) {
                             style={{ flex: 1 }}
                         />
                         <Button
-                            label={sell.isPending ? "Selling…" : "Sell"}
-                            disabled={!sold || !at || pending}
+                            label={online ? (sell.isPending ? "Selling…" : "Sell") : "Needs a connection"}
+                            disabled={!sold || !at || pending || !online}
                             onPress={confirmSale}
                             style={{ flex: 2 }}
                         />
@@ -196,12 +200,13 @@ export function HoldingSheet({ holding, accountName, onClose }: Props) {
                         <Button
                             variant="danger"
                             label="Remove"
+                            disabled={!online}
                             onPress={drop}
                             style={{ flex: 1 }}
                         />
                         <Button
-                            label={update.isPending ? "Saving…" : "Save"}
-                            disabled={!held || cost === undefined || !since || pending}
+                            label={online ? (update.isPending ? "Saving…" : "Save") : "Needs a connection"}
+                            disabled={!held || cost === undefined || !since || pending || !online}
                             onPress={save}
                             style={{ flex: 2 }}
                         />

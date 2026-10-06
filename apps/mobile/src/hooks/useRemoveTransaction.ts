@@ -8,14 +8,7 @@ export function useRemoveTransaction() {
     const show = useToast();
 
     return (transaction: Transaction) => {
-        const { id, ...draft } = transaction;
-
-        remove.mutate(id, {
-            onSuccess: () =>
-                show(`Removed ${transaction.name}`, {
-                    label: "Undo",
-                    run: () => restore.mutate(draft),
-                }),
-        });
+        remove.mutate(transaction.id);
+        show(`Removed ${transaction.name}`, { label: "Undo", run: () => restore.mutate(transaction) });
     };
 }

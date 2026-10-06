@@ -5,11 +5,32 @@ let client: ReturnType<typeof hc<AppType>> | undefined;
 
 export type ApiOptions = {
     headers?: () => Promise<Record<string, string>>;
+    onUnreachable?: () => void;
 };
 
+const GATEWAY_STATUSES = new Set([502, 503, 504]);
+
+function gatewayFailure(response: { status: number; headers: Headers }): boolean {
+    return GATEWAY_STATUSES.has(response.status) || response.headers.has("ngrok-error-code");
+}
+
 export function configureApi(baseUrl: string, options: ApiOptions = {}): void {
-    const { headers } = options;
-    client = hc<AppType>(baseUrl, headers ? { headers, init: { credentials: "omit" } } : {});
+    const { headers, onUnreachable } = options;
+    const watched: typeof fetch = async (input, init) => {
+        try {
+            const response = await fetch(input, init);
+            if (gatewayFailure(response)) onUnreachable?.();
+            return response;
+        } catch (error) {
+            onUnreachable?.();
+            throw error;
+        }
+    };
+
+    client = hc<AppType>(baseUrl, {
+        ...(headers ? { headers, init: { credentials: "omit" } } : {}),
+        ...(onUnreachable ? { fetch: watched } : {}),
+    });
 }
 
 export function api() {
@@ -27,12 +48,29 @@ export function fromJson<T>(value: T): FromJson<T> {
     return value as FromJson<T>;
 }
 
-export async function apiError(response: { status: number; text(): Promise<string> }): Promise<Error> {
+export class ApiError extends Error {
+    readonly status: number;
+    readonly unreachable: boolean;
+
+    constructor(status: number, message: string, unreachable: boolean) {
+        super(`API ${status}: ${message}`);
+        this.name = "ApiError";
+        this.status = status;
+        this.unreachable = unreachable;
+    }
+}
+
+export async function apiError(response: { status: number; headers: Headers; text(): Promise<string> }): Promise<ApiError> {
     const body = await response.text();
     let message = body;
     try {
         message = (JSON.parse(body) as { error?: string }).error ?? body;
     } catch {
     }
-    return new Error(`API ${response.status}: ${message}`);
+    return new ApiError(response.status, message, gatewayFailure(response));
+}
+
+export function isUnreachable(error: unknown): boolean {
+    if (error instanceof ApiError) return error.unreachable;
+    return error instanceof TypeError;
 }

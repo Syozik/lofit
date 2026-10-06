@@ -39,6 +39,7 @@ import { HoldingSheet } from "../../components/HoldingSheet";
 import { PortfolioChart } from "../../components/PortfolioChart";
 import { Screen, Status, text } from "../../components/Screen";
 import { useToast } from "../../components/Toast";
+import { useOnline } from "../../connectivity";
 import { colors, fonts, radius, space } from "../../theme";
 
 type AccountCardProps = {
@@ -188,6 +189,7 @@ export default function AccountsScreen() {
     const groupsQuery = useGroups();
     const refresh = useRefreshPrices();
     const show = useToast();
+    const online = useOnline();
 
     const [openId, setOpenId] = useState<string | null>(null);
     const [editing, setEditing] = useState<Account | null>(null);
@@ -268,9 +270,9 @@ export default function AccountsScreen() {
                                 <Pressable
                                     accessibilityLabel="Refresh prices"
                                     hitSlop={10}
-                                    disabled={refresh.isPending}
+                                    disabled={refresh.isPending || !online}
                                     onPress={refreshPrices}
-                                    style={refresh.isPending && styles.dim}
+                                    style={(refresh.isPending || !online) && styles.dim}
                                 >
                                     <RefreshCw size={13} strokeWidth={1.5} color={colors.quiet} />
                                 </Pressable>

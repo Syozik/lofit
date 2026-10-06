@@ -1,16 +1,6 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteTransaction } from "./transactions";
+import { useMutation } from "@tanstack/react-query";
+import { MUTATIONS } from "./mutations";
 
 export function useDeleteTransaction() {
-    const client = useQueryClient();
-
-    return useMutation({
-        mutationFn: deleteTransaction,
-        onSuccess: async () => {
-            await Promise.all([
-                client.invalidateQueries({ queryKey: ["transactions"] }),
-                client.invalidateQueries({ queryKey: ["accounts"] }),
-            ]);
-        },
-    });
+    return useMutation<void, Error, string>({ mutationKey: MUTATIONS.deleteTransaction });
 }

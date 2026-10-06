@@ -1,13 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { renameTag } from "./tags";
+import type { Tag } from "@lofit/domain";
+import { useMutation } from "@tanstack/react-query";
+import { MUTATIONS } from "./mutations";
+import type { NamedDraft } from "./mutations";
 
 export function useRenameTag() {
-    const client = useQueryClient();
-
-    return useMutation({
-        mutationFn: renameTag,
-        onSuccess: async () => {
-            await client.invalidateQueries({ queryKey: ["tags"] });
-        },
-    });
+    return useMutation<Tag, Error, NamedDraft>({ mutationKey: MUTATIONS.renameTag });
 }

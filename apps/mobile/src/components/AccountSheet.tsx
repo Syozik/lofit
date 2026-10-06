@@ -49,27 +49,13 @@ export function AccountSheet({ account, onClose }: Props) {
         const balance = euros(value);
 
         if (account) {
-            updateBalance.mutate(
-                { id: account.id, balance },
-                {
-                    onSuccess: () => {
-                        show(`Updated ${account.name}`);
-                        onClose();
-                    },
-                },
-            );
-            return;
+            updateBalance.mutate({ id: account.id, balance });
+            show(`Updated ${account.name}`);
+        } else {
+            addAccount.mutate({ name: name.trim(), subtitle: subtitle.trim(), groupId: chosen, balance });
+            show(`Added ${name.trim()}`);
         }
-
-        addAccount.mutate(
-            { name: name.trim(), subtitle: subtitle.trim(), groupId: chosen, balance },
-            {
-                onSuccess: () => {
-                    show(`Added ${name.trim()}`);
-                    onClose();
-                },
-            },
-        );
+        onClose();
     }
 
     return (

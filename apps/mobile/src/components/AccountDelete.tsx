@@ -4,6 +4,7 @@ import { StyleSheet, Text } from "react-native";
 import { colors, fonts } from "../theme";
 import { Button } from "./Button";
 import { Sheet, SheetActions } from "./Sheet";
+import { useOnline } from "../connectivity";
 import { useToast } from "./Toast";
 
 type Props = {
@@ -15,6 +16,7 @@ type Props = {
 export function AccountDelete({ account, onClose, onDeleted }: Props) {
     const remove = useDeleteAccount();
     const show = useToast();
+    const online = useOnline();
 
     function confirm() {
         remove.mutate(account.id, {
@@ -38,8 +40,8 @@ export function AccountDelete({ account, onClose, onDeleted }: Props) {
                 <Button variant="secondary" label="Cancel" onPress={onClose} style={{ flex: 1 }} />
                 <Button
                     variant="danger"
-                    label={remove.isPending ? "Deleting…" : "Delete account"}
-                    disabled={remove.isPending}
+                    label={online ? (remove.isPending ? "Deleting…" : "Delete account") : "Needs a connection"}
+                    disabled={remove.isPending || !online}
                     onPress={confirm}
                     style={{ flex: 2 }}
                 />

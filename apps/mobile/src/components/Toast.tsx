@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { onSyncIssue } from "../syncIssues";
 import { TAB_BAR_HEIGHT } from "../tabBar";
 import { colors, fonts, radius } from "../theme";
 
@@ -34,6 +35,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const show = useCallback<Show>((message, action) => {
         setToast(action ? { message, action, id: Date.now() } : { message, id: Date.now() });
     }, []);
+
+    useEffect(() => onSyncIssue((message) => show(message)), [show]);
 
     return (
         <ToastContext.Provider value={show}>
