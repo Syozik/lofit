@@ -15,25 +15,15 @@ import {
     RANGE_ORDER,
     seriesFor,
 } from "@lofit/domain";
-import type { Cents, Delta, Group, NetWorthGroup, NetWorthItem, RangeKey, Scope } from "@lofit/domain";
+import type { Delta, RangeKey, Scope } from "@lofit/domain";
 import { useState } from "react";
-import { groupColor, OTHER_COLOR, paletteFor } from "../helpers/palette";
 import { monthName } from "../period";
+import { centreLabel, kickerFor, netWorthSlices, shortEuros, signedAmount, signedPercent } from "@lofit/view";
 import { Donut } from "./donut";
-import type { Slice } from "./donut";
 import { useInvestmentTrend } from "../useInvestmentTrend";
 import { InvestmentTrend } from "./investmentTrend";
 import { RecentTransactions } from "./recentTransactions";
 import { TrendChart } from "./trendChart";
-
-function kickerFor(entry: NetWorthGroup | undefined): string {
-    if (!entry) return "Net worth";
-    return owesMoney(entry.total) ? `${entry.group.name} outstanding` : entry.group.name;
-}
-
-function centreLabel(entry: NetWorthGroup | undefined): string {
-    return entry ? entry.group.name : "Assets";
-}
 
 type ChartMode = "mix" | "trend";
 
@@ -42,66 +32,6 @@ const CHART_MODES: readonly ChartMode[] = ["mix", "trend"];
 const CHART_LABELS: Record<ChartMode, string> = { mix: "Mix", trend: "Trend" };
 
 const MIX_TITLE = "Made of";
-
-function shortEuros(value: Cents): string {
-    return `€ ${Math.round(Math.abs(value) / 100).toLocaleString("en-US")}`;
-}
-
-function signedAmount(value: Cents): string {
-    return `${value < 0 ? "−" : "+"} € ${formatAmount(value)}`;
-}
-
-function signedPercent(value: number): string {
-    return `${value < 0 ? "−" : "+"}${Math.abs(value).toFixed(1)}%`;
-}
-
-function toSlices(
-    parts: readonly NetWorthItem[],
-    groups: readonly Group[],
-    owed: boolean,
-): Slice[] {
-    const { slots, cap } = paletteFor(owed);
-    const positionOf = (groupId: string) =>
-        groups.find((group) => group.id === groupId)?.position ?? 0;
-
-    const ranked = [...parts].sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
-    const shown = new Set(ranked.slice(0, cap).map((item) => item.id));
-
-    const colors = new Map<string, string>();
-    for (const item of parts.filter((item) => shown.has(item.id))) {
-        colors.set(
-            item.id,
-            item.id === item.groupId
-                ? groupColor(positionOf(item.groupId), item.value < 0)
-                : slots[colors.size % slots.length]!,
-        );
-    }
-
-    const slices: Slice[] = ranked
-        .filter((item) => shown.has(item.id))
-        .map((item) => ({
-            key: item.id,
-            label: item.label,
-            value: item.value,
-            color: colors.get(item.id)!,
-        }));
-
-    const tail = ranked.slice(cap);
-    const only = tail.length === 1 ? tail[0] : undefined;
-
-    if (only) {
-        slices.push({ key: only.id, label: only.label, value: only.value, color: OTHER_COLOR });
-    } else if (tail.length > 1) {
-        slices.push({
-            key: "other",
-            label: `Other (${tail.length})`,
-            value: tail.reduce((sum, item) => addCents(sum, item.value), cents(0)),
-            color: OTHER_COLOR,
-        });
-    }
-
-    return slices;
-}
 
 function DeltaLine({ delta, previous }: { delta: Delta; previous: string }) {
     return (
@@ -148,7 +78,7 @@ export function NetWorthTab() {
     const selected = groups.find((entry) => entry.group.id === scope);
     const scoped = itemsInScope(groups, scope);
     const live = scoped.reduce((sum, item) => addCents(sum, item.value), cents(0));
-    const slices = toSlices(scoped, allGroups, selected ? owesMoney(selected.total) : false);
+    const slices = netWorthSlices(scoped, allGroups, selected ? owesMoney(selected.total) : false);
 
     const fullSeries = seriesFor(allMonths, scope);
     const series = fullSeries.slice(offset);

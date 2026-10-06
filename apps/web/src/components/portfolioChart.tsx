@@ -6,7 +6,8 @@ import {
 } from "@lofit/domain";
 import type { Cents, Delta, Holding, HoldingGain } from "@lofit/domain";
 import { useState } from "react";
-import { rankColor } from "../helpers/palette";
+import { rankColor } from "@lofit/view";
+import { cssColor } from "../helpers/palette";
 
 type Mode = "allocation" | "gains";
 
@@ -40,7 +41,7 @@ function Allocation({ holdings }: { holdings: readonly Holding[] }) {
                     <span
                         key={share.key}
                         title={`${share.label} ${Math.round(share.pct)}%`}
-                        style={{ width: `${share.pct.toFixed(1)}%`, background: rankColor(rank, share.key === "other") }}
+                        style={{ width: `${share.pct.toFixed(1)}%`, background: cssColor(rankColor(rank, share.key === "other")) }}
                     />
                 ))}
             </div>
@@ -48,7 +49,7 @@ function Allocation({ holdings }: { holdings: readonly Holding[] }) {
             <div className="trend-parts">
                 {shares.map((share, rank) => (
                     <div key={share.key} className="trend-part">
-                        <span className="trend-dot" style={{ background: rankColor(rank, share.key === "other") }} />
+                        <span className="trend-dot" style={{ background: cssColor(rankColor(rank, share.key === "other")) }} />
                         <span className="trend-name">{share.label}</span>
                         <span className="trend-value">{formatEuros(share.value)}</span>
                         <span className="trend-share">{Math.round(share.pct)}%</span>

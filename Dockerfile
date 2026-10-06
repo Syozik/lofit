@@ -6,7 +6,8 @@ COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
 COPY packages/api/package.json packages/api/
 COPY packages/domain/package.json packages/domain/
-RUN pnpm install --frozen-lockfile
+COPY packages/view/package.json packages/view/
+RUN pnpm install --frozen-lockfile --filter "@lofit/server..." --filter "@lofit/web..."
 COPY . .
 RUN pnpm --filter @lofit/web build && pnpm --filter @lofit/server build
 

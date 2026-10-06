@@ -1,6 +1,7 @@
 import { amountIn, byPosition, formatEuros } from "@lofit/domain";
 import type { Cents, Group, Snapshot } from "@lofit/domain";
-import { groupColor } from "../helpers/palette";
+import { groupColor } from "@lofit/view";
+import { cssColor } from "../helpers/palette";
 import { monthName } from "../period";
 
 const BAR_FLOOR = 26;
@@ -52,7 +53,7 @@ function toParts(snapshot: Snapshot, groups: readonly Group[]): Part[] {
         .map((entry) => ({
             label: entry.group.name,
             value: entry.amount,
-            color: groupColor(entry.group.position, entry.amount < 0),
+            color: cssColor(groupColor(entry.group.position, entry.amount < 0)),
             pct: share(entry.amount),
         }));
 }
