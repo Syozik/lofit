@@ -1,3 +1,4 @@
+export type { ApiOptions } from "./client";
 export { configureApi } from "./client";
 export { configureAuth, signIn, signOut, signUp, useSession } from "./auth";
 export { addAccount, deleteAccount, fetchAccounts, updateAccountBalance } from "./accounts";

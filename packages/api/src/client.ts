@@ -3,8 +3,13 @@ import { hc } from "hono/client";
 
 let client: ReturnType<typeof hc<AppType>> | undefined;
 
-export function configureApi(baseUrl: string): void {
-    client = hc<AppType>(baseUrl);
+export type ApiOptions = {
+    headers?: () => Promise<Record<string, string>>;
+};
+
+export function configureApi(baseUrl: string, options: ApiOptions = {}): void {
+    const { headers } = options;
+    client = hc<AppType>(baseUrl, headers ? { headers, init: { credentials: "omit" } } : {});
 }
 
 export function api() {

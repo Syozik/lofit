@@ -2,10 +2,13 @@ import { createAuthClient } from "better-auth/react";
 
 type AuthClient = ReturnType<typeof createAuthClient>;
 
+type AuthPlugins = NonNullable<Parameters<typeof createAuthClient>[0]>["plugins"];
+
 let client: AuthClient | undefined;
 
-export function configureAuth(baseUrl: string): void {
-    client = createAuthClient({ baseURL: `${baseUrl}/api/auth` });
+export function configureAuth(baseUrl: string, plugins: AuthPlugins = []): AuthClient {
+    client = createAuthClient({ baseURL: `${baseUrl}/api/auth`, plugins }) as unknown as AuthClient;
+    return client;
 }
 
 function auth(): AuthClient {

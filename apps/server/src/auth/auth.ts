@@ -1,4 +1,5 @@
 import { DEFAULT_GROUP_NAMES, DEFAULT_TAG_NAMES, INVESTMENTS_GROUP } from "@lofit/domain";
+import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { bearer } from "better-auth/plugins/bearer";
@@ -55,5 +56,5 @@ export const auth = betterAuth({
     advanced: {
         database: { generateId: "uuid" },
     },
-    plugins: [bearer()],
+    plugins: [bearer(), expo()],
 });

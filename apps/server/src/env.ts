@@ -21,10 +21,16 @@ function baseUrl(): string {
     return `http://localhost:${port}`;
 }
 
+const APP_ORIGINS = ["lofit://", "exp://"];
+
 function origins(): string[] {
     const configured = process.env.TRUSTED_ORIGINS;
-    if (configured) return configured.split(",").map((origin) => origin.trim());
-    return production ? [] : ["http://localhost:5173"];
+    const listed = configured
+        ? configured.split(",").map((origin) => origin.trim())
+        : production
+          ? []
+          : ["http://localhost:5173"];
+    return [...listed, ...APP_ORIGINS];
 }
 
 export const env = {
