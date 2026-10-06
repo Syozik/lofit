@@ -1,6 +1,7 @@
-import { cents, historyIn, PRICE_RANGES, rangeWindow } from "@lofit/domain";
+import { cents, historyIn, PRICE_RANGES } from "@lofit/domain";
 import type { Cents, DayWindow, HistoryRange, PricePoint } from "@lofit/domain";
 import { useState } from "react";
+import { defaultCustom } from "../helpers/range";
 import { LineChart } from "./lineChart";
 import { RangePicker } from "./rangePicker";
 
@@ -16,11 +17,6 @@ function formatChange(format: (price: Cents) => string, from: Cents, to: Cents):
     const sign = amount < 0 ? "−" : "+";
     const pct = from === 0 ? 0 : (Math.abs(amount) / Math.abs(from)) * 100;
     return `${sign}${format(cents(Math.abs(amount)))} · ${sign}${pct.toFixed(1)}%`;
-}
-
-export function defaultCustom(first: string, last: string): DayWindow {
-    const from = rangeWindow("1m", last).from ?? first;
-    return { from: from < first ? first : from, to: last };
 }
 
 type Props = {

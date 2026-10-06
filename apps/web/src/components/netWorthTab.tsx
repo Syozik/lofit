@@ -21,7 +21,8 @@ import { groupColor, OTHER_COLOR, paletteFor } from "../helpers/palette";
 import { monthName } from "../period";
 import { Donut } from "./donut";
 import type { Slice } from "./donut";
-import { InvestmentTrend, useInvestmentTrend } from "./investmentTrend";
+import { useInvestmentTrend } from "../useInvestmentTrend";
+import { InvestmentTrend } from "./investmentTrend";
 import { RecentTransactions } from "./recentTransactions";
 import { TrendChart } from "./trendChart";
 
