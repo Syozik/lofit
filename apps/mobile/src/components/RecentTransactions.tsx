@@ -2,6 +2,7 @@ import { useTags, useTransactions } from "@lofit/api";
 import { ALL_GROUPS, byRecency, forAccounts } from "@lofit/domain";
 import type { Account, Scope } from "@lofit/domain";
 import { router } from "expo-router";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useOpenEntry } from "../context/entry";
 import { useRemoveTransaction } from "../hooks/useRemoveTransaction";
@@ -9,7 +10,7 @@ import { colors, fonts, space } from "../theme";
 import { text } from "./Screen";
 import { TransactionRow } from "./TransactionRow";
 
-const RECENT_COUNT = 5;
+const STEP = 10;
 
 type Props = {
     accounts: readonly Account[];
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export function RecentTransactions({ accounts, scope }: Props) {
+    const [recentCount, setRecentCount] = useState(STEP);
     const transactions = useTransactions();
     const tags = useTags();
     const remove = useRemoveTransaction();
@@ -32,33 +34,48 @@ export function RecentTransactions({ accounts, scope }: Props) {
             ? transactions.data
             : forAccounts(
                   transactions.data,
-                  new Set(accounts.filter((account) => account.groupId === scope).map((account) => account.id)),
+                  new Set(
+                      accounts
+                          .filter((account) => account.groupId === scope)
+                          .map((account) => account.id),
+                  ),
               );
-    const recent = byRecency(scoped).slice(0, RECENT_COUNT);
+    const recent = byRecency(scoped).slice(0, recentCount);
 
     return (
         <View style={styles.section}>
             <View style={styles.head}>
                 <Text style={text.kicker}>Recent</Text>
-                <Pressable hitSlop={8} onPress={() => router.navigate("/spending")} style={styles.action}>
+                <Pressable
+                    hitSlop={8}
+                    onPress={() => router.navigate("/spending")}
+                    style={styles.action}
+                >
                     <Text style={styles.actionText}>All activity</Text>
                 </Pressable>
             </View>
             {recent.length === 0 ? (
                 <Text style={text.muted}>No activity on these accounts yet</Text>
             ) : (
-                <View>
-                    {recent.map((transaction) => (
-                        <TransactionRow
-                            key={transaction.id}
-                            transaction={transaction}
-                            accountNames={accountNames}
-                            tagNames={tagNames}
-                            onEdit={openEntry}
-                            onDelete={remove}
-                        />
-                    ))}
-                </View>
+                <>
+                    <View>
+                        {recent.map((transaction) => (
+                            <TransactionRow
+                                key={transaction.id}
+                                transaction={transaction}
+                                accountNames={accountNames}
+                                tagNames={tagNames}
+                                onEdit={openEntry}
+                                onDelete={remove}
+                            />
+                        ))}
+                    </View>
+                    {recentCount < scoped.length && (
+                        <Pressable hitSlop={8} onPress={() => setRecentCount(recentCount + STEP)}>
+                            <Text style={styles.actionText}>Load more</Text>
+                        </Pressable>
+                    )}
+                </>
             )}
         </View>
     );
