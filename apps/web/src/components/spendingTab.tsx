@@ -1,6 +1,6 @@
 import { useAccounts, useBudgets, useTags, useTransactions } from "@lofit/api";
 import { byRecency, cents, formatAmount, latestPeriod, primaryTagId, spendByTag } from "@lofit/domain";
-import type { BudgetProgress, Tag, TagSpend, Transaction } from "@lofit/domain";
+import type { Tag, TagSpend, Transaction } from "@lofit/domain";
 import { useState } from "react";
 import { useRemoveTransaction } from "../useRemoveTransaction";
 import { CATEGORY_COLORS, OTHER_COLOR, UNTAGGED_COLOR } from "../helpers/palette";
@@ -72,22 +72,22 @@ function spendSlices(rows: readonly TagSpend[], tags: readonly Tag[]): SpendSlic
     return { slices, tagsOf };
 }
 
-function BudgetBar({ budget }: { budget: BudgetProgress }) {
-    return (
-        <>
-            <div className="spend-bar">
-                <div
-                    className={`spend-fill ${budget.over ? "over" : ""}`}
-                    style={{ width: `${budget.pct}%` }}
-                />
-            </div>
-            <span className={`spend-note ${budget.over ? "over" : ""}`}>
-                € {formatAmount(budget.gap)} {budget.over ? "over budget" : "left"}
-            </span>
-        </>
-    );
-}
-
+// function BudgetBar({ budget }: { budget: BudgetProgress }) {
+//     return (
+//         <>
+//             <div className="spend-bar">
+//                 <div
+//                     className={`spend-fill ${budget.over ? "over" : ""}`}
+//                     style={{ width: `${budget.pct}%` }}
+//                 />
+//             </div>
+//             <span className={`spend-note ${budget.over ? "over" : ""}`}>
+//                 € {formatAmount(budget.gap)} {budget.over ? "over budget" : "left"}
+//             </span>
+//         </>
+//     );
+// }
+//
 export function SpendingTab() {
     const remove = useRemoveTransaction();
     const show = useToast();
@@ -146,7 +146,7 @@ export function SpendingTab() {
                     />
                 )}
 
-                <div className="spend-cats">
+                {/*<div className="spend-cats">
                     {summary.tags.map((row) => (
                         <div key={row.tagId ?? "untagged"} className="spend-cat">
                             <div className="spend-cat-head">
@@ -165,7 +165,7 @@ export function SpendingTab() {
                             )}
                         </div>
                     ))}
-                </div>
+                </div>*/}
 
                 <div className="section recent-section tight">
                     <div className="section-head">
