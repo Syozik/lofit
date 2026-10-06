@@ -33,7 +33,8 @@ export { useDeleteHolding, useSellHolding, useUpdateHolding } from "./useHolding
 export { addGroup, fetchGroups } from "./groups";
 export { useGroups } from "./useGroups";
 export { useAddGroup } from "./useAddGroup";
-export { addTag, fetchTags } from "./tags";
+export { addTag, fetchTags, renameTag } from "./tags";
+export { useRenameTag } from "./useRenameTag";
 export { useTags } from "./useTags";
 export { useAddTag } from "./useAddTag";
 export { fetchBudgets } from "./budgets";

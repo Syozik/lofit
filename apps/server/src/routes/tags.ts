@@ -1,7 +1,9 @@
 import { zValidator } from "@hono/zod-validator";
 import { newTagSchema } from "@lofit/domain/schemas";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { z } from "zod";
 import type { AuthEnv } from "../auth/session";
 import { db } from "../db/client";
 import { toTag } from "../db/mappers";
@@ -50,5 +52,45 @@ export const tagsRoute = new Hono<AuthEnv>()
             });
 
             return c.json(toTag(result.tag), result.created ? 201 : 200);
+        },
+    )
+    .patch(
+        "/:id",
+        zValidator("param", z.object({ id: z.uuid() }), (result) => {
+            if (!result.success) throw new HTTPException(404, { message: "No such tag" });
+        }),
+        zValidator("json", newTagSchema, (result, c) => {
+            if (!result.success) return invalidBody(c, result.error.issues);
+        }),
+        async (c) => {
+            const id = c.req.param("id");
+            const { name } = c.req.valid("json");
+            const userId = c.var.userId;
+
+            const row = await db.transaction(async (tx) => {
+                const [clash] = await tx
+                    .select({ id: tags.id })
+                    .from(tags)
+                    .where(
+                        and(
+                            eq(tags.userId, userId),
+                            ne(tags.id, id),
+                            sql`lower(${tags.name}) = lower(${name})`,
+                        ),
+                    )
+                    .limit(1);
+                if (clash) throw new HTTPException(409, { message: `A tag named ${name} already exists` });
+
+                const [renamed] = await tx
+                    .update(tags)
+                    .set({ name })
+                    .where(and(eq(tags.id, id), eq(tags.userId, userId)))
+                    .returning();
+                if (!renamed) throw new HTTPException(404, { message: "No such tag" });
+
+                return renamed;
+            });
+
+            return c.json(toTag(row));
         },
     );

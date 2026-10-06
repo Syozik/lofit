@@ -4,6 +4,7 @@ import {
     useAddHolding,
     useAddTag,
     useAddTransaction,
+    useRenameTag,
     useTags,
     useUpdateTransaction,
 } from "@lofit/api";
@@ -24,7 +25,8 @@ import type {
     Transaction,
     TransactionKind,
 } from "@lofit/domain";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useToast } from "../toast";
 import { Sheet } from "./sheet";
 
 type EntryMode = TransactionKind | "holding";
@@ -60,6 +62,8 @@ type Props = {
     onSaved: (message: string) => void;
 };
 
+const DOUBLE_TAP_MS = 350;
+
 export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const { data: accounts } = useAccounts();
     const { data: groups } = useGroups();
@@ -67,6 +71,8 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const addEntry = useAddTransaction();
     const addPosition = useAddHolding();
     const addNewTag = useAddTag();
+    const rename = useRenameTag();
+    const show = useToast();
     const updateEntry = useUpdateTransaction();
 
     const [mode, setMode] = useState<EntryMode>(entry?.kind ?? "expense");
@@ -76,6 +82,8 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const [name, setName] = useState(entry?.name ?? "");
     const [tagIds, setTagIds] = useState<string[]>([...(entry?.tagIds ?? [])]);
     const [newTag, setNewTag] = useState<string | undefined>(undefined);
+    const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
+    const lastTap = useRef<{ id: string; at: number } | null>(null);
     const [day, setDay] = useState(entry ? entry.occurredAt.slice(0, 10) : today);
     const [fromId, setFromId] = useState(entry?.accountId ?? "");
     const [toId, setToId] = useState(entry?.toAccountId ?? "");
@@ -110,8 +118,6 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
 
     const pending = addEntry.isPending || addPosition.isPending || updateEntry.isPending;
 
-    const owner = tagIds[0] ? (tags ?? []).find((tag) => tag.id === tagIds[0])?.name : undefined;
-
     function nextCurrency() {
         const at = CURRENCIES.indexOf(currency);
         setCurrency(CURRENCIES[(at + 1) % CURRENCIES.length]!);
@@ -120,6 +126,30 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     function toggleTag(id: string) {
         setTagIds((chosen) =>
             chosen.includes(id) ? chosen.filter((other) => other !== id) : [...chosen, id],
+        );
+    }
+
+    function tapTag(id: string, name: string, now: number) {
+        toggleTag(id);
+
+        if (lastTap.current?.id === id && now - lastTap.current.at < DOUBLE_TAP_MS) {
+            lastTap.current = null;
+            setRenaming({ id, name });
+        } else {
+            lastTap.current = { id, at: now };
+        }
+    }
+
+    function finishRename() {
+        if (!renaming) return;
+        const wanted = renaming.name.trim();
+        const original = (tags ?? []).find((tag) => tag.id === renaming.id)?.name;
+        setRenaming(null);
+        if (!wanted || wanted === original) return;
+
+        rename.mutate(
+            { id: renaming.id, name: wanted },
+            { onError: (error) => show(error.message.replace(/^API \d+: /, "")) },
         );
     }
 
@@ -271,11 +301,37 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                     <div className="sheet-chips">
                         {(tags ?? []).map((tag) => {
                             const chosen = tagIds.indexOf(tag.id);
+                            if (renaming?.id === tag.id) {
+                                return (
+                                    <input
+                                        key={tag.id}
+                                        className="input sheet-new-tag"
+                                        autoFocus
+                                        aria-label={`Rename ${tag.name}`}
+                                        value={renaming.name}
+                                        onFocus={(event) => event.currentTarget.select()}
+                                        onChange={(event) => setRenaming({ id: tag.id, name: event.target.value })}
+                                        onBlur={(event) => {
+                                            if (!event.currentTarget.dataset.cancelled) finishRename();
+                                        }}
+                                        onKeyDown={(event) => {
+                                            if (event.key === "Enter") {
+                                                event.preventDefault();
+                                                finishRename();
+                                            }
+                                            if (event.key === "Escape") {
+                                                event.currentTarget.dataset.cancelled = "true";
+                                                setRenaming(null);
+                                            }
+                                        }}
+                                    />
+                                );
+                            }
                             return (
                                 <button
                                     key={tag.id}
                                     className={`tag sheet-chip ${chosen === 0 ? "selected owner" : chosen > 0 ? "selected" : ""}`}
-                                    onClick={() => toggleTag(tag.id)}
+                                    onClick={(event) => tapTag(tag.id, tag.name, event.timeStamp)}
                                 >
                                     {tag.name}
                                 </button>
@@ -303,7 +359,6 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                             />
                         )}
                     </div>
-                    {owner && <span className="sheet-hint">{owner} owns this entry</span>}
                 </div>
             )}
 
