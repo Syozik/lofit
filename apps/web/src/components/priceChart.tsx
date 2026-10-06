@@ -1,7 +1,7 @@
 import { cents, historyIn, PRICE_RANGES } from "@lofit/domain";
+import { currencyFormat, defaultCustom, formatChange } from "@lofit/view";
 import type { Cents, DayWindow, HistoryRange, PricePoint } from "@lofit/domain";
 import { useState } from "react";
-import { defaultCustom } from "../helpers/range";
 import { LineChart } from "./lineChart";
 import { RangePicker } from "./rangePicker";
 
@@ -12,13 +12,6 @@ const dayFormat = new Intl.DateTimeFormat("en-GB", {
     timeZone: "UTC",
 });
 
-function formatChange(format: (price: Cents) => string, from: Cents, to: Cents): string {
-    const amount = to - from;
-    const sign = amount < 0 ? "−" : "+";
-    const pct = from === 0 ? 0 : (Math.abs(amount) / Math.abs(from)) * 100;
-    return `${sign}${format(cents(Math.abs(amount)))} · ${sign}${pct.toFixed(1)}%`;
-}
-
 type Props = {
     points: readonly PricePoint[];
     currency: string;
@@ -27,7 +20,7 @@ type Props = {
 };
 
 export function PriceChart({ points: history, currency, cost, heldSince }: Props) {
-    const priceFormat = new Intl.NumberFormat("en-IE", { style: "currency", currency });
+    const priceFormat = currencyFormat(currency);
     const formatPrice = (price: Cents) => priceFormat.format(price / 100);
 
     const bounds = { from: history[0]?.day ?? heldSince, to: history[history.length - 1]?.day ?? heldSince };
@@ -54,7 +47,7 @@ export function PriceChart({ points: history, currency, cost, heldSince }: Props
                     <div className="price-readout">
                         <span className="price-value">{formatPrice(shown.price)}</span>
                         <span className={`price-change ${shown.price >= first.price ? "up" : ""}`}>
-                            {formatChange(formatPrice, first.price, shown.price)}
+                            {formatChange((amount) => formatPrice(cents(amount)), first.price, shown.price)}
                         </span>
                         <span className="price-day">{focus ? dayFormat.format(new Date(focus.day)) : "Last close"}</span>
                     </div>

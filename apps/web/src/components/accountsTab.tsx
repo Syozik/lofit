@@ -12,7 +12,6 @@ import {
     ASSET_TYPE_LABELS,
     byPosition,
     formatEuros,
-    holdingGain,
     holdingsFor,
     holdingValue,
     lastSyncedAt,
@@ -21,7 +20,15 @@ import {
     owesMoney,
     sumItems,
 } from "@lofit/domain";
-import type { Account, AccountChange, Cents, Group, Holding } from "@lofit/domain";
+import type { Account, Cents, Group, Holding } from "@lofit/domain";
+import {
+    accountChangeLabel,
+    detailLines,
+    formatSync,
+    formatUnits,
+    gainLabel,
+    latestPricing,
+} from "@lofit/view";
 import { useState } from "react";
 import { useToast } from "../toast";
 import { ACTION_WIDTH, useSwipe } from "../useSwipe";
@@ -30,63 +37,6 @@ import { AccountHistory } from "./accountHistory";
 import { AccountSheet } from "./accountSheet";
 import { HoldingSheet } from "./holdingSheet";
 import { PortfolioChart } from "./portfolioChart";
-
-const timeFormat = new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-});
-
-const dateTimeFormat = new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-});
-
-function sameDay(one: Date, other: Date): boolean {
-    return one.toDateString() === other.toDateString();
-}
-
-function formatSync(instant: string): string {
-    const when = new Date(instant);
-    return sameDay(when, new Date())
-        ? `today ${timeFormat.format(when)}`
-        : dateTimeFormat.format(when).replace(",", "");
-}
-
-function formatChange(change: AccountChange): string {
-    const rounded = Math.round(Math.abs(change.amount) / 100).toLocaleString("en-US");
-    return `${change.amount < 0 ? "−" : "+"}€${rounded} ${change.period}`;
-}
-
-function detailLines(account: Account): readonly { label: string; value: string }[] {
-    const lines = [...(account.details ?? [])];
-
-    if (account.lastSyncedAt) {
-        lines.push({ label: "Last sync", value: formatSync(account.lastSyncedAt) });
-    }
-
-    if (account.statedAt) {
-        lines.push({ label: "You updated", value: formatSync(account.statedAt) });
-    }
-
-    return lines;
-}
-
-const shareFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 });
-const unitFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 8 });
-
-function formatUnits(holding: Holding): string {
-    const format = holding.type === "crypto" ? unitFormat : shareFormat;
-    const each = new Intl.NumberFormat("en-IE", {
-        style: "currency",
-        currency: holding.currency,
-    }).format(holding.nativePrice / 100);
-
-    return `${format.format(holding.quantity)} × ${each}`;
-}
 
 type GroupHeadProps = {
     name: string;
@@ -143,8 +93,10 @@ function AccountCard({
                         </span>
                     ) : (
                         account.change && (
-                            <span className={`acct-change ${account.change.favourable ? "up" : ""}`}>
-                                {formatChange(account.change)}
+                            <span
+                                className={`acct-change ${account.change.favourable ? "up" : ""}`}
+                            >
+                                {accountChangeLabel(account.change)}
                             </span>
                         )
                     )}
@@ -189,14 +141,8 @@ function AccountCard({
 }
 
 function GainLine({ holding }: { holding: Holding }) {
-    const gain = holdingGain(holding);
-    const sign = gain.amount < 0 ? "−" : "+";
-
-    return (
-        <span className={`acct-change ${gain.favourable ? "up" : ""}`}>
-            {`${sign}€${Math.round(Math.abs(gain.amount) / 100).toLocaleString("en-US")} · ${sign}${Math.abs(gain.pct).toFixed(1)}%`}
-        </span>
-    );
+    const gain = gainLabel(holding);
+    return <span className={`acct-change ${gain.favourable ? "up" : ""}`}>{gain.text}</span>;
 }
 
 type HoldingRowProps = {
@@ -274,11 +220,7 @@ export function AccountsTab() {
     const groups = groupsQuery.data;
     const synced = lastSyncedAt(accounts);
     const byGroup = accountsByGroup(accounts, groups);
-    const pricedAt = holdings
-        .map((holding) => holding.pricedAt)
-        .filter((stamp): stamp is string => stamp !== undefined)
-        .sort()
-        .at(-1);
+    const pricedAt = latestPricing(holdings);
 
     return (
         <div className="tab-content">
@@ -372,9 +314,7 @@ export function AccountsTab() {
                 </button>
             </div>
 
-            {adding && (
-                <AccountSheet onClose={() => setAdding(false)} onSaved={show} />
-            )}
+            {adding && <AccountSheet onClose={() => setAdding(false)} onSaved={show} />}
 
             {position && (
                 <HoldingSheet
@@ -399,15 +339,15 @@ export function AccountsTab() {
             )}
 
             {history && (
-                <AccountHistory account={history} accounts={accounts} onClose={() => setHistory(null)} />
+                <AccountHistory
+                    account={history}
+                    accounts={accounts}
+                    onClose={() => setHistory(null)}
+                />
             )}
 
             {editing && (
-                <AccountSheet
-                    account={editing}
-                    onClose={() => setEditing(null)}
-                    onSaved={show}
-                />
+                <AccountSheet account={editing} onClose={() => setEditing(null)} onSaved={show} />
             )}
         </div>
     );

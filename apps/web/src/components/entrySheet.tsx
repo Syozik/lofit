@@ -25,6 +25,7 @@ import type {
     Transaction,
     TransactionKind,
 } from "@lofit/domain";
+import { parsePositive } from "@lofit/view";
 import { useRef, useState } from "react";
 import { useToast } from "../toast";
 import { Sheet } from "./sheet";
@@ -45,11 +46,6 @@ function money(currency: string, amount: number): string {
 
 function today(): string {
     return new Date().toISOString().slice(0, 10);
-}
-
-function parseNumber(input: string): number | undefined {
-    const value = Number.parseFloat(input.replace(",", "."));
-    return Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
 function toInstant(day: string): string {
@@ -76,9 +72,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const updateEntry = useUpdateTransaction();
 
     const [mode, setMode] = useState<EntryMode>(entry?.kind ?? "expense");
-    const [amount, setAmount] = useState(
-        entry ? (Math.abs(entry.amount) / 100).toFixed(2) : "",
-    );
+    const [amount, setAmount] = useState(entry ? (Math.abs(entry.amount) / 100).toFixed(2) : "");
     const [name, setName] = useState(entry?.name ?? "");
     const [tagIds, setTagIds] = useState<string[]>([...(entry?.tagIds ?? [])]);
     const [newTag, setNewTag] = useState<string | undefined>(undefined);
@@ -109,8 +103,8 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const heldAt = custodianId || brokerages[0]?.id || "";
     const to = toId || accounts?.find((account) => account.id !== from)?.id || "";
 
-    const value = parseNumber(amount);
-    const units = parseNumber(quantity);
+    const value = parsePositive(amount);
+    const units = parsePositive(quantity);
 
     const blocked = isHolding
         ? !value || !units || !symbol.trim() || !heldAt || !day
@@ -242,9 +236,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
             <div className="sheet-head">
                 <h4 className="sheet-title">{editing ? "Edit entry" : "Log an entry"}</h4>
                 <span className="sheet-note">
-                    {isHolding
-                        ? "Manual · price per unit"
-                        : "Manual"}
+                    {isHolding ? "Manual · price per unit" : "Manual"}
                 </span>
             </div>
 
@@ -312,9 +304,12 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                                         aria-label={`Rename ${tag.name}`}
                                         value={renaming.name}
                                         onFocus={(event) => event.currentTarget.select()}
-                                        onChange={(event) => setRenaming({ id: tag.id, name: event.target.value })}
+                                        onChange={(event) =>
+                                            setRenaming({ id: tag.id, name: event.target.value })
+                                        }
                                         onBlur={(event) => {
-                                            if (!event.currentTarget.dataset.cancelled) finishRename();
+                                            if (!event.currentTarget.dataset.cancelled)
+                                                finishRename();
                                         }}
                                         onKeyDown={(event) => {
                                             if (event.key === "Enter") {
@@ -390,7 +385,6 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                                     onChange={(event) => setQuantity(event.target.value)}
                                 />
                             </label>
-
                         </div>
 
                         <label className="field">

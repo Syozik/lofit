@@ -1,14 +1,9 @@
 import { useAddAccount, useAddGroup, useGroups, useUpdateAccountBalance } from "@lofit/api";
 import { euros } from "@lofit/domain";
 import type { Account } from "@lofit/domain";
+import { parseAmount } from "@lofit/view";
 import { useState } from "react";
 import { Sheet } from "./sheet";
-
-function parseAmount(input: string): number | undefined {
-    const typed = input.replace(",", ".").replace(/[\u2212\u2013\u2014]/g, "-");
-    const value = Number.parseFloat(typed);
-    return Number.isFinite(value) ? value : undefined;
-}
 
 function startingAmount(account: Account): string {
     return (account.balance / 100).toFixed(2);
@@ -116,7 +111,10 @@ export function AccountSheet({ account, onClose, onSaved }: Props) {
                                         if (event.key === "Escape") setNewGroup(undefined);
                                     }}
                                 />
-                                <button className="btn btn-ghost" onClick={() => void createGroup()}>
+                                <button
+                                    className="btn btn-ghost"
+                                    onClick={() => void createGroup()}
+                                >
                                     Add
                                 </button>
                             </span>

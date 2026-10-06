@@ -1,8 +1,9 @@
 import { formatAmount } from "@lofit/domain";
 import type { Cents } from "@lofit/domain";
+import { wholeNumber } from "./intl";
 
 export function shortEuros(value: Cents): string {
-    return `€ ${Math.round(Math.abs(value) / 100).toLocaleString("en-US")}`;
+    return `€ ${wholeNumber(Math.round(Math.abs(value) / 100))}`;
 }
 
 export function signedAmount(value: Cents): string {

@@ -2,7 +2,7 @@ import { usePortfolioHistory } from "@lofit/api";
 import { cents, PORTFOLIO_RANGES, pointsWithin, rangeWindow } from "@lofit/domain";
 import type { Delta, DayWindow, HistoryRange, ValuePoint } from "@lofit/domain";
 import { useState } from "react";
-import { defaultCustom } from "./helpers/range";
+import { defaultCustom } from "@lofit/view";
 
 const dayFormat = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 

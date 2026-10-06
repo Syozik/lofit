@@ -1,28 +1,10 @@
 import { useDeleteHolding, useHoldingHistory, useSellHolding, useUpdateHolding } from "@lofit/api";
 import { euros, formatAmount, formatEuros, holdingValue, unitCost } from "@lofit/domain";
 import type { Holding } from "@lofit/domain";
+import { dayFormat, inCurrency, parsePositive } from "@lofit/view";
 import { useState } from "react";
 import { PriceChart } from "./priceChart";
 import { Sheet } from "./sheet";
-
-const dayFormat = new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-});
-
-function inCurrency(holding: Holding, amount: number): string {
-    return new Intl.NumberFormat("en-IE", {
-        style: "currency",
-        currency: holding.currency,
-    }).format(amount / 100);
-}
-
-function parseNumber(input: string): number | undefined {
-    const value = Number.parseFloat(input.replace(",", "."));
-    return Number.isFinite(value) && value > 0 ? value : undefined;
-}
 
 type Props = {
     holding: Holding;
@@ -46,10 +28,10 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
 
     const pending = update.isPending || sell.isPending || remove.isPending;
 
-    const held = parseNumber(quantity);
-    const cost = parseNumber(paid);
-    const sold = parseNumber(units);
-    const at = parseNumber(price);
+    const held = parsePositive(quantity);
+    const cost = parsePositive(paid);
+    const sold = parsePositive(units);
+    const at = parsePositive(price);
 
     const proceeds = sold && at ? sold * at : 0;
 
@@ -97,8 +79,8 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
             <div className="sheet-head">
                 <h4 className="sheet-title">{holding.symbol}</h4>
                 <span className="sheet-note">
-                    {holding.name} · {accountName} · worth {formatEuros(holdingValue(holding))} · since{" "}
-                    {dayFormat.format(new Date(holding.heldSince))}
+                    {holding.name} · {accountName} · worth {formatEuros(holdingValue(holding))} ·
+                    since {dayFormat.format(new Date(holding.heldSince))}
                 </span>
             </div>
 
@@ -107,7 +89,11 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
                     <PriceChart
                         points={history.data.points}
                         currency={history.data.currency}
-                        cost={holding.cost > 0 ? unitCost(holding, history.data.perEuroWhenBought) : undefined}
+                        cost={
+                            holding.cost > 0
+                                ? unitCost(holding, history.data.perEuroWhenBought)
+                                : undefined
+                        }
                         heldSince={holding.heldSince}
                     />
                 ) : (
@@ -221,8 +207,7 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
                         </label>
 
                         <span className="sheet-total">
-                            Worth {inCurrency(holding, holding.nativePrice)} each, refreshed
-                            hourly
+                            Worth {inCurrency(holding, holding.nativePrice)} each, refreshed hourly
                         </span>
 
                         <div className="sheet-actions">
