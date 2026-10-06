@@ -25,11 +25,26 @@
             "expo-secure-store",
             "expo-web-browser",
             "expo-font",
-            "@react-native-community/datetimepicker"
+            "@react-native-community/datetimepicker",
+            [
+                "expo-splash-screen",
+                {
+                    "image": "./assets/splash-icon.png",
+                    "imageWidth": 200,
+                    "resizeMode": "contain",
+                    "backgroundColor": "#F6F7FC"
+                }
+            ]
         ],
         "scheme": "lofit",
         "experiments": {
             "typedRoutes": true
+        },
+        "extra": {
+            "router": {},
+            "eas": {
+                "projectId": "53a4bac4-e3af-42ac-84e4-8846449a61e3"
+            }
         }
     }
 }
