@@ -13,7 +13,7 @@ export interface Transaction {
     occurredAt: string;
 }
 
-export type NewTransaction = Omit<Transaction, "id">;
+export type NewTransaction = Omit<Transaction, "id"> & { id?: string };
 
 export function primaryTagId(transaction: Pick<Transaction, "tagIds">): string | undefined {
     return transaction.tagIds[0];

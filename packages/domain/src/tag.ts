@@ -4,7 +4,7 @@ export interface Tag {
     position: number;
 }
 
-export type NewTag = Pick<Tag, "name">;
+export type NewTag = Pick<Tag, "name"> & { id?: string };
 
 export const DEFAULT_TAG_NAMES: readonly string[] = [
     "Housing",

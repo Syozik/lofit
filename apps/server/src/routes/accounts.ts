@@ -31,7 +31,16 @@ export const accountsRoute = new Hono<AuthEnv>()
             const draft = c.req.valid("json");
             const userId = c.var.userId;
 
-            const row = await db.transaction(async (tx) => {
+            const result = await db.transaction(async (tx) => {
+                if (draft.id) {
+                    const [same] = await tx
+                        .select()
+                        .from(accounts)
+                        .where(and(eq(accounts.id, draft.id), eq(accounts.userId, userId)))
+                        .limit(1);
+                    if (same) return { row: same, created: false };
+                }
+
                 const [group] = await tx
                     .select({ id: groups.id })
                     .from(groups)
@@ -43,6 +52,7 @@ export const accountsRoute = new Hono<AuthEnv>()
                 const [created] = await tx
                     .insert(accounts)
                     .values({
+                        ...(draft.id ? { id: draft.id } : {}),
                         userId,
                         name: draft.name,
                         subtitle: draft.subtitle,
@@ -53,10 +63,10 @@ export const accountsRoute = new Hono<AuthEnv>()
                     })
                     .returning();
 
-                return created!;
+                return { row: created!, created: true };
             });
 
-            return c.json(toAccount(row), 201);
+            return c.json(toAccount(result.row), result.created ? 201 : 200);
         },
     )
     .patch(

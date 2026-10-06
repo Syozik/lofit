@@ -16,6 +16,7 @@ export interface Account {
 }
 
 export interface NewAccount {
+    id?: string;
     name: string;
     subtitle: string;
     groupId: string;

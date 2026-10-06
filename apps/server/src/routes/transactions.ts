@@ -46,7 +46,19 @@ export const transactionsRoute = new Hono<AuthEnv>()
             const userId = c.var.userId;
             const changes = balanceChanges(entry);
 
-            const row = await db.transaction(async (tx) => {
+            const result = await db.transaction(async (tx) => {
+                if (entry.id) {
+                    const [existing] = await tx
+                        .select()
+                        .from(transactions)
+                        .where(eq(transactions.id, entry.id))
+                        .limit(1);
+                    if (existing && existing.userId !== userId) {
+                        throw new HTTPException(409, { message: "That id is taken" });
+                    }
+                    if (existing) return { row: existing, created: false };
+                }
+
                 const owned = await tx
                     .select({ id: accounts.id })
                     .from(accounts)
@@ -70,6 +82,7 @@ export const transactionsRoute = new Hono<AuthEnv>()
                 const [inserted] = await tx
                     .insert(transactions)
                     .values({
+                        ...(entry.id ? { id: entry.id } : {}),
                         userId,
                         name: entry.name,
                         kind: entry.kind,
@@ -99,12 +112,10 @@ export const transactionsRoute = new Hono<AuthEnv>()
                         .where(and(eq(accounts.id, change.accountId), eq(accounts.userId, userId)));
                 }
 
-                return inserted;
+                return { row: inserted, created: true };
             });
 
-            if (!row) throw new Error("Inserting a transaction returned no row.");
-
-            return c.json(toTransaction(row, entry.tagIds), 201);
+            return c.json(toTransaction(result.row, entry.tagIds), result.created ? 201 : 200);
         },
     )
     .patch(

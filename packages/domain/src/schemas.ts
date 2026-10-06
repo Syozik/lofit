@@ -16,6 +16,7 @@ const daySchema = z.string().refine(isDay, "Expected a calendar day, like 2026-0
 
 export const newTransactionSchema = z
     .object({
+        id: z.uuid().optional(),
         name: z.string().trim().min(1).max(200),
         kind: z.enum(TRANSACTION_KINDS),
         tagIds: z.array(z.uuid()).max(MAX_TAGS).default([]),
@@ -84,10 +85,12 @@ export const newHoldingSchema = z.object({
 });
 
 export const newTagSchema = z.object({
+    id: z.uuid().optional(),
     name: z.string().trim().min(1).max(40),
 });
 
 export const newAccountSchema = z.object({
+    id: z.uuid().optional(),
     name: z.string().trim().min(1).max(100),
     subtitle: z.string().trim().max(100).default(""),
     groupId: z.uuid(),
@@ -110,5 +113,6 @@ export const sellHoldingSchema = z.object({
 });
 
 export const newGroupSchema = z.object({
+    id: z.uuid().optional(),
     name: z.string().trim().min(1).max(40),
 });

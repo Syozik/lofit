@@ -5,7 +5,7 @@ export interface Group {
     invests: boolean;
 }
 
-export type NewGroup = Pick<Group, "name">;
+export type NewGroup = Pick<Group, "name"> & { id?: string };
 
 export const ALL_GROUPS = "all";
 

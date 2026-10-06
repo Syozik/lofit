@@ -24,10 +24,19 @@ export const groupsRoute = new Hono<AuthEnv>()
             if (!result.success) return invalidBody(c, result.error.issues);
         }),
         async (c) => {
-            const { name } = c.req.valid("json");
+            const { id, name } = c.req.valid("json");
             const userId = c.var.userId;
 
             const result = await db.transaction(async (tx) => {
+                if (id) {
+                    const [same] = await tx
+                        .select()
+                        .from(groups)
+                        .where(and(eq(groups.id, id), eq(groups.userId, userId)))
+                        .limit(1);
+                    if (same) return { group: same, created: false };
+                }
+
                 const [existing] = await tx
                     .select()
                     .from(groups)
@@ -44,7 +53,7 @@ export const groupsRoute = new Hono<AuthEnv>()
 
                 const [row] = await tx
                     .insert(groups)
-                    .values({ userId, name, position: end?.next ?? 0 })
+                    .values({ ...(id ? { id } : {}), userId, name, position: end?.next ?? 0 })
                     .returning();
                 if (!row) throw new Error("Creating a group returned no row.");
 
