@@ -38,6 +38,21 @@ export const KIND_LABELS: Record<TransactionKind, string> = {
     transfer: "Transfer",
 };
 
+export interface ImportDraft {
+    name: string;
+    kind: "expense" | "income";
+    amount: Cents;
+    day: string;
+    accountId?: string;
+    tagIds: string[];
+    currency?: string;
+}
+
+export interface ScreenshotImport {
+    drafts: ImportDraft[];
+    skipped: number;
+}
+
 export interface Budget {
     tagId: string;
     limit: Cents;

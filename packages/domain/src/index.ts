@@ -45,6 +45,8 @@ export type {
     AccountDetail,
     AssetType,
     Budget,
+    ImportDraft,
+    ScreenshotImport,
     Provenance,
     TransactionKind,
 } from "./types";

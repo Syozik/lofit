@@ -8,6 +8,7 @@ import { accountsRoute } from "./routes/accounts";
 import { budgetsRoute } from "./routes/budgets";
 import { groupsRoute } from "./routes/groups";
 import { holdingsRoute } from "./routes/holdings";
+import { importsRoute } from "./routes/imports";
 import { portfolioRoute } from "./routes/portfolio";
 import { pricesRoute } from "./routes/prices";
 import { snapshotsRoute } from "./routes/snapshots";
@@ -24,7 +25,8 @@ const resources = new Hono<AuthEnv>()
     .route("/groups", groupsRoute)
     .route("/budgets", budgetsRoute)
     .route("/snapshots", snapshotsRoute)
-    .route("/prices", pricesRoute);
+    .route("/prices", pricesRoute)
+    .route("/imports", importsRoute);
 
 export const app = new Hono()
     .basePath("/api")

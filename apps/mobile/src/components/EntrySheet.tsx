@@ -4,10 +4,12 @@ import {
     useAddTag,
     useAddTransaction,
     useGroups,
+    useImportScreenshot,
     useRenameTag,
     useTags,
     useUpdateTransaction,
 } from "@lofit/api";
+import type { Screenshot } from "@lofit/api";
 import { ASSET_TYPE_LABELS, ASSET_TYPES, CURRENCIES, euros, investingGroups, KIND_LABELS } from "@lofit/domain";
 import type {
     Account,
@@ -20,6 +22,7 @@ import type {
     TransactionKind,
 } from "@lofit/domain";
 import { currencyFormat, dayFormat, parsePositive } from "@lofit/view";
+import { ImagePlus } from "lucide-react-native";
 import { useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { colors, fonts } from "../theme";
@@ -28,8 +31,10 @@ import { Button } from "./Button";
 import { Chip, ChipRow, Segmented } from "./Choices";
 import { Field, fieldStyles } from "./Field";
 import { pickDay } from "./RangePicker";
+import { pickScreenshot, ScreenshotImportView } from "./ScreenshotImport";
 import { Sheet, SheetActions } from "./Sheet";
 import { useOnline } from "../connectivity";
+import { today, toInstant } from "../days";
 import { useToast } from "./Toast";
 
 type EntryMode = TransactionKind | "holding";
@@ -46,14 +51,6 @@ const TRANSACTION_MODES = ALL_MODES.filter((option) => option.value !== "holding
 const CURRENCY_SYMBOLS: Record<Currency, string> = { EUR: "€", USD: "$" };
 
 const DOUBLE_TAP_MS = 350;
-
-function today(): string {
-    return new Date().toISOString().slice(0, 10);
-}
-
-function toInstant(day: string): string {
-    return `${day}T${new Date().toISOString().slice(11)}`;
-}
 
 function AccountPicker({
     label,
@@ -113,6 +110,8 @@ export function EntrySheet({ entry, onClose }: Props) {
     const updateEntry = useUpdateTransaction();
     const show = useToast();
     const online = useOnline();
+    const reading = useImportScreenshot();
+    const [shot, setShot] = useState<Screenshot | null>(null);
 
     const [mode, setMode] = useState<EntryMode>(entry?.kind ?? "expense");
     const [amount, setAmount] = useState(entry ? (Math.abs(entry.amount) / 100).toFixed(2) : "");
@@ -249,6 +248,26 @@ export function EntrySheet({ entry, onClose }: Props) {
         onClose();
     }
 
+    async function fromScreenshot() {
+        try {
+            const picked = await pickScreenshot();
+            if (!picked) return;
+            if ("tooLarge" in picked) {
+                show("That screenshot is too large to read");
+                return;
+            }
+            setShot(picked.screenshot);
+            reading.mutate(picked.screenshot);
+        } catch {
+            show("Couldn't open your photos");
+        }
+    }
+
+    function leaveImport() {
+        reading.reset();
+        setShot(null);
+    }
+
     function save() {
         if (blocked || !value) return;
         if (isHolding) {
@@ -258,13 +277,42 @@ export function EntrySheet({ entry, onClose }: Props) {
         saveTransaction(value);
     }
 
+    if (shot) {
+        return (
+            <Sheet title="From screenshot" onClose={onClose}>
+                <ScreenshotImportView
+                    reading={reading}
+                    accounts={allAccounts}
+                    tags={tags ?? []}
+                    defaultAccountId={from}
+                    onBack={leaveImport}
+                    onRetry={() => reading.mutate(shot)}
+                    onClose={onClose}
+                />
+            </Sheet>
+        );
+    }
+
     return (
         <Sheet
             title={editing ? "Edit entry" : "Log an entry"}
             note={isHolding ? "Manual · price per unit" : "Manual"}
             onClose={onClose}
         >
-            <Segmented options={editing ? TRANSACTION_MODES : ALL_MODES} value={mode} onChange={setMode} />
+            <View style={styles.modeRow}>
+                <Segmented options={editing ? TRANSACTION_MODES : ALL_MODES} value={mode} onChange={setMode} />
+                {!editing && (
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="From screenshot"
+                        hitSlop={8}
+                        onPress={() => void fromScreenshot()}
+                        style={styles.screenshot}
+                    >
+                        <ImagePlus size={18} color={colors.accent} />
+                    </Pressable>
+                )}
+            </View>
 
             <View style={styles.amountRow}>
                 {isHolding && (
@@ -437,6 +485,13 @@ export function EntrySheet({ entry, onClose }: Props) {
 
 const styles = StyleSheet.create({
     field: { gap: 5 },
+    modeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+    screenshot: {
+        padding: 7,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: colors.divider,
+    },
     label: { fontFamily: fonts.regular, fontSize: 12, color: colors.quiet },
     date: { justifyContent: "center" },
     dateText: { fontFamily: fonts.regular, fontSize: 15, color: colors.text },

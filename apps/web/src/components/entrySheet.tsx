@@ -26,8 +26,10 @@ import type {
     TransactionKind,
 } from "@lofit/domain";
 import { parsePositive } from "@lofit/view";
-import { useRef, useState } from "react";
+import { ImagePlus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useToast } from "../toast";
+import { ScreenshotImport } from "./screenshotImport";
 import { Sheet } from "./sheet";
 
 type EntryMode = TransactionKind | "holding";
@@ -89,6 +91,8 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const [currency, setCurrency] = useState<Currency>("EUR");
     const [liveSymbol, setLiveSymbol] = useState("");
     const [ownTicker, setOwnTicker] = useState(false);
+    const [screenshot, setScreenshot] = useState<File | null>(null);
+    const picker = useRef<HTMLInputElement>(null);
 
     const editing = entry !== undefined;
     const isHolding = mode === "holding";
@@ -111,6 +115,22 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
         : !value || !name.trim() || !from || (mode === "transfer" && (!to || to === from));
 
     const pending = addEntry.isPending || addPosition.isPending || updateEntry.isPending;
+
+    useEffect(() => {
+        if (editing || screenshot) return;
+
+        function paste(event: ClipboardEvent) {
+            const image = [...(event.clipboardData?.files ?? [])].find((file) =>
+                file.type.startsWith("image/"),
+            );
+            if (!image) return;
+            event.preventDefault();
+            setScreenshot(image);
+        }
+
+        document.addEventListener("paste", paste);
+        return () => document.removeEventListener("paste", paste);
+    }, [editing, screenshot]);
 
     function nextCurrency() {
         const at = CURRENCIES.indexOf(currency);
@@ -231,13 +251,49 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
         saveTransaction(value);
     }
 
+    if (screenshot) {
+        return (
+            <Sheet label="From screenshot" onClose={onClose}>
+                <ScreenshotImport
+                    file={screenshot}
+                    defaultAccount={from}
+                    onBack={() => setScreenshot(null)}
+                    onClose={onClose}
+                    onSaved={onSaved}
+                />
+            </Sheet>
+        );
+    }
+
     return (
         <Sheet label={editing ? "Edit entry" : "Log an entry"} onClose={onClose}>
             <div className="sheet-head">
                 <h4 className="sheet-title">{editing ? "Edit entry" : "Log an entry"}</h4>
-                <span className="sheet-note">
-                    {isHolding ? "Manual · price per unit" : "Manual"}
-                </span>
+                {editing || isHolding ? (
+                    <span className="sheet-note">
+                        {isHolding ? "Manual · price per unit" : "Manual"}
+                    </span>
+                ) : (
+                    <button
+                        className="btn btn-ghost sheet-import"
+                        title="Or paste an image"
+                        onClick={() => picker.current?.click()}
+                    >
+                        <ImagePlus size={15} strokeWidth={1.5} aria-hidden />
+                        From screenshot
+                    </button>
+                )}
+                <input
+                    ref={picker}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        if (file) setScreenshot(file);
+                    }}
+                />
             </div>
 
             <div className="seg sheet-kinds">

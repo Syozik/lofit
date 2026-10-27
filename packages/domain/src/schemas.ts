@@ -89,6 +89,15 @@ export const newTagSchema = z.object({
     name: z.string().trim().min(1).max(40),
 });
 
+export const SCREENSHOT_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"] as const;
+
+const MAX_SCREENSHOT_BASE64 = 7_000_000;
+
+export const screenshotImportSchema = z.object({
+    image: z.string().min(1).max(MAX_SCREENSHOT_BASE64),
+    mediaType: z.enum(SCREENSHOT_TYPES),
+});
+
 export const budgetLimitSchema = z.object({
     limit: centsSchema.refine((value) => value > 0, "A budget is a positive amount"),
 });

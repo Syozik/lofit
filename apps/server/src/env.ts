@@ -41,6 +41,7 @@ export const env = {
     trustedOrigins: origins(),
     devUserEmail: process.env.DEV_USER_EMAIL ?? "dev@lofit.local",
     devUserPassword: process.env.DEV_USER_PASSWORD ?? "lofit-dev-password",
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY,
     priceRefreshMinutes: Number(process.env.PRICE_REFRESH_MINUTES ?? 60),
     webRoot: process.env.WEB_ROOT,
     migrationsDir: process.env.MIGRATIONS_DIR ?? "./drizzle",
