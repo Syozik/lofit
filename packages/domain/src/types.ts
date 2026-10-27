@@ -40,10 +40,11 @@ export const KIND_LABELS: Record<TransactionKind, string> = {
 
 export interface ImportDraft {
     name: string;
-    kind: "expense" | "income";
+    kind: "expense" | "income" | "transfer";
     amount: Cents;
     day: string;
     accountId?: string;
+    toAccountId?: string;
     tagIds: string[];
     currency?: string;
 }

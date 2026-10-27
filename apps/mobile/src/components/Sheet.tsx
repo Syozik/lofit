@@ -22,11 +22,12 @@ const SETTLE_MS = 200;
 type Props = {
     title: string;
     note?: string | undefined;
+    action?: { label: string; onPress: () => void } | undefined;
     onClose: () => void;
     children: ReactNode;
 };
 
-export function Sheet({ title, note, onClose, children }: Props) {
+export function Sheet({ title, note, action, onClose, children }: Props) {
     const insets = useSafeAreaInsets();
     const offset = useRef(new Animated.Value(Dimensions.get("window").height)).current;
 
@@ -100,6 +101,11 @@ export function Sheet({ title, note, onClose, children }: Props) {
                                             {note}
                                         </Text>
                                     )}
+                                    {action && (
+                                        <Pressable accessibilityRole="button" hitSlop={8} onPress={action.onPress} style={styles.actionButton}>
+                                            <Text style={styles.action}>{action.label}</Text>
+                                        </Pressable>
+                                    )}
                                 </View>
                             </View>
                         </GestureDetector>
@@ -159,6 +165,8 @@ const styles = StyleSheet.create({
         fontSize: 11,
         color: colors.muted,
     },
+    actionButton: { marginLeft: "auto" },
+    action: { fontFamily: fonts.medium, fontSize: 13, color: colors.accent },
     body: { paddingHorizontal: 20, gap: space[6] },
     actions: { flexDirection: "row", gap: 10 },
 });

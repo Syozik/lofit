@@ -939,105 +939,28 @@
     }
 }
 
-.import-rows {
-    display: flex;
-    flex-direction: column;
+.import-head {
+    flex-wrap: wrap;
 }
 
-.import-row {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--color-divider);
+.import-head .sheet-import {
+    margin-left: 0;
 }
 
-.import-row:first-child {
-    padding-top: 0;
-}
-
-.import-row:last-child {
-    border-bottom: 0;
-}
-
-.import-row.off .import-name,
-.import-row.off .import-amount,
-.import-row.off .import-row-meta {
-    opacity: 0.5;
-}
-
-.import-row-main {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.import-check {
-    flex: none;
-    width: 17px;
-    height: 17px;
-    margin: 0;
-    accent-color: var(--color-accent);
-    cursor: pointer;
-}
-
-.import-name {
-    flex: 1;
-    min-width: 0;
-}
-
-.import-amount {
-    width: 124px;
-}
-
-.import-sign {
-    flex: none;
-    width: 18px;
-    border: 0;
-    padding: 0;
-    background: transparent;
-    font: inherit;
-    cursor: pointer;
-    color: var(--color-neutral-500);
-}
-
-.import-sign.income {
-    color: var(--color-accent);
-}
-
-.import-sign:hover {
-    color: var(--color-text);
-}
-
-.import-amount .budget-input-currency {
-    margin-left: -4px;
+.import-skipped {
+    order: 3;
+    flex-basis: 100%;
+    margin-left: 0;
 }
 
 .import-warning {
     align-self: flex-start;
-    margin-left: 27px;
+    margin-top: -8px;
     padding: 2px 8px;
     font-size: 11px;
     border-radius: var(--radius-sm);
     color: var(--color-danger);
     background: color-mix(in srgb, var(--color-danger) 10%, transparent);
-}
-
-.import-row-meta {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-left: 27px;
-}
-
-.import-row-meta .input {
-    min-height: 32px;
-    padding-block: 4px;
-    font-size: 13px;
-}
-
-.import-row-meta .input[type="date"] {
-    grid-column: 1 / -1;
 }
 
 .tabs {
@@ -2569,14 +2492,6 @@ button.sheet-currency.switchable:hover {
         flex-basis: auto;
         margin-right: auto;
         font-size: 13px;
-    }
-
-    .import-row-meta {
-        grid-template-columns: 128px 1fr 1fr;
-    }
-
-    .import-row-meta .input[type="date"] {
-        grid-column: auto;
     }
 
     .import-status {

@@ -19,6 +19,7 @@ services:
       AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET}
       BASE_URL: ${BASE_URL:?set BASE_URL to the URL the app is served from}
       PRICE_REFRESH_MINUTES: ${PRICE_REFRESH_MINUTES:-60}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     command: sh -c "node dist/migrate.js && node dist/server.js"
     depends_on:
       db:

@@ -89,7 +89,13 @@ export const newTagSchema = z.object({
     name: z.string().trim().min(1).max(40),
 });
 
-export const SCREENSHOT_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"] as const;
+export const SCREENSHOT_TYPES = [
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/gif",
+    "application/pdf",
+] as const;
 
 const MAX_SCREENSHOT_BASE64 = 7_000_000;
 

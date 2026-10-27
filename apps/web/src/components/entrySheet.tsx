@@ -19,15 +19,17 @@ import {
 import type {
     AssetType,
     Currency,
+    ImportDraft,
     QuoteRef,
     NewHolding,
     NewTransaction,
+    ScreenshotImport as Found,
     Transaction,
     TransactionKind,
 } from "@lofit/domain";
 import { parsePositive } from "@lofit/view";
 import { ImagePlus } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useToast } from "../toast";
 import { ScreenshotImport } from "./screenshotImport";
 import { Sheet } from "./sheet";
@@ -52,6 +54,19 @@ function today(): string {
 
 function toInstant(day: string): string {
     return `${day}T${new Date().toISOString().slice(11)}`;
+}
+
+type Queue = {
+    drafts: readonly ImportDraft[];
+    at: number;
+    added: number;
+    skipped: number;
+    source: string;
+    account: string;
+};
+
+function addedOf(queue: Queue): string {
+    return `Added ${queue.added} of ${queue.drafts.length} entries`;
 }
 
 type Props = {
@@ -92,9 +107,11 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const [liveSymbol, setLiveSymbol] = useState("");
     const [ownTicker, setOwnTicker] = useState(false);
     const [screenshot, setScreenshot] = useState<File | null>(null);
+    const [queue, setQueue] = useState<Queue | null>(null);
     const picker = useRef<HTMLInputElement>(null);
 
     const editing = entry !== undefined;
+    const draft = queue?.drafts[queue.at];
     const isHolding = mode === "holding";
 
     const mirrored = assetType === "crypto" ? "" : symbol.trim().toUpperCase();
@@ -117,7 +134,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const pending = addEntry.isPending || addPosition.isPending || updateEntry.isPending;
 
     useEffect(() => {
-        if (editing || screenshot) return;
+        if (editing || screenshot || queue) return;
 
         function paste(event: ClipboardEvent) {
             const image = [...(event.clipboardData?.files ?? [])].find((file) =>
@@ -130,7 +147,56 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
 
         document.addEventListener("paste", paste);
         return () => document.removeEventListener("paste", paste);
-    }, [editing, screenshot]);
+    }, [editing, screenshot, queue]);
+
+    const fill = useCallback((next: ImportDraft, account: string) => {
+        setMode(next.kind);
+        setAmount((Math.abs(next.amount) / 100).toFixed(2));
+        setName(next.name);
+        setTagIds(next.kind === "transfer" ? [] : [...next.tagIds]);
+        setDay(next.day);
+        setFromId(next.accountId ?? account);
+        setToId(next.toAccountId ?? "");
+        setNewTag(undefined);
+        setRenaming(null);
+    }, []);
+
+    const begin = useCallback(
+        (found: Found) => {
+            if (!screenshot) return;
+            const first = found.drafts[0];
+            if (!first) return;
+            setQueue({
+                drafts: found.drafts,
+                at: 0,
+                added: 0,
+                skipped: found.skipped,
+                source: screenshot.type === "application/pdf" ? "statement" : "screenshot",
+                account: from,
+            });
+            fill(first, from);
+            setScreenshot(null);
+        },
+        [screenshot, from, fill],
+    );
+
+    function advance(added: number) {
+        if (!queue) return;
+        const at = queue.at + 1;
+        const next = queue.drafts[at];
+        if (!next) {
+            onSaved(addedOf({ ...queue, added }));
+            onClose();
+            return;
+        }
+        setQueue({ ...queue, at, added });
+        fill(next, queue.account);
+    }
+
+    function close() {
+        if (queue && queue.added > 0) onSaved(addedOf(queue));
+        onClose();
+    }
 
     function nextCurrency() {
         const at = CURRENCIES.indexOf(currency);
@@ -236,6 +302,10 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
 
         addEntry.mutate(transaction, {
             onSuccess: () => {
+                if (queue) {
+                    advance(queue.added + 1);
+                    return;
+                }
                 onSaved(`Saved ${name.trim()}`);
                 onClose();
             },
@@ -253,23 +323,40 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
 
     if (screenshot) {
         return (
-            <Sheet label="From screenshot" onClose={onClose}>
+            <Sheet label={screenshot.type === "application/pdf" ? "From statement" : "From screenshot"} onClose={onClose}>
                 <ScreenshotImport
                     file={screenshot}
-                    defaultAccount={from}
                     onBack={() => setScreenshot(null)}
                     onClose={onClose}
-                    onSaved={onSaved}
+                    onFound={begin}
                 />
             </Sheet>
         );
     }
 
     return (
-        <Sheet label={editing ? "Edit entry" : "Log an entry"} onClose={onClose}>
-            <div className="sheet-head">
+        <Sheet label={editing ? "Edit entry" : "Log an entry"} onClose={close}>
+            <div className={`sheet-head ${queue ? "import-head" : ""}`}>
                 <h4 className="sheet-title">{editing ? "Edit entry" : "Log an entry"}</h4>
-                {editing || isHolding ? (
+                {queue ? (
+                    <>
+                        <span className="sheet-note">
+                            From {queue.source} · {queue.at + 1} of {queue.drafts.length}
+                        </span>
+                        <button
+                            className="btn btn-ghost sheet-import"
+                            disabled={pending}
+                            onClick={() => advance(queue.added)}
+                        >
+                            Skip
+                        </button>
+                        {queue.at === 0 && queue.skipped > 0 && (
+                            <span className="sheet-note import-skipped">
+                                Skipped {queue.skipped} already logged
+                            </span>
+                        )}
+                    </>
+                ) : editing || isHolding ? (
                     <span className="sheet-note">
                         {isHolding ? "Manual · price per unit" : "Manual"}
                     </span>
@@ -280,13 +367,13 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                         onClick={() => picker.current?.click()}
                     >
                         <ImagePlus size={15} strokeWidth={1.5} aria-hidden />
-                        From screenshot
+                        From screenshot or statement
                     </button>
                 )}
                 <input
                     ref={picker}
                     type="file"
-                    accept="image/*"
+                    accept="image/*,application/pdf"
                     hidden
                     onChange={(event) => {
                         const file = event.target.files?.[0];
@@ -297,7 +384,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
             </div>
 
             <div className="seg sheet-kinds">
-                {(editing ? TRANSACTION_MODES : MODES).map((option) => (
+                {(editing || queue ? TRANSACTION_MODES : MODES).map((option) => (
                     <label key={option} className="seg-opt">
                         <input
                             type="radio"
@@ -332,6 +419,12 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                     onChange={(event) => setAmount(event.target.value)}
                 />
             </div>
+
+            {draft?.currency && (
+                <span className="import-warning">
+                    Shown in {draft.currency} on the {queue?.source} — check the amount
+                </span>
+            )}
 
             {isHolding ? (
                 <div className="sheet-chips">
@@ -568,7 +661,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
             </div>
 
             <div className="sheet-actions">
-                <button className="btn btn-secondary" onClick={onClose}>
+                <button className="btn btn-secondary" onClick={close}>
                     Cancel
                 </button>
                 <button

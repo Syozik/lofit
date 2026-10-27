@@ -33,6 +33,7 @@ each query is scoped by the session's user id.
 | `WEB_ROOT` | unset | directory of built web files; unset serves API only |
 | `MIGRATIONS_DIR` | ./drizzle | where the migrator looks |
 | `PRICE_REFRESH_MINUTES` | 60 | 0 disables the refresh loop |
+| `ANTHROPIC_API_KEY` | unset | enables importing entries from screenshots and statements; unset answers 501 |
 | `AUTH_SECRET` | required | signs session cookies; a long random string, keep it stable |
 | `BASE_URL` | localhost:PORT | the full URL the app is served from, required in production |
 | `TRUSTED_ORIGINS` | localhost:5173 in dev | comma-separated origins allowed to sign in |

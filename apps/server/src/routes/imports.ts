@@ -37,7 +37,7 @@ export const importsRoute = new Hono<AuthEnv>().post(
 
         const [accountRows, tagRows, existing] = await Promise.all([
             db
-                .select({ id: accounts.id, name: accounts.name })
+                .select({ id: accounts.id, name: accounts.name, subtitle: accounts.subtitle })
                 .from(accounts)
                 .where(eq(accounts.userId, userId)),
             db

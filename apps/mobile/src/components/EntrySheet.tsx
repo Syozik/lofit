@@ -15,6 +15,7 @@ import type {
     Account,
     AssetType,
     Currency,
+    ImportDraft,
     NewHolding,
     NewTransaction,
     QuoteRef,
@@ -22,7 +23,7 @@ import type {
     TransactionKind,
 } from "@lofit/domain";
 import { currencyFormat, dayFormat, parsePositive } from "@lofit/view";
-import { ImagePlus } from "lucide-react-native";
+import { ImagePlus, TriangleAlert } from "lucide-react-native";
 import { useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { colors, fonts } from "../theme";
@@ -31,7 +32,7 @@ import { Button } from "./Button";
 import { Chip, ChipRow, Segmented } from "./Choices";
 import { Field, fieldStyles } from "./Field";
 import { pickDay } from "./RangePicker";
-import { pickScreenshot, ScreenshotImportView } from "./ScreenshotImport";
+import { pickFile, ScreenshotImportView, skippedText } from "./ScreenshotImport";
 import { Sheet, SheetActions } from "./Sheet";
 import { useOnline } from "../connectivity";
 import { today, toInstant } from "../days";
@@ -94,6 +95,18 @@ function DateField({ label, day, onChange, max }: { label: string; day: string; 
     );
 }
 
+type Queue = {
+    drafts: readonly ImportDraft[];
+    skipped: number;
+    statement: boolean;
+    at: number;
+    saved: number;
+};
+
+function entries(count: number): string {
+    return count === 1 ? "1 entry" : `${count} entries`;
+}
+
 type Props = {
     entry?: Transaction | undefined;
     onClose: () => void;
@@ -112,6 +125,7 @@ export function EntrySheet({ entry, onClose }: Props) {
     const online = useOnline();
     const reading = useImportScreenshot();
     const [shot, setShot] = useState<Screenshot | null>(null);
+    const [queue, setQueue] = useState<Queue | null>(null);
 
     const [mode, setMode] = useState<EntryMode>(entry?.kind ?? "expense");
     const [amount, setAmount] = useState(entry ? (Math.abs(entry.amount) / 100).toFixed(2) : "");
@@ -153,7 +167,7 @@ export function EntrySheet({ entry, onClose }: Props) {
         ? !value || !units || !symbol.trim() || !heldAt || !day
         : !value || !name.trim() || !from || (mode === "transfer" && (!to || to === from));
 
-    const pending = addEntry.isPending || addPosition.isPending || updateEntry.isPending;
+    const pending = (!queue && addEntry.isPending) || addPosition.isPending || updateEntry.isPending;
     const needsConnection = isHolding && !online;
 
     function nextCurrency() {
@@ -241,6 +255,10 @@ export function EntrySheet({ entry, onClose }: Props) {
         if (entry) {
             updateEntry.mutate({ id: entry.id, draft: transaction });
             show(`Updated ${name.trim()}`);
+        } else if (queue) {
+            addEntry.mutate(transaction);
+            advance(queue, queue.saved + 1);
+            return;
         } else {
             addEntry.mutate(transaction);
             show(`Saved ${name.trim()}`);
@@ -248,19 +266,72 @@ export function EntrySheet({ entry, onClose }: Props) {
         onClose();
     }
 
-    async function fromScreenshot() {
+    async function startImport() {
         try {
-            const picked = await pickScreenshot();
+            const picked = await pickFile();
             if (!picked) return;
-            if ("tooLarge" in picked) {
-                show("That screenshot is too large to read");
+            if ("unsupported" in picked) {
+                show("Use a PNG, JPEG or PDF");
                 return;
             }
-            setShot(picked.screenshot);
-            reading.mutate(picked.screenshot);
+            if ("tooLarge" in picked) {
+                show("This file is too large");
+                return;
+            }
+            read(picked.screenshot);
         } catch {
-            show("Couldn't open your photos");
+            show("Couldn't open that file");
         }
+    }
+
+    function read(screenshot: Screenshot) {
+        setShot(screenshot);
+        reading.mutate(screenshot, {
+            onSuccess: (result) => {
+                if (result.drafts.length === 0) return;
+                const first = result.drafts[0]!;
+                setQueue({
+                    drafts: result.drafts,
+                    skipped: result.skipped,
+                    statement: screenshot.mediaType === "application/pdf",
+                    at: 0,
+                    saved: 0,
+                });
+                fill(first);
+                setShot(null);
+            },
+        });
+    }
+
+    function fill(draft: ImportDraft) {
+        const known = (id: string | undefined) => !!id && allAccounts.some((account) => account.id === id);
+        const source = known(draft.accountId) ? draft.accountId! : from;
+        setMode(draft.kind);
+        setAmount((Math.abs(draft.amount) / 100).toFixed(2));
+        setName(draft.name);
+        setDay(draft.day);
+        setFromId(source);
+        setToId(known(draft.toAccountId) && draft.toAccountId !== source ? draft.toAccountId! : "");
+        setTagIds(draft.kind === "transfer" ? [] : draft.tagIds.filter((id) => (tags ?? []).some((tag) => tag.id === id)));
+        setNewTag(undefined);
+        setRenaming(null);
+    }
+
+    function advance(current: Queue, saved: number) {
+        const at = current.at + 1;
+        const next = current.drafts[at];
+        if (!next) {
+            show(`Added ${saved} of ${entries(current.drafts.length)}`);
+            onClose();
+            return;
+        }
+        setQueue({ ...current, at, saved });
+        fill(next);
+    }
+
+    function close() {
+        if (queue && queue.saved > 0) show(`Added ${queue.saved} of ${entries(queue.drafts.length)}`);
+        onClose();
     }
 
     function leaveImport() {
@@ -278,35 +349,50 @@ export function EntrySheet({ entry, onClose }: Props) {
     }
 
     if (shot) {
+        const statement = shot.mediaType === "application/pdf";
         return (
-            <Sheet title="From screenshot" onClose={onClose}>
+            <Sheet title={statement ? "From statement" : "From screenshot"} onClose={onClose}>
                 <ScreenshotImportView
                     reading={reading}
-                    accounts={allAccounts}
-                    tags={tags ?? []}
-                    defaultAccountId={from}
+                    statement={statement}
                     onBack={leaveImport}
-                    onRetry={() => reading.mutate(shot)}
+                    onRetry={() => read(shot)}
                     onClose={onClose}
                 />
             </Sheet>
         );
     }
 
+    const draft = queue?.drafts[queue.at];
+
     return (
         <Sheet
             title={editing ? "Edit entry" : "Log an entry"}
-            note={isHolding ? "Manual · price per unit" : "Manual"}
-            onClose={onClose}
+            note={
+                queue
+                    ? [
+                          `${queue.statement ? "From statement" : "From screenshot"} · ${queue.at + 1} of ${queue.drafts.length}`,
+                          ...(queue.at === 0 && queue.skipped > 0 ? [skippedText(queue.skipped)] : []),
+                      ].join(" · ")
+                    : isHolding
+                      ? "Manual · price per unit"
+                      : "Manual"
+            }
+            action={queue ? { label: "Skip", onPress: () => advance(queue, queue.saved) } : undefined}
+            onClose={close}
         >
             <View style={styles.modeRow}>
-                <Segmented options={editing ? TRANSACTION_MODES : ALL_MODES} value={mode} onChange={setMode} />
-                {!editing && (
+                <Segmented
+                    options={editing || queue ? TRANSACTION_MODES : ALL_MODES}
+                    value={mode}
+                    onChange={setMode}
+                />
+                {!editing && !queue && (
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="From screenshot"
+                        accessibilityLabel="From screenshot or statement"
                         hitSlop={8}
-                        onPress={() => void fromScreenshot()}
+                        onPress={() => void startImport()}
                         style={styles.screenshot}
                     >
                         <ImagePlus size={18} color={colors.accent} />
@@ -334,6 +420,16 @@ export function EntrySheet({ entry, onClose }: Props) {
                     />
                 </View>
             </View>
+
+            {draft?.currency && (
+                <View style={styles.warning}>
+                    <TriangleAlert size={13} color={colors.danger} />
+                    <Text style={styles.warningText}>
+                        Shown in {draft.currency} on the {queue?.statement ? "statement" : "screenshot"} — check the
+                        amount
+                    </Text>
+                </View>
+            )}
 
             {isHolding ? (
                 <ChipRow>
@@ -463,7 +559,7 @@ export function EntrySheet({ entry, onClose }: Props) {
             )}
 
             <SheetActions>
-                <Button variant="secondary" label="Cancel" onPress={onClose} style={{ flex: 1 }} />
+                <Button variant="secondary" label="Cancel" onPress={close} style={{ flex: 1 }} />
                 <Button
                     label={
                         needsConnection
@@ -508,5 +604,7 @@ const styles = StyleSheet.create({
     inlineInput: { minWidth: 120, minHeight: 32, paddingVertical: 4 },
     pair: { flexDirection: "row", gap: 10 },
     half: { flex: 1 },
+    warning: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: -8 },
+    warningText: { flexShrink: 1, fontFamily: fonts.medium, fontSize: 12, color: colors.danger },
     total: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, fontVariant: ["tabular-nums"] },
 });
