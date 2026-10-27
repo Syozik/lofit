@@ -137,6 +137,17 @@ export function periodOf(occurredAt: string): string {
     return occurredAt.slice(0, 7);
 }
 
+export function shiftPeriod(period: string, months: number): string {
+    const [year = 0, month = 1] = period.split("-").map(Number);
+    const shifted = new Date(Date.UTC(year, month - 1 + months, 1));
+    return shifted.toISOString().slice(0, 7);
+}
+
+export function earliestPeriod(transactions: readonly Transaction[]): string | undefined {
+    const last = byRecency(transactions).at(-1);
+    return last ? periodOf(last.occurredAt) : undefined;
+}
+
 export function latestPeriod(transactions: readonly Transaction[]): string | undefined {
     const first = byRecency(transactions).at(0);
     return first ? periodOf(first.occurredAt) : undefined;

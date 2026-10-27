@@ -1,7 +1,9 @@
 import { balanceChanges, negateCents } from "@lofit/domain";
-import type { Account, BalanceChange, Group, NewAccount, NewTransaction, Tag, Transaction } from "@lofit/domain";
+import type { Account, BalanceChange, Budget, Group, NewAccount, NewTransaction, Tag, Transaction } from "@lofit/domain";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { addAccount, updateAccountBalance } from "./accounts";
+import { setBudget } from "./budgets";
+import type { BudgetChange } from "./budgets";
 import { ApiError, isUnreachable } from "./client";
 import { addGroup } from "./groups";
 import { addTag, renameTag } from "./tags";
@@ -16,6 +18,7 @@ export const MUTATIONS = {
     addTag: ["tags", "add"],
     renameTag: ["tags", "rename"],
     addGroup: ["groups", "add"],
+    setBudget: ["budgets", "set"],
 } as const;
 
 export type TransactionDraft = NewTransaction & { id: string };
@@ -203,5 +206,18 @@ export function configureMutations(client: QueryClient): void {
             );
         },
         ["groups"],
+    );
+
+    register<BudgetChange, void>(
+        MUTATIONS.setBudget,
+        setBudget,
+        async ({ tagId, limit }) => {
+            await hold("budgets");
+            client.setQueryData<readonly Budget[]>(["budgets"], (budgets) => {
+                const others = (budgets ?? []).filter((budget) => budget.tagId !== tagId);
+                return limit === null ? others : [...others, { tagId, limit }];
+            });
+        },
+        ["budgets"],
     );
 }

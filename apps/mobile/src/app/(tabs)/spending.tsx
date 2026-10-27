@@ -1,9 +1,11 @@
 import { useAccounts, useBudgets, useTags, useTransactions } from "@lofit/api";
-import { byRecency, formatAmount, latestPeriod, primaryTagId, spendByTag } from "@lofit/domain";
+import { byRecency, earliestPeriod, formatAmount, inPeriod, periodOf, primaryTagId, shiftPeriod, spendByTag } from "@lofit/domain";
 import type { Transaction } from "@lofit/domain";
 import { shortEuros, spendSlices, UNTAGGED_KEY } from "@lofit/view";
+import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { BudgetsSheet } from "../../components/BudgetsSheet";
 import { Donut } from "../../components/Donut";
 import { ListScreen, Screen, Status, text } from "../../components/Screen";
 import { TransactionRow } from "../../components/TransactionRow";
@@ -11,10 +13,15 @@ import { useOpenEntry } from "../../context/entry";
 import { useRemoveTransaction } from "../../hooks/useRemoveTransaction";
 import { colors, fonts, space } from "../../theme";
 
-const monthFormat = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+const periodFormat = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+const monthFormat = new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" });
 
-function formatPeriod(period: string): string {
-    return monthFormat.format(new Date(`${period}-01T00:00:00Z`));
+function formatPeriod(period: string, format = periodFormat): string {
+    return format.format(new Date(`${period}-01T00:00:00Z`));
+}
+
+function currentPeriod(): string {
+    return periodOf(new Date().toISOString());
 }
 
 export default function SpendingScreen() {
@@ -25,6 +32,8 @@ export default function SpendingScreen() {
     const remove = useRemoveTransaction();
     const openEntry = useOpenEntry();
     const [focused, setFocused] = useState<string | null>(null);
+    const [period, setPeriod] = useState(currentPeriod);
+    const [editingBudgets, setEditingBudgets] = useState(false);
 
     const queries = [transactions, budgets, accounts, tags];
     const refreshing = queries.some((query) => query.isRefetching);
@@ -45,13 +54,14 @@ export default function SpendingScreen() {
         );
     }
 
-    const period = latestPeriod(transactions.data);
-    if (!period) {
-        return (
-            <Screen refreshing={refreshing} onRefresh={reload}>
-                <Status text="No activity yet" />
-            </Screen>
-        );
+    const current = currentPeriod();
+    const earliest = earliestPeriod(transactions.data) ?? current;
+    const canGoBack = period > earliest;
+    const canGoForward = period < current;
+
+    function shift(months: number) {
+        setPeriod((value) => shiftPeriod(value, months));
+        setFocused(null);
     }
 
     const summary = spendByTag(transactions.data, budgets.data, tags.data, period);
@@ -59,24 +69,60 @@ export default function SpendingScreen() {
     const tagNames = new Map(tags.data.map((tag) => [tag.id, tag.name]));
     const { slices, tagsOf } = spendSlices(summary.tags, tags.data);
     const focusedTags = focused ? tagsOf.get(focused) : undefined;
+    const monthly = inPeriod(transactions.data, period);
     const activity = byRecency(
         focusedTags
-            ? transactions.data.filter((transaction) => focusedTags.has(primaryTagId(transaction) ?? UNTAGGED_KEY))
-            : transactions.data,
+            ? monthly.filter((transaction) => focusedTags.has(primaryTagId(transaction) ?? UNTAGGED_KEY))
+            : monthly,
     );
+    const spentByTag = new Map(summary.tags.flatMap((row) => (row.tagId ? [[row.tagId, row.spent] as const] : [])));
     const focusedLabel = focusedTags ? slices.find((slice) => slice.key === focused)?.label : undefined;
 
     const header = (
         <>
             <View style={styles.head}>
                 <View style={styles.totalBlock}>
-                    <Text style={text.kicker}>Spent in {formatPeriod(period)}</Text>
+                    <View style={styles.monthRow}>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Previous month"
+                            accessibilityState={{ disabled: !canGoBack }}
+                            disabled={!canGoBack}
+                            hitSlop={10}
+                            onPress={() => shift(-1)}
+                        >
+                            <ChevronLeft size={16} color={canGoBack ? colors.quiet : colors.chip} />
+                        </Pressable>
+                        <Text style={text.kicker}>Spent in {formatPeriod(period)}</Text>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Next month"
+                            accessibilityState={{ disabled: !canGoForward }}
+                            disabled={!canGoForward}
+                            hitSlop={10}
+                            onPress={() => shift(1)}
+                        >
+                            <ChevronRight size={16} color={canGoForward ? colors.quiet : colors.chip} />
+                        </Pressable>
+                    </View>
                     <Text style={styles.amount}>€ {formatAmount(summary.spent)}</Text>
                 </View>
-                <View style={styles.budget}>
-                    <Text style={styles.of}>of € {formatAmount(summary.budgeted)}</Text>
-                    <Text style={styles.left}>€ {formatAmount(summary.left)} left</Text>
-                </View>
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Edit budgets"
+                    hitSlop={8}
+                    onPress={() => setEditingBudgets(true)}
+                    style={({ pressed }) => [styles.budget, pressed && styles.pressed]}
+                >
+                    {summary.budgeted > 0 ? (
+                        <>
+                            <Text style={styles.of}>of € {formatAmount(summary.budgeted)}</Text>
+                            <Text style={styles.left}>€ {formatAmount(summary.left)} left</Text>
+                        </>
+                    ) : (
+                        <Text style={styles.setBudget}>Set a budget</Text>
+                    )}
+                </Pressable>
             </View>
 
             {slices.length > 0 && (
@@ -101,31 +147,47 @@ export default function SpendingScreen() {
     );
 
     return (
-        <ListScreen<Transaction>
-            header={header}
-            data={activity}
-            keyExtractor={(transaction) => transaction.id}
-            renderItem={({ item }) => (
-                <TransactionRow
-                    transaction={item}
-                    accountNames={accountNames}
-                    tagNames={tagNames}
-                    onEdit={openEntry}
-                    onDelete={remove}
+        <>
+            <ListScreen<Transaction>
+                header={header}
+                data={activity}
+                empty={<Text style={styles.empty}>No activity in {formatPeriod(period, monthFormat)}</Text>}
+                keyExtractor={(transaction) => transaction.id}
+                renderItem={({ item }) => (
+                    <TransactionRow
+                        transaction={item}
+                        accountNames={accountNames}
+                        tagNames={tagNames}
+                        onEdit={openEntry}
+                        onDelete={remove}
+                    />
+                )}
+                refreshing={refreshing}
+                onRefresh={reload}
+            />
+            {editingBudgets && (
+                <BudgetsSheet
+                    tags={tags.data}
+                    budgets={budgets.data}
+                    spent={spentByTag}
+                    month={formatPeriod(period, monthFormat)}
+                    onClose={() => setEditingBudgets(false)}
                 />
             )}
-            refreshing={refreshing}
-            onRefresh={reload}
-        />
+        </>
     );
 }
 
 const styles = StyleSheet.create({
     head: { flexDirection: "row", alignItems: "flex-end", gap: space[6] },
     totalBlock: { gap: 4 },
+    monthRow: { flexDirection: "row", alignItems: "center", gap: 6, marginLeft: -2 },
     amount: { fontFamily: fonts.medium, fontSize: 30, letterSpacing: -0.6, color: colors.text, fontVariant: ["tabular-nums"] },
     budget: { marginLeft: "auto", alignItems: "flex-end", gap: 2 },
     of: { fontFamily: fonts.regular, fontSize: 12, color: colors.quiet, fontVariant: ["tabular-nums"] },
+    setBudget: { fontFamily: fonts.medium, fontSize: 13, color: colors.accent },
+    pressed: { opacity: 0.55 },
+    empty: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, paddingVertical: space[6] },
     left: { fontFamily: fonts.regular, fontSize: 12, color: colors.accentStrong, fontVariant: ["tabular-nums"] },
     sectionHead: { flexDirection: "row", alignItems: "center" },
     showAll: { marginLeft: "auto" },

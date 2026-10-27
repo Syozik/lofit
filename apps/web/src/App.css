@@ -796,6 +796,140 @@
     color: var(--color-neutral-300);
 }
 
+.spend-period {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.spend-period .kicker {
+    margin-right: 4px;
+}
+
+.spend-step {
+    width: 24px;
+    height: 24px;
+    margin-block: -6px;
+    color: var(--color-neutral-400);
+}
+
+.spend-step:hover {
+    color: var(--color-accent);
+}
+
+.spend-step:disabled {
+    background: transparent;
+    color: var(--color-neutral-700);
+    opacity: 1;
+}
+
+.spend-budget-button {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    align-items: flex-end;
+}
+
+.spend-cats-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.budget-rows {
+    display: flex;
+    flex-direction: column;
+}
+
+.budget-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--color-divider);
+}
+
+.budget-row:last-child {
+    border-bottom: 0;
+}
+
+.budget-row-label {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.budget-row-name {
+    font-size: 14px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.budget-row-spent {
+    font-size: 11px;
+    color: var(--color-neutral-600);
+    font-variant-numeric: tabular-nums;
+}
+
+.budget-input {
+    flex: none;
+    width: 132px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: text;
+}
+
+.budget-input:focus-within {
+    border-color: var(--color-accent);
+}
+
+.budget-input.invalid {
+    border-color: var(--color-danger);
+}
+
+.budget-input-currency {
+    color: var(--color-neutral-500);
+}
+
+.budget-input input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.budget-input input:focus {
+    outline: none;
+}
+
+.budget-input input::placeholder {
+    color: var(--color-neutral-700);
+}
+
+.budget-actions {
+    flex-wrap: wrap;
+}
+
+.budget-total {
+    flex-basis: 100%;
+    font-size: 12px;
+    color: var(--color-neutral-400);
+    font-variant-numeric: tabular-nums;
+}
+
 .tabs {
     --tab-add-size: 44px;
 
@@ -2161,6 +2295,11 @@ button.sheet-currency.switchable:hover {
         font-size: 13px;
     }
 
+    .spend-budget > :only-child {
+        grid-column: 1 / -1;
+        justify-self: end;
+    }
+
     .spend-budget .spend-bar {
         grid-row: 2;
         grid-column: 1 / -1;
@@ -2371,6 +2510,22 @@ button.sheet-currency.switchable:hover {
 
     .spend-note.over {
         color: var(--color-danger);
+    }
+
+    .spend-step {
+        width: 28px;
+        height: 28px;
+    }
+
+    .budget-actions {
+        flex-wrap: nowrap;
+        align-items: center;
+    }
+
+    .budget-total {
+        flex-basis: auto;
+        margin-right: auto;
+        font-size: 13px;
     }
 
     .sheet-layer {

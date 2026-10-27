@@ -73,11 +73,13 @@ export {
     itemsInScope,
     owesMoney,
     lastSyncedAt,
+    earliestPeriod,
     latestPeriod,
     netWorth,
     netWorthGroups,
     netWorthItems,
     periodOf,
+    shiftPeriod,
     spendByTag,
     sumItems,
 } from "./select";

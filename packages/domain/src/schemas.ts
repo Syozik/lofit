@@ -89,6 +89,10 @@ export const newTagSchema = z.object({
     name: z.string().trim().min(1).max(40),
 });
 
+export const budgetLimitSchema = z.object({
+    limit: centsSchema.refine((value) => value > 0, "A budget is a positive amount"),
+});
+
 export const newAccountSchema = z.object({
     id: z.uuid().optional(),
     name: z.string().trim().min(1).max(100),
