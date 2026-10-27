@@ -72,5 +72,5 @@ export function TabBarBackground() {
 }
 
 const styles = StyleSheet.create({
-    fill: { flex: 1 },
+    fill: { flex: 1, backgroundColor: colors.bg },
 });
