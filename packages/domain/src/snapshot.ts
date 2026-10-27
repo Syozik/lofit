@@ -9,7 +9,7 @@ export interface GroupAmount {
 }
 
 export interface Snapshot {
-    period: string;
+    day: string;
     groups: readonly GroupAmount[];
 }
 
@@ -25,6 +25,20 @@ export function seriesFor(snapshots: readonly Snapshot[], scope: Scope): readonl
     return snapshots.map((snapshot) =>
         scope === ALL_GROUPS ? snapshotNet(snapshot) : amountIn(snapshot, scope),
     );
+}
+
+export interface SnapshotPoint {
+    at: string;
+    value: Cents;
+}
+
+export function snapshotPoints(snapshots: readonly Snapshot[], scope: Scope): SnapshotPoint[] {
+    const values = seriesFor(snapshots, scope);
+    return snapshots.map((snapshot, index) => ({ at: snapshot.day, value: values[index] ?? cents(0) }));
+}
+
+export function lastBefore(snapshots: readonly Snapshot[], day: string): Snapshot | undefined {
+    return snapshots.filter((snapshot) => snapshot.day < day).at(-1);
 }
 
 export interface Delta {
@@ -45,27 +59,4 @@ export function deltaAt(values: readonly Cents[], index: number): Delta | undefi
         pct: previous === 0 ? 0 : Math.round((amount / Math.abs(previous)) * 10000) / 100,
         favourable: amount >= 0,
     };
-}
-
-export type RangeKey = "3m" | "6m" | "1y" | "all";
-
-export const RANGE_ORDER: readonly RangeKey[] = ["3m", "6m", "1y", "all"];
-
-export const RANGE_LABELS: Record<RangeKey, string> = {
-    "3m": "3M",
-    "6m": "6M",
-    "1y": "1Y",
-    all: "All",
-};
-
-const RANGE_MONTHS: Record<RangeKey, number | undefined> = {
-    "3m": 3,
-    "6m": 6,
-    "1y": 12,
-    all: undefined,
-};
-
-export function inRange<T>(entries: readonly T[], range: RangeKey): readonly T[] {
-    const months = RANGE_MONTHS[range];
-    return months === undefined ? entries : entries.slice(-months);
 }

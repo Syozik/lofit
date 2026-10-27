@@ -1,20 +1,31 @@
-import { useAccounts, useGroups, useHoldings, useSnapshots } from "@lofit/api";
+import {
+    INITIAL_TREND,
+    useAccounts,
+    useGroups,
+    useHoldings,
+    useNetWorthTrend,
+    useSnapshots,
+} from "@lofit/api";
 import {
     addCents,
     ALL_GROUPS,
     ALL_GROUPS_LABEL,
+    amountIn,
+    byPosition,
     cents,
     deltaAt,
     formatAmount,
     itemsInScope,
+    lastBefore,
     netWorthGroups,
     netWorthItems,
     owesMoney,
     seriesFor,
 } from "@lofit/domain";
-import type { Delta, Scope } from "@lofit/domain";
+import type { Account, Delta, Group, Holding, Scope, Snapshot } from "@lofit/domain";
 import {
     centreLabel,
+    groupColor,
     kickerFor,
     monthName,
     netWorthSlices,
@@ -24,10 +35,20 @@ import {
 } from "@lofit/view";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Segmented } from "../../components/Choices";
 import { Donut } from "../../components/Donut";
+import { NetWorthTrend } from "../../components/NetWorthTrend";
+import type { TrendPart } from "../../components/NetWorthTrend";
 import { RecentTransactions } from "../../components/RecentTransactions";
 import { Screen, Status, text } from "../../components/Screen";
-import { colors, fonts, radius, space } from "../../theme";
+import { colors, fonts, radius, space, tokenColor } from "../../theme";
+
+type ChartMode = "mix" | "trend";
+
+const CHART_MODES = [
+    { value: "mix", label: "Mix" },
+    { value: "trend", label: "Trend" },
+] as const;
 
 function DeltaLine({ delta, previous }: { delta: Delta; previous: string }) {
     const tone = delta.favourable ? styles.up : null;
@@ -45,9 +66,6 @@ export default function NetWorthScreen() {
     const holdings = useHoldings();
     const snapshots = useSnapshots();
     const groupRows = useGroups();
-
-    const [scope, setScope] = useState<Scope>(ALL_GROUPS);
-    const [focused, setFocused] = useState<string | null>(null);
 
     const queries = [accounts, holdings, snapshots, groupRows];
     const refreshing = queries.some((query) => query.isRefetching);
@@ -68,29 +86,98 @@ export default function NetWorthScreen() {
         );
     }
 
-    const allGroups = groupRows.data;
-    const groups = netWorthGroups(netWorthItems(accounts.data, holdings.data), allGroups);
+    return (
+        <NetWorthBody
+            accounts={accounts.data}
+            holdings={holdings.data}
+            snapshots={snapshots.data}
+            allGroups={groupRows.data}
+            refreshing={refreshing}
+            onRefresh={refresh}
+        />
+    );
+}
+
+type BodyProps = {
+    accounts: readonly Account[];
+    holdings: readonly Holding[];
+    snapshots: readonly Snapshot[];
+    allGroups: readonly Group[];
+    refreshing: boolean;
+    onRefresh: () => void;
+};
+
+function NetWorthBody({
+    accounts,
+    holdings,
+    snapshots,
+    allGroups,
+    refreshing,
+    onRefresh,
+}: BodyProps) {
+    const [scope, setScope] = useState<Scope>(ALL_GROUPS);
+    const [mode, setMode] = useState<ChartMode>("mix");
+    const [focused, setFocused] = useState<string | null>(null);
+
+    const groups = netWorthGroups(netWorthItems(accounts, holdings), allGroups);
     const selected = groups.find((entry) => entry.group.id === scope);
     const scoped = itemsInScope(groups, scope);
-    const total = scoped.reduce((sum, item) => addCents(sum, item.value), cents(0));
+    const live = scoped.reduce((sum, item) => addCents(sum, item.value), cents(0));
     const slices = netWorthSlices(scoped, allGroups, selected ? owesMoney(selected.total) : false);
 
-    const months = snapshots.data;
-    const delta = deltaAt(seriesFor(months, scope), months.length - 1);
-    const previous = months[months.length - 2]?.period;
+    const investing = allGroups.find((group) => group.id === scope && group.invests)?.id;
+    const selection = useState(INITIAL_TREND);
+    const trend = useNetWorthTrend(scope, investing, snapshots, live, selection);
+    const trending = mode === "trend";
+    const total = trending ? (trend.shown?.value ?? live) : live;
+    const kicker =
+        trending && trend.focusLabel
+            ? `${kickerFor(selected)} · ${trend.focusLabel}`
+            : kickerFor(selected);
+
+    const monthStart = `${new Date().toISOString().slice(0, 7)}-01`;
+    const baseline = lastBefore(snapshots, monthStart);
+    const monthDelta = baseline ? deltaAt([...seriesFor([baseline], scope), live], 1) : undefined;
+    const delta = trending ? trend.delta : monthDelta;
+    const previous = trending
+        ? trend.since
+        : baseline
+          ? monthName(baseline.day.slice(0, 7), "long")
+          : "start";
+
+    const past = trend.focusSnapshot;
+    const parts: TrendPart[] =
+        scope === ALL_GROUPS
+            ? byPosition(allGroups)
+                  .map((group) => ({
+                      group,
+                      value: past
+                          ? amountIn(past, group.id)
+                          : (groups.find((entry) => entry.group.id === group.id)?.total ??
+                            cents(0)),
+                  }))
+                  .filter((entry) => entry.value !== 0)
+                  .map(({ group, value }) => ({
+                      id: group.id,
+                      label: group.name,
+                      value,
+                      color: tokenColor(groupColor(group.position, value < 0)),
+                  }))
+            : [];
 
     const liveAssets = groups
         .filter((entry) => !owesMoney(entry.total))
         .reduce((sum, entry) => addCents(sum, entry.total), cents(0));
-    const centre = scope !== ALL_GROUPS ? total : liveAssets;
+    const centre = scope !== ALL_GROUPS ? live : liveAssets;
 
     const choose = (next: Scope) => {
         setScope(next);
         setFocused(null);
+        trend.setHover(null);
     };
 
     return (
-        <Screen refreshing={refreshing} onRefresh={refresh}>
+        <Screen refreshing={refreshing} onRefresh={onRefresh}>
             <View style={styles.summary}>
                 <ScrollView
                     horizontal
@@ -114,35 +201,44 @@ export default function NetWorthScreen() {
                         </Pressable>
                     ))}
                 </ScrollView>
-                <Text style={text.kicker}>{kickerFor(selected)}</Text>
+                <Text style={text.kicker}>{kicker}</Text>
                 <View style={styles.netWorth}>
                     <Text style={styles.currency}>{total < 0 ? "−€" : "€"}</Text>
                     <Text style={styles.amount} numberOfLines={1} adjustsFontSizeToFit>
                         {formatAmount(total)}
                     </Text>
                 </View>
-                {delta && (
-                    <DeltaLine
-                        delta={delta}
-                        previous={previous ? monthName(previous, "long") : "start"}
-                    />
-                )}
+                {delta && <DeltaLine delta={delta} previous={previous} />}
             </View>
 
             {scoped.length > 0 && (
                 <View style={styles.section}>
-                    <Text style={text.kicker}>Made of</Text>
-                    <Donut
-                        slices={slices}
-                        focused={focused}
-                        onFocus={setFocused}
-                        label={centreLabel(selected)}
-                        value={shortEuros(centre)}
-                    />
+                    <View style={styles.chartHead}>
+                        <Text style={text.kicker}>{trending ? "Trend" : "Made of"}</Text>
+                        <Segmented
+                            options={CHART_MODES}
+                            value={mode}
+                            onChange={(next) => {
+                                setMode(next);
+                                trend.setHover(null);
+                            }}
+                        />
+                    </View>
+                    {trending ? (
+                        <NetWorthTrend trend={trend} parts={parts} />
+                    ) : (
+                        <Donut
+                            slices={slices}
+                            focused={focused}
+                            onFocus={setFocused}
+                            label={centreLabel(selected)}
+                            value={shortEuros(centre)}
+                        />
+                    )}
                 </View>
             )}
 
-            <RecentTransactions accounts={accounts.data} scope={scope} />
+            <RecentTransactions accounts={accounts} scope={scope} />
         </Screen>
     );
 }
@@ -186,4 +282,9 @@ const styles = StyleSheet.create({
     deltaVs: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
     up: { color: colors.accentStrong },
     section: { gap: space[6] },
+    chartHead: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
 });

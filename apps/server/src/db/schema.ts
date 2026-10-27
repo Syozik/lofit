@@ -270,18 +270,17 @@ export const snapshots = pgTable(
     "snapshots",
     {
         userId: owner(),
-        period: text("period").notNull(),
+        day: date("day", { mode: "string" }).notNull(),
         groupId: uuid("group_id").notNull(),
         amount: money("amount").notNull(),
     },
     (t) => [
-        primaryKey({ columns: [t.userId, t.period, t.groupId] }),
+        primaryKey({ columns: [t.userId, t.day, t.groupId] }),
         foreignKey({
             name: "snapshots_group_fk",
             columns: [t.groupId, t.userId],
             foreignColumns: [groups.id, groups.userId],
         }),
-        check("snapshots_period_is_month", sql`${t.period} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`),
     ],
 );
 

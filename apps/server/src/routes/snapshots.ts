@@ -10,7 +10,7 @@ export const snapshotsRoute = new Hono<AuthEnv>().get("/", async (c) => {
         .select()
         .from(snapshots)
         .where(eq(snapshots.userId, c.var.userId))
-        .orderBy(asc(snapshots.period));
+        .orderBy(asc(snapshots.day));
 
     return c.json(toSnapshots(rows));
 });

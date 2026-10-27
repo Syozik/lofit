@@ -1,5 +1,3 @@
-import { rangeWindow } from "@lofit/domain";
-import type { DayWindow } from "@lofit/domain";
 import { numberFormat } from "./intl";
 
 const PAD = 0.08;
@@ -159,9 +157,4 @@ export function formatChange(format: (amount: number) => string, from: number, t
     const sign = amount < 0 ? "−" : "+";
     const pct = from === 0 ? 0 : (Math.abs(amount) / Math.abs(from)) * 100;
     return `${sign}${format(Math.abs(amount))} · ${sign}${pct.toFixed(1)}%`;
-}
-
-export function defaultCustom(first: string, last: string): DayWindow {
-    const from = rangeWindow("1m", last).from ?? first;
-    return { from: from < first ? first : from, to: last };
 }

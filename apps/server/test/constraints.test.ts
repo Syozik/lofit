@@ -1,7 +1,7 @@
 import { euros } from "@lofit/domain";
 import { describe, expect, it } from "vitest";
 import { db } from "../src/db/client";
-import { snapshots, tags, transactionTags } from "../src/db/schema";
+import { tags, transactionTags } from "../src/db/schema";
 import { createAccount, createHolding, createTag, createTransaction, createUser, firstGroup } from "./factories";
 
 async function violatedConstraint(write: PromiseLike<unknown>): Promise<string | undefined> {
@@ -82,12 +82,4 @@ describe("database constraints", () => {
         expect(await violatedConstraint(createHolding(me.id, { quantity: 0 }))).toBe("holdings_quantity_positive");
     });
 
-    it("require snapshot periods to be real months", async () => {
-        const me = await createUser();
-        const write = db
-            .insert(snapshots)
-            .values({ userId: me.id, period: "2026-13", groupId: (await firstGroup(me.id)).id, amount: euros(0) });
-
-        expect(await violatedConstraint(write)).toBe("snapshots_period_is_month");
-    });
 });

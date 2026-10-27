@@ -1,6 +1,6 @@
-import { cents, historyIn, PRICE_RANGES } from "@lofit/domain";
+import { cents, defaultCustom, historyIn, PRICE_RANGES } from "@lofit/domain";
 import type { Cents, DayWindow, HistoryRange, PricePoint } from "@lofit/domain";
-import { currencyFormat, dayFormat, defaultCustom, formatChange } from "@lofit/view";
+import { currencyFormat, dayFormat, formatChange } from "@lofit/view";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { colors, fonts, space } from "../theme";

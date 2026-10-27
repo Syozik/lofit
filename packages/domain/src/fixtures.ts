@@ -466,24 +466,63 @@ const MONTHLY_FIGURES: readonly {
     { period: "2026-06", cash: 22380.2, investments: 43426.08, debt: -10184.4 },
 ];
 
-export const FIXTURE_SNAPSHOTS: readonly Snapshot[] = [
+const FIXTURE_GROUP_IDS = ["group-cash", "group-investments", "group-debt"] as const;
+
+const MONTH_ENDS: readonly { day: string; amounts: readonly Cents[] }[] = [
     ...MONTHLY_FIGURES.map((row) => ({
-        period: row.period,
-        groups: [
-            { groupId: "group-cash", amount: euros(row.cash) },
-            { groupId: "group-investments", amount: euros(row.investments) },
-            { groupId: "group-debt", amount: euros(row.debt) },
-        ],
+        day: monthEnd(row.period),
+        amounts: [euros(row.cash), euros(row.investments), euros(row.debt)],
     })),
     {
-        period: "2026-07",
-        groups: [
-            { groupId: "group-cash", amount: fixtureGroupTotal("group-cash") },
-            {
-                groupId: "group-investments",
-                amount: sumItems(netWorthItems([], FIXTURE_HOLDINGS)),
-            },
-            { groupId: "group-debt", amount: fixtureGroupTotal("group-debt") },
+        day: "2026-07-31",
+        amounts: [
+            fixtureGroupTotal("group-cash"),
+            sumItems(netWorthItems([], FIXTURE_HOLDINGS)),
+            fixtureGroupTotal("group-debt"),
         ],
     },
 ];
+
+const DAY_MS = 86_400_000;
+
+function monthEnd(period: string): string {
+    const [year = 0, month = 1] = period.split("-").map(Number);
+    return new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
+}
+
+function wobble(index: number, share: number): number {
+    return Math.sin(Math.PI * share) * (Math.sin(index * 0.9) + Math.sin(index * 0.23)) * 0.012;
+}
+
+function snapshotOn(day: string, amounts: readonly number[]): Snapshot {
+    return {
+        day,
+        groups: FIXTURE_GROUP_IDS.map((groupId, index) => ({
+            groupId,
+            amount: cents(Math.round(amounts[index] ?? 0)),
+        })),
+    };
+}
+
+function dailyBetween(
+    from: (typeof MONTH_ENDS)[number],
+    to: (typeof MONTH_ENDS)[number],
+): Snapshot[] {
+    const start = Date.parse(from.day);
+    const days = Math.round((Date.parse(to.day) - start) / DAY_MS);
+
+    return Array.from({ length: days }, (_, step) => {
+        const share = (step + 1) / days;
+        const index = Math.round(start / DAY_MS) + step + 1;
+        const amounts = from.amounts.map((amount, group) => {
+            const line = amount + ((to.amounts[group] ?? amount) - amount) * share;
+            return group === 1 ? line * (1 + wobble(index, share)) : line;
+        });
+        return snapshotOn(new Date(start + (step + 1) * DAY_MS).toISOString().slice(0, 10), amounts);
+    });
+}
+
+export const FIXTURE_SNAPSHOTS: readonly Snapshot[] = MONTH_ENDS.flatMap((point, index) => {
+    const previous = MONTH_ENDS[index - 1];
+    return previous ? dailyBetween(previous, point) : [snapshotOn(point.day, point.amounts)];
+});

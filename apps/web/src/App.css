@@ -283,77 +283,6 @@
 
 /* — trend chart — */
 
-.trend {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-6);
-}
-
-.trend-bars {
-    display: flex;
-    align-items: flex-end;
-    gap: 5px;
-    height: 104px;
-    /* Labels sit out of flow below the bars, so the row reserves their band. */
-    padding-bottom: 16px;
-}
-
-/* Three years of months need the gap back to stay wider than the bars. */
-.trend-bars.dense {
-    gap: 2px;
-}
-
-.trend-bar {
-    position: relative;
-    flex: 1;
-    min-width: 0;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-end;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    cursor: pointer;
-    font-family: var(--font-body);
-}
-
-.trend-fill {
-    width: 100%;
-    /* A three-month range would otherwise render as slabs, not bars. */
-    max-width: 34px;
-    border-radius: 3px;
-    background: color-mix(in srgb, var(--color-accent) 22%, transparent);
-    transition:
-        background 0.18s,
-        box-shadow 0.18s,
-        height 0.3s;
-}
-
-.trend-bar.active .trend-fill {
-    background: var(--color-accent);
-    box-shadow: 0 0 16px color-mix(in srgb, var(--color-accent) 45%, transparent);
-}
-
-/* Out of flow: a labelled and an unlabelled bar must share a baseline, and a
-   sparse label is wider than the bar it names. */
-.trend-label {
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    margin-top: 6px;
-    font-size: 8.5px;
-    letter-spacing: 0.04em;
-    white-space: nowrap;
-    color: var(--color-neutral-700);
-}
-
-.trend-bar.active .trend-label {
-    color: var(--color-accent-300);
-}
-
 .ranges {
     display: flex;
     gap: 6px;
@@ -414,6 +343,26 @@
 
 .trend-value.negative {
     color: var(--color-neutral-400);
+}
+
+.nw-parts {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-6);
+}
+
+.nw-parts .trend-part {
+    gap: 6px;
+}
+
+.nw-parts .trend-name {
+    font-size: 12px;
+    color: var(--color-neutral-400);
+}
+
+.nw-parts .trend-value {
+    margin-left: 2px;
+    font-size: 12px;
 }
 
 .trend-share {
@@ -804,6 +753,20 @@
 
 .spend-period .kicker {
     margin-right: 4px;
+}
+
+.spend-month {
+    display: inline-grid;
+}
+
+.spend-month > span,
+.spend-month::after {
+    grid-area: 1 / 1;
+}
+
+.spend-month::after {
+    content: attr(data-widest);
+    visibility: hidden;
 }
 
 .spend-step {
@@ -2039,59 +2002,9 @@ button.sheet-currency.switchable:hover {
         overflow: visible;
     }
 
-    .nw-trend .trend {
-        flex: 1;
-        gap: 14px;
-    }
-
-    .nw-trend .trend-bars {
-        flex: 1;
-        height: auto;
-        min-height: 200px;
-        gap: 8px;
-        padding-bottom: 24px;
-    }
-
-    .nw-trend .trend-bars.dense {
-        gap: 3px;
-    }
-
-    .nw-trend .trend-fill {
-        max-width: 44px;
-        border-radius: 4px;
-    }
-
-    .nw-trend .trend-label {
-        margin-top: 8px;
-        font-size: 11px;
-        letter-spacing: 0;
-        color: var(--color-neutral-500);
-    }
-
-    .nw-trend .trend-bar.active .trend-label {
-        font-weight: 500;
-        color: var(--color-accent);
-    }
-
-    .nw-trend .trend-strip {
-        height: 6px;
-        border-radius: 3px;
-    }
-
-    .nw-trend .trend-parts {
-        flex-direction: row;
-        flex-wrap: wrap;
-        align-items: center;
+    .nw-trend .nw-parts {
         gap: 6px 20px;
-    }
-
-    .nw-trend .trend-part {
-        gap: 6px;
-    }
-
-    .trend-month {
-        font-size: 12px;
-        font-weight: 500;
+        margin-left: 56px;
     }
 
     @media (max-width: 1279px) {
@@ -2112,24 +2025,6 @@ button.sheet-currency.switchable:hover {
             grid-column: 2;
             margin-left: 0;
         }
-
-        .nw-trend .trend-month {
-            flex-basis: 100%;
-        }
-    }
-
-    .nw-trend .trend-name {
-        font-size: 12px;
-        color: var(--color-neutral-400);
-    }
-
-    .nw-trend .trend-value {
-        margin-left: 2px;
-        font-size: 12px;
-    }
-
-    .nw-trend .trend-share {
-        width: auto;
     }
 
     .nw-trend .price-chart {
@@ -2158,6 +2053,7 @@ button.sheet-currency.switchable:hover {
         right: calc(100% + 8px);
         padding: 0;
         background: none;
+        white-space: nowrap;
         font-size: 11px;
     }
 
@@ -2665,10 +2561,6 @@ button.sheet-currency.switchable:hover {
     .group-button:not(.active):hover {
         color: var(--color-text);
         background: color-mix(in srgb, var(--color-text) 5%, transparent);
-    }
-
-    .trend-bar:not(.active):hover .trend-fill {
-        background: color-mix(in srgb, var(--color-accent) 38%, transparent);
     }
 
     .legend-item:hover {

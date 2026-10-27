@@ -82,15 +82,15 @@ export function toGroup(row: typeof groups.$inferSelect): Group {
 }
 
 export function toSnapshots(rows: readonly (typeof snapshots.$inferSelect)[]): Snapshot[] {
-    const byPeriod = new Map<string, Snapshot>();
+    const byDay = new Map<string, Snapshot>();
 
     for (const row of rows) {
-        const snapshot = byPeriod.get(row.period) ?? { period: row.period, groups: [] };
-        byPeriod.set(row.period, {
-            period: row.period,
+        const snapshot = byDay.get(row.day) ?? { day: row.day, groups: [] };
+        byDay.set(row.day, {
+            day: row.day,
             groups: [...snapshot.groups, { groupId: row.groupId, amount: cents(row.amount) }],
         });
     }
 
-    return [...byPeriod.values()];
+    return [...byDay.values()];
 }

@@ -49,3 +49,5 @@ export { fetchSnapshots } from "./snapshots";
 export { useSnapshots } from "./useSnapshots";
 export { fetchPortfolioHistory, fetchPortfolioIntraday } from "./portfolio";
 export { usePortfolioHistory } from "./usePortfolioHistory";
+export type { NetWorthTrendState, TrendPoint, TrendSelection } from "./useNetWorthTrend";
+export { INITIAL_TREND, useNetWorthTrend } from "./useNetWorthTrend";

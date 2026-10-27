@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { amountIn, deltaAt, euros, inRange, seriesFor, snapshotNet } from "./index";
+import { amountIn, deltaAt, euros, seriesFor, snapshotNet } from "./index";
 import type { Snapshot } from "./index";
 
-function month(period: string, cash: number, investments: number, debt: number): Snapshot {
+function month(day: string, cash: number, investments: number, debt: number): Snapshot {
     return {
-        period,
+        day,
         groups: [
             { groupId: "g-cash", amount: euros(cash) },
             { groupId: "g-inv", amount: euros(investments) },
@@ -14,9 +14,9 @@ function month(period: string, cash: number, investments: number, debt: number):
 }
 
 const months: Snapshot[] = [
-    month("2026-05", 1000, 5000, -2000),
-    month("2026-06", 1100, 4800, -1900),
-    month("2026-07", 1200, 5200, -1800),
+    month("2026-05-31", 1000, 5000, -2000),
+    month("2026-06-30", 1100, 4800, -1900),
+    month("2026-07-31", 1200, 5200, -1800),
 ];
 
 describe("series", () => {
@@ -53,18 +53,5 @@ describe("deltaAt", () => {
 
     it("reads shrinking debt as progress", () => {
         expect(deltaAt(seriesFor(months, "g-debt"), 2)).toStrictEqual({ amount: 10000, pct: 5.26, favourable: true });
-    });
-});
-
-describe("inRange", () => {
-    const fourteen = Array.from({ length: 14 }, (_, index) => index + 1);
-
-    it.each([
-        ["3m", [12, 13, 14]],
-        ["6m", [9, 10, 11, 12, 13, 14]],
-        ["1y", [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]],
-        ["all", fourteen],
-    ] as const)("keeps the newest entries for %s", (range, expected) => {
-        expect(inRange(fourteen, range)).toEqual(expected);
     });
 });

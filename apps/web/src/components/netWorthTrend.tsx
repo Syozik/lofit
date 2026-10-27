@@ -1,8 +1,17 @@
-import type { InvestmentTrendState } from "../useInvestmentTrend";
+import { formatEuros } from "@lofit/domain";
+import type { Cents } from "@lofit/domain";
+import type { NetWorthTrendState } from "@lofit/api";
 import { LineChart } from "./lineChart";
 import { RangePicker } from "./rangePicker";
 
-export function InvestmentRanges({ trend }: { trend: InvestmentTrendState }) {
+export type TrendPart = {
+    id: string;
+    label: string;
+    value: Cents;
+    color: string;
+};
+
+export function NetWorthRanges({ trend }: { trend: NetWorthTrendState }) {
     return (
         <RangePicker
             ranges={trend.ranges}
@@ -16,17 +25,22 @@ export function InvestmentRanges({ trend }: { trend: InvestmentTrendState }) {
 }
 
 type Props = {
-    trend: InvestmentTrendState;
+    trend: NetWorthTrendState;
+    parts?: readonly TrendPart[];
     ranges?: boolean;
 };
 
-export function InvestmentTrend({ trend, ranges = true }: Props) {
+export function NetWorthTrend({ trend, parts, ranges = true }: Props) {
     const values = trend.points.map((point) => point.value);
     const low = Math.min(...values);
     const high = Math.max(...values);
     const slack = (high - low) * 0.08;
     const showInvested = trend.points.some(
-        (point) => point.invested > 0 && point.invested >= low - slack && point.invested <= high + slack,
+        (point) =>
+            point.invested !== undefined &&
+            point.invested > 0 &&
+            point.invested >= low - slack &&
+            point.invested <= high + slack,
     );
 
     return (
@@ -38,7 +52,7 @@ export function InvestmentTrend({ trend, ranges = true }: Props) {
                     onHover={trend.setHover}
                     grid
                     {...(showInvested
-                        ? { guide: trend.points.map((point) => ({ t: Date.parse(point.at), value: point.invested })) }
+                        ? { guide: trend.points.map((point) => ({ t: Date.parse(point.at), value: point.invested ?? 0 })) }
                         : {})}
                 />
             ) : (
@@ -54,7 +68,21 @@ export function InvestmentTrend({ trend, ranges = true }: Props) {
                 </div>
             )}
 
-            {ranges && <InvestmentRanges trend={trend} />}
+            {parts && parts.length > 0 && (
+                <div className="trend-parts nw-parts">
+                    {parts.map((part) => (
+                        <div key={part.id} className="trend-part">
+                            <span className="trend-dot" style={{ background: part.color }} />
+                            <span className="trend-name">{part.label}</span>
+                            <span className={`trend-value ${part.value < 0 ? "negative" : ""}`}>
+                                {formatEuros(part.value)}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {ranges && <NetWorthRanges trend={trend} />}
         </div>
     );
 }

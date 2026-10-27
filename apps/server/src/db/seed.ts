@@ -160,7 +160,7 @@ async function seed() {
             FIXTURE_SNAPSHOTS.flatMap((snapshot) =>
                 snapshot.groups.map((entry) => ({
                     userId: user.id,
-                    period: snapshot.period,
+                    day: snapshot.day,
                     groupId: groupId(entry.groupId),
                     amount: entry.amount,
                 })),

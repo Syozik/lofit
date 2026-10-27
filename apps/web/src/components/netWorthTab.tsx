@@ -1,30 +1,34 @@
-import { useAccounts, useGroups, useHoldings, useSnapshots } from "@lofit/api";
+import { INITIAL_TREND, useAccounts, useGroups, useHoldings, useNetWorthTrend, useSnapshots } from "@lofit/api";
 import {
     addCents,
     ALL_GROUPS,
     ALL_GROUPS_LABEL,
+    amountIn,
+    byPosition,
     cents,
-    deltaAt,
     formatAmount,
-    inRange,
     itemsInScope,
     netWorthGroups,
     netWorthItems,
     owesMoney,
-    RANGE_LABELS,
-    RANGE_ORDER,
-    seriesFor,
 } from "@lofit/domain";
-import type { Delta, RangeKey, Scope } from "@lofit/domain";
+import type { Account, Delta, Group, Holding, Scope, Snapshot } from "@lofit/domain";
 import { useState } from "react";
-import { monthName, yearOf } from "../period";
-import { centreLabel, kickerFor, netWorthSlices, shortEuros, signedAmount, signedPercent } from "@lofit/view";
+import {
+    centreLabel,
+    groupColor,
+    kickerFor,
+    netWorthSlices,
+    shortEuros,
+    signedAmount,
+    signedPercent,
+} from "@lofit/view";
+import { cssColor } from "../helpers/palette";
 import { Donut } from "./donut";
 import { useDesktop } from "../useDesktop";
-import { useInvestmentTrend } from "../useInvestmentTrend";
-import { InvestmentRanges, InvestmentTrend } from "./investmentTrend";
+import { NetWorthRanges, NetWorthTrend } from "./netWorthTrend";
+import type { TrendPart } from "./netWorthTrend";
 import { RecentTransactions } from "./recentTransactions";
-import { TrendChart } from "./trendChart";
 
 type ChartMode = "mix" | "trend";
 
@@ -33,6 +37,8 @@ const CHART_MODES: readonly ChartMode[] = ["mix", "trend"];
 const CHART_LABELS: Record<ChartMode, string> = { mix: "Mix", trend: "Trend" };
 
 const MIX_TITLE = "Made of";
+
+const TREND_TITLE = "Trend";
 
 function DeltaLine({ delta, previous }: { delta: Delta; previous: string }) {
     return (
@@ -50,25 +56,6 @@ export function NetWorthTab() {
     const snapshots = useSnapshots();
     const groupRows = useGroups();
 
-    const [scope, setScope] = useState<Scope>(ALL_GROUPS);
-    const [mode, setMode] = useState<ChartMode>("mix");
-    const [range, setRange] = useState<RangeKey>("1y");
-    const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-    const [focusedSlice, setFocusedSlice] = useState<string | null>(null);
-    const desktop = useDesktop();
-    const showTrend = desktop || mode === "trend";
-    const picked = desktop ? selectedIndex !== null : mode === "trend";
-
-    const allMonths = snapshots.data ?? [];
-    const months = inRange(allMonths, range);
-    const focusIndex = (showTrend ? selectedIndex : null) ?? months.length - 1;
-    const offset = allMonths.length - months.length;
-
-    const investingScope = showTrend
-        ? groupRows.data?.find((group) => group.id === scope && group.invests)?.id
-        : undefined;
-    const investments = useInvestmentTrend(investingScope);
-
     if (accounts.isPending || holdings.isPending || snapshots.isPending || groupRows.isPending) {
         return <div className="tab-content">Loading…</div>;
     }
@@ -76,60 +63,65 @@ export function NetWorthTab() {
         return <div className="tab-content">Could not load accounts</div>;
     }
 
-    const allGroups = groupRows.data;
-    const groups = netWorthGroups(netWorthItems(accounts.data, holdings.data), allGroups);
+    return (
+        <NetWorthPage
+            accounts={accounts.data}
+            holdings={holdings.data}
+            snapshots={snapshots.data}
+            allGroups={groupRows.data}
+        />
+    );
+}
+
+type PageProps = {
+    accounts: readonly Account[];
+    holdings: readonly Holding[];
+    snapshots: readonly Snapshot[];
+    allGroups: readonly Group[];
+};
+
+function NetWorthPage({ accounts, holdings, snapshots, allGroups }: PageProps) {
+    const [scope, setScope] = useState<Scope>(ALL_GROUPS);
+    const [mode, setMode] = useState<ChartMode>("mix");
+    const [focusedSlice, setFocusedSlice] = useState<string | null>(null);
+    const desktop = useDesktop();
+
+    const groups = netWorthGroups(netWorthItems(accounts, holdings), allGroups);
     const selected = groups.find((entry) => entry.group.id === scope);
     const scoped = itemsInScope(groups, scope);
     const live = scoped.reduce((sum, item) => addCents(sum, item.value), cents(0));
     const slices = netWorthSlices(scoped, allGroups, selected ? owesMoney(selected.total) : false);
 
-    const fullSeries = seriesFor(allMonths, scope);
-    const series = fullSeries.slice(offset);
-    const previous = allMonths[offset + focusIndex - 1]?.period;
-    const delta = investments.active ? investments.delta : deltaAt(fullSeries, offset + focusIndex);
-    const since = investments.active ? investments.since : previous ? monthName(previous, "long") : "start";
-    const total = investments.active
-        ? (investments.shown?.value ?? live)
-        : ((picked ? series[focusIndex] : undefined) ?? live);
+    const investing = allGroups.find((group) => group.id === scope && group.invests)?.id;
+    const trend = useNetWorthTrend(scope, investing, snapshots, live, useState(INITIAL_TREND));
+    const total = trend.shown?.value ?? live;
+    const kicker = trend.focusLabel ? `${kickerFor(selected)} · ${trend.focusLabel}` : kickerFor(selected);
 
-    const history = desktop && !investments.active && selectedIndex !== null ? months[focusIndex] : undefined;
-    const kicker = history
-        ? `${kickerFor(selected)} · ${monthName(history.period, "short")} ${yearOf(history.period)}`
-        : kickerFor(selected);
+    const past = trend.focusSnapshot;
+    const parts: TrendPart[] =
+        scope === ALL_GROUPS
+            ? byPosition(allGroups)
+                  .map((group) => ({
+                      group,
+                      value: past
+                          ? amountIn(past, group.id)
+                          : (groups.find((entry) => entry.group.id === group.id)?.total ?? cents(0)),
+                  }))
+                  .filter((entry) => entry.value !== 0)
+                  .map(({ group, value }) => ({
+                      id: group.id,
+                      label: group.name,
+                      value,
+                      color: cssColor(groupColor(group.position, value < 0)),
+                  }))
+            : [];
 
     const liveAssets = groups
         .filter((entry) => !owesMoney(entry.total))
         .reduce((sum, entry) => addCents(sum, entry.total), cents(0));
     const centre = scope !== ALL_GROUPS ? live : liveAssets;
 
-    const rangeChips = (
-        <div className="ranges">
-            {RANGE_ORDER.map((option) => (
-                <button
-                    key={option}
-                    className={`tag range-chip ${range === option ? "selected" : ""}`}
-                    onClick={() => {
-                        setRange(option);
-                        setSelectedIndex(null);
-                    }}
-                >
-                    {RANGE_LABELS[option]}
-                </button>
-            ))}
-        </div>
-    );
-
-    const trend = investments.active ? (
-        <InvestmentTrend trend={investments} ranges={!desktop} />
-    ) : (
-        <TrendChart
-            snapshots={months}
-            groups={allGroups}
-            series={series}
-            selectedIndex={focusIndex}
-            onSelect={setSelectedIndex}
-        />
-    );
+    const chart = <NetWorthTrend trend={trend} parts={parts} ranges={!desktop} />;
 
     const mix = (
         <Donut
@@ -174,7 +166,7 @@ export function NetWorthTab() {
                         <span className="net-worth-currency">{total < 0 ? "−€" : "€"}</span>
                         <span>{formatAmount(total)}</span>
                     </div>
-                    {delta && <DeltaLine delta={delta} previous={since} />}
+                    {trend.delta && <DeltaLine delta={trend.delta} previous={trend.since} />}
                 </div>
 
                 {scoped.length > 0 &&
@@ -182,19 +174,10 @@ export function NetWorthTab() {
                         <div className="nw-charts">
                             <div className="section panel nw-trend">
                                 <div className="chart-head">
-                                    {investments.active ? (
-                                        <>
-                                            <span className="kicker">{investments.focusLabel}</span>
-                                            <InvestmentRanges trend={investments} />
-                                        </>
-                                    ) : (
-                                        <>
-                                            <span className="kicker">Trend</span>
-                                            {rangeChips}
-                                        </>
-                                    )}
+                                    <span className="kicker">{TREND_TITLE}</span>
+                                    <NetWorthRanges trend={trend} />
                                 </div>
-                                {trend}
+                                {chart}
                             </div>
                             <div className="section panel nw-mix">
                                 <span className="kicker">{MIX_TITLE}</span>
@@ -204,13 +187,7 @@ export function NetWorthTab() {
                     ) : (
                         <div className="section">
                             <div className="chart-head">
-                                {investments.active ? (
-                                    <span className="kicker">{investments.focusLabel}</span>
-                                ) : mode === "trend" ? (
-                                    rangeChips
-                                ) : (
-                                    <span className="kicker">{MIX_TITLE}</span>
-                                )}
+                                <span className="kicker">{mode === "trend" ? TREND_TITLE : MIX_TITLE}</span>
                                 <div className="seg chart-modes">
                                     {CHART_MODES.map((option) => (
                                         <label key={option} className="seg-opt">
@@ -225,11 +202,11 @@ export function NetWorthTab() {
                                     ))}
                                 </div>
                             </div>
-                            {mode === "trend" ? trend : mix}
+                            {mode === "trend" ? chart : mix}
                         </div>
                     ))}
 
-                <RecentTransactions accounts={accounts.data} scope={scope} />
+                <RecentTransactions accounts={accounts} scope={scope} />
             </div>
         </div>
     );

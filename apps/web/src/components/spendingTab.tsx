@@ -70,7 +70,9 @@ function MonthStep({
 }) {
     return (
         <span className="spend-period">
-            <span className="kicker">Spent in {formatPeriod(period)}</span>
+            <span className="kicker spend-month" data-widest={`September ${period.slice(0, 4)}`}>
+                <span>{formatPeriod(period)}</span>
+            </span>
             <button
                 className="btn btn-ghost btn-icon spend-step"
                 aria-label="Previous month"

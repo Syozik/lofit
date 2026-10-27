@@ -37,11 +37,12 @@ describe("fixtures", () => {
         expect(snapshotNet(FIXTURE_SNAPSHOTS.at(-1)!)).toBe(5696136);
     });
 
-    it("cover 36 consecutive months ending July 2026", () => {
-        const expected = Array.from({ length: 36 }, (_, index) =>
-            new Date(Date.UTC(2023, 7 + index, 1)).toISOString().slice(0, 7),
-        );
+    it("cover every day from August 2023 to the end of July 2026", () => {
+        const days = FIXTURE_SNAPSHOTS.map((snapshot) => snapshot.day);
 
-        expect(FIXTURE_SNAPSHOTS.map((snapshot) => snapshot.period)).toEqual(expected);
+        expect(days[0]).toBe("2023-08-31");
+        expect(days.at(-1)).toBe("2026-07-31");
+        expect(new Set(days).size).toBe(days.length);
+        expect(days).toHaveLength(Math.round((Date.parse("2026-07-31") - Date.parse("2023-08-31")) / 86_400_000) + 1);
     });
 });

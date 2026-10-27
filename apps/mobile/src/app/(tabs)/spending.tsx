@@ -93,7 +93,10 @@ export default function SpendingScreen() {
                         >
                             <ChevronLeft size={16} color={canGoBack ? colors.quiet : colors.chip} />
                         </Pressable>
-                        <Text style={text.kicker}>Spent in {formatPeriod(period)}</Text>
+                        <View>
+                            <Text style={[text.kicker, styles.widest]}>September {period.slice(0, 4)}</Text>
+                            <Text style={[text.kicker, styles.month]}>{formatPeriod(period)}</Text>
+                        </View>
                         <Pressable
                             accessibilityRole="button"
                             accessibilityLabel="Next month"
@@ -181,6 +184,8 @@ export default function SpendingScreen() {
 const styles = StyleSheet.create({
     head: { flexDirection: "row", alignItems: "flex-end", gap: space[6] },
     totalBlock: { gap: 4 },
+    widest: { opacity: 0 },
+    month: { position: "absolute", left: 0, right: 0, textAlign: "center" },
     monthRow: { flexDirection: "row", alignItems: "center", gap: 6, marginLeft: -2 },
     amount: { fontFamily: fonts.medium, fontSize: 30, letterSpacing: -0.6, color: colors.text, fontVariant: ["tabular-nums"] },
     budget: { marginLeft: "auto", alignItems: "flex-end", gap: 2 },

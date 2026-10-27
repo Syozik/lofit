@@ -17,7 +17,6 @@ export { spendSlices, UNTAGGED_KEY } from "./spending";
 export { amountFor, monogram, transactionMeta } from "./transaction";
 export type { LinePoint, LineScale } from "./chart";
 export {
-    defaultCustom,
     formatChange,
     linePath,
     lineScale,

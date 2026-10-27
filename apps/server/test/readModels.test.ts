@@ -41,18 +41,18 @@ describe("GET /api/snapshots", () => {
         const theirCash = await firstGroup(someoneElse.id);
 
         await db.insert(snapshots).values([
-            { userId: me.id, period: "2026-07", groupId: cash.id, amount: euros(22582.73) },
-            { userId: me.id, period: "2026-07", groupId: debt.id, amount: euros(-10034.4) },
-            { userId: me.id, period: "2025-08", groupId: cash.id, amount: euros(17250.1) },
-            { userId: someoneElse.id, period: "2026-01", groupId: theirCash.id, amount: euros(1) },
+            { userId: me.id, day: "2026-07-31", groupId: cash.id, amount: euros(22582.73) },
+            { userId: me.id, day: "2026-07-31", groupId: debt.id, amount: euros(-10034.4) },
+            { userId: me.id, day: "2025-08-31", groupId: cash.id, amount: euros(17250.1) },
+            { userId: someoneElse.id, day: "2026-01-31", groupId: theirCash.id, amount: euros(1) },
         ]);
 
         const response = await mine.snapshots.$get();
 
         expect(await response.json()).toStrictEqual([
-            { period: "2025-08", groups: [{ groupId: cash.id, amount: 1725010 }] },
+            { day: "2025-08-31", groups: [{ groupId: cash.id, amount: 1725010 }] },
             {
-                period: "2026-07",
+                day: "2026-07-31",
                 groups: [
                     { groupId: cash.id, amount: 2258273 },
                     { groupId: debt.id, amount: -1003440 },

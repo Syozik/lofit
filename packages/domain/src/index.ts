@@ -9,6 +9,7 @@ export type { Sale } from "./holding";
 export { addUnits, holdingGain, holdingValue, paidFor, sellUnits } from "./holding";
 export type { DayWindow, HistoryRange, PriceHistory, PricePoint, ValuePoint } from "./history";
 export {
+    defaultCustom,
     HISTORY_RANGE_LABELS,
     historyIn,
     pointsWithin,
@@ -84,15 +85,14 @@ export {
     sumItems,
 } from "./select";
 
-export type { Delta, GroupAmount, RangeKey, Snapshot } from "./snapshot";
+export type { Delta, GroupAmount, Snapshot, SnapshotPoint } from "./snapshot";
 export {
     amountIn,
     deltaAt,
-    inRange,
-    RANGE_LABELS,
-    RANGE_ORDER,
+    lastBefore,
     seriesFor,
     snapshotNet,
+    snapshotPoints,
 } from "./snapshot";
 
 export {

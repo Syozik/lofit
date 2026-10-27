@@ -73,6 +73,11 @@ export function rangeWindow(
     }
 }
 
+export function defaultCustom(first: string, last: string): DayWindow {
+    const from = rangeWindow("1m", last).from ?? first;
+    return { from: from < first ? first : from, to: last };
+}
+
 export function pointsWithin<T>(
     points: readonly T[],
     dayOf: (point: T) => string,

@@ -4,6 +4,7 @@ import { connection } from "./db/client";
 import { refreshRates } from "./prices/rates";
 import { refreshPrices } from "./prices/refresh";
 import { server } from "./server";
+import { recordSnapshots } from "./snapshots";
 
 const listening = serve({ fetch: server.fetch, port: env.port }, (info) => {
     console.log(`lofit listening on http://localhost:${info.port}`);
@@ -22,6 +23,8 @@ if (env.priceRefreshMinutes > 0) {
         refreshRates()
             .then(() => refreshPrices())
             .then((report) => console.log("prices refreshed", report))
+            .then(() => recordSnapshots())
+            .then((written) => console.log("snapshots recorded", written))
             .catch((error: unknown) => console.error("price refresh failed", error));
     };
 
