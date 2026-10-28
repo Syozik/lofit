@@ -1,6 +1,6 @@
 import { BlurTargetView, BlurView } from "expo-blur";
 import { useFocusEffect } from "expo-router";
-import type { ReactNode, RefObject } from "react";
+import type { ComponentRef, ReactNode, RefObject } from "react";
 import { createContext, useCallback, useContext, useId, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,7 +14,7 @@ export function useTabBarSpace(): number {
     return useSafeAreaInsets().bottom + TAB_BAR_HEIGHT;
 }
 
-type Target = { id: string; ref: RefObject<View | null> };
+type Target = { id: string; ref: RefObject<ComponentRef<typeof View> | null> };
 
 type Targets = { current: Target | null; show: (target: Target) => void };
 
@@ -28,7 +28,7 @@ export function BlurTargetsProvider({ children }: { children: ReactNode }) {
 export function BlurSource({ children }: { children: ReactNode }) {
     const styles = useStyles(makeStyles);
     const id = useId();
-    const ref = useRef<View | null>(null);
+    const ref = useRef<ComponentRef<typeof View>>(null);
     const { show } = useContext(BlurTargets);
 
     useFocusEffect(

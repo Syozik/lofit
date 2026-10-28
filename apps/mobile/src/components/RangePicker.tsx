@@ -2,6 +2,7 @@ import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { HISTORY_RANGE_LABELS } from "@lofit/domain";
 import type { DayWindow, HistoryRange } from "@lofit/domain";
 import { dayFormat } from "@lofit/view";
+import type { ComponentRef } from "react";
 import { useEffect, useRef } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import type { Colors } from "../theme";
@@ -46,7 +47,7 @@ type Props = {
 
 export function RangePicker({ ranges, active, onSelect, custom, onCustom, bounds }: Props) {
     const styles = useStyles(makeStyles);
-    const row = useRef<ScrollView>(null);
+    const row = useRef<ComponentRef<typeof ScrollView>>(null);
 
     useEffect(() => {
         if (active === "custom") row.current?.scrollToEnd({ animated: true });

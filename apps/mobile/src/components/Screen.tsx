@@ -78,7 +78,7 @@ export function ListScreen<T>({ header, data, renderItem, keyExtractor, empty, r
                             {header}
                         </View>
                     }
-                    ListEmptyComponent={empty ? <>{empty}</> : null}
+                    ListEmptyComponent={empty ? <>{empty}</> : undefined}
                     contentContainerStyle={[styles.list, { paddingBottom: tabBar + 24 }]}
                     initialNumToRender={12}
                     windowSize={7}
