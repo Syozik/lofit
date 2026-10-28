@@ -1,6 +1,7 @@
 import { onlineManager } from "@tanstack/react-query";
 import * as Network from "expo-network";
 import { useSyncExternalStore } from "react";
+import { AppState } from "react-native";
 import { API_URL } from "./config";
 
 const PING_TIMEOUT_MS = 5000;
@@ -8,6 +9,7 @@ const RECHECK_MS = 15000;
 
 let networkUp = true;
 let serverUp = true;
+let local = false;
 let report: (online: boolean) => void = () => {};
 let recheck: ReturnType<typeof setTimeout> | undefined;
 
@@ -25,18 +27,19 @@ async function ping(): Promise<boolean> {
 }
 
 function publish(): void {
-    report(networkUp && serverUp);
+    report(local || (networkUp && serverUp));
     clearTimeout(recheck);
-    if (networkUp && !serverUp) recheck = setTimeout(() => void checkServer(), RECHECK_MS);
+    if (!local && networkUp && !serverUp) recheck = setTimeout(() => void checkServer(), RECHECK_MS);
 }
 
 export async function checkServer(): Promise<void> {
+    if (local) return publish();
     serverUp = await ping();
     publish();
 }
 
 export function markServerDown(): void {
-    if (!serverUp) return;
+    if (local || !serverUp) return;
     serverUp = false;
     publish();
 }
@@ -47,12 +50,26 @@ function applyNetwork(state: Network.NetworkState): void {
     else publish();
 }
 
+export function stayOnline(value: boolean): void {
+    if (local === value) return;
+    local = value;
+    serverUp = true;
+    void checkServer();
+}
+
 export function startConnectivity(): void {
     onlineManager.setEventListener((setOnline) => {
         report = setOnline;
-        void Network.getNetworkStateAsync().then(applyNetwork);
+        const refresh = () => void Network.getNetworkStateAsync().then(applyNetwork);
+        refresh();
         const subscription = Network.addNetworkStateListener(applyNetwork);
-        return () => subscription.remove();
+        const foreground = AppState.addEventListener("change", (state) => {
+            if (state === "active") refresh();
+        });
+        return () => {
+            subscription.remove();
+            foreground.remove();
+        };
     });
 }
 

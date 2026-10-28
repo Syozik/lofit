@@ -13,10 +13,16 @@ const auth = configureAuth(API_URL, [
 
 configureIds(() => Crypto.randomUUID());
 
-configureApi(API_URL, {
-    headers: async () => {
-        const cookie = await auth.getCookie();
-        return cookie ? { cookie } : {};
-    },
-    onUnreachable: markServerDown,
-});
+export function connectAccount(): void {
+    configureApi(API_URL, {
+        headers: async () => {
+            const cookie = await auth.getCookie();
+            return cookie ? { cookie } : {};
+        },
+        onUnreachable: markServerDown,
+    });
+}
+
+export function connectLocal(fetch: typeof globalThis.fetch): void {
+    configureApi(API_URL, { fetch });
+}

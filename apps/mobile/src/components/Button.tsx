@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
-import type { StyleProp, ViewStyle } from "react-native";
+import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import type { Colors } from "../theme";
 import { fonts, radius, useStyles } from "../theme";
 
@@ -11,9 +11,18 @@ type Props = {
     disabled?: boolean;
     icon?: ReactNode;
     style?: StyleProp<ViewStyle>;
+    labelStyle?: StyleProp<TextStyle>;
 };
 
-export function Button({ label, onPress, variant = "primary", disabled = false, icon, style }: Props) {
+export function Button({
+    label,
+    onPress,
+    variant = "primary",
+    disabled = false,
+    icon,
+    style,
+    labelStyle,
+}: Props) {
     const styles = useStyles(makeStyles);
     const labels = useStyles(makeLabels);
     return (
@@ -30,7 +39,7 @@ export function Button({ label, onPress, variant = "primary", disabled = false, 
             ]}
         >
             {icon}
-            <Text style={[styles.label, labels[variant]]}>{label}</Text>
+            <Text style={[styles.label, labels[variant], labelStyle]}>{label}</Text>
         </Pressable>
     );
 }

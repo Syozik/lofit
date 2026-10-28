@@ -37,6 +37,7 @@ import { pickFile, ScreenshotImportView, skippedText } from "./ScreenshotImport"
 import { Sheet, SheetActions } from "./Sheet";
 import { useOnline } from "../connectivity";
 import { today, toInstant } from "../days";
+import { useGuest } from "../mode";
 import { useToast } from "./Toast";
 
 type EntryMode = TransactionKind | "holding";
@@ -130,6 +131,7 @@ export function EntrySheet({ entry, onClose }: Props) {
     const updateEntry = useUpdateTransaction();
     const show = useToast();
     const online = useOnline();
+    const guest = useGuest();
     const reading = useImportScreenshot();
     const [shot, setShot] = useState<Screenshot | null>(null);
     const [queue, setQueue] = useState<Queue | null>(null);
@@ -401,11 +403,11 @@ export function EntrySheet({ entry, onClose }: Props) {
         >
             <View style={styles.modeRow}>
                 <Segmented
-                    options={editing || queue ? TRANSACTION_MODES : ALL_MODES}
+                    options={editing || queue || guest ? TRANSACTION_MODES : ALL_MODES}
                     value={mode}
                     onChange={changeMode}
                 />
-                {!editing && !queue && (
+                {!editing && !queue && !guest && (
                     <Pressable
                         accessibilityRole="button"
                         accessibilityLabel="From screenshot or statement"

@@ -6,6 +6,7 @@ let client: ReturnType<typeof hc<AppType>> | undefined;
 export type ApiOptions = {
     headers?: () => Promise<Record<string, string>>;
     onUnreachable?: () => void;
+    fetch?: typeof fetch;
 };
 
 const GATEWAY_STATUSES = new Set([502, 503, 504]);
@@ -15,7 +16,7 @@ function gatewayFailure(response: { status: number; headers: Headers }): boolean
 }
 
 export function configureApi(baseUrl: string, options: ApiOptions = {}): void {
-    const { headers, onUnreachable } = options;
+    const { headers, onUnreachable, fetch: local } = options;
     const watched: typeof fetch = async (input, init) => {
         try {
             const response = await fetch(input, init);
@@ -29,7 +30,7 @@ export function configureApi(baseUrl: string, options: ApiOptions = {}): void {
 
     client = hc<AppType>(baseUrl, {
         ...(headers ? { headers, init: { credentials: "omit" } } : {}),
-        ...(onUnreachable ? { fetch: watched } : {}),
+        ...(local ? { fetch: local } : onUnreachable ? { fetch: watched } : {}),
     });
 }
 

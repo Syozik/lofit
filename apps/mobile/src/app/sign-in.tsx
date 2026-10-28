@@ -1,10 +1,13 @@
 import { signIn, signUp } from "@lofit/api";
+import { useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff } from "lucide-react-native";
 import { useState } from "react";
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../components/Button";
 import { Field } from "../components/Field";
+import { setMode } from "../mode";
+import { forgetCache } from "../queryClient";
 import type { Colors } from "../theme";
 import { fonts, radius, space, useStyles, useTheme } from "../theme";
 
@@ -20,6 +23,7 @@ export default function SignInScreen() {
     const [visible, setVisible] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [pending, setPending] = useState(false);
+    const client = useQueryClient();
 
     const short = password.length > 0 && password.length < MIN_PASSWORD;
     const blocked =
@@ -38,6 +42,11 @@ export default function SignInScreen() {
         } finally {
             setPending(false);
         }
+    }
+
+    async function enterGuest() {
+        await forgetCache(client, "account");
+        await setMode("guest");
     }
 
     return (
@@ -112,15 +121,44 @@ export default function SignInScreen() {
                             disabled={blocked}
                             onPress={() => void submit()}
                         />
-                        <Button
-                            variant="ghost"
-                            label={joining ? "I already have an account" : "Create an account"}
-                            onPress={() => {
-                                setJoining(!joining);
-                                setError(null);
-                            }}
-                        />
+                        {joining ? (
+                            <Button
+                                variant="ghost"
+                                label="I already have an account"
+                                onPress={() => {
+                                    setJoining(false);
+                                    setError(null);
+                                }}
+                            />
+                        ) : (
+                            <>
+                                <View style={styles.rule} />
+                                <Text style={styles.ask}>Don't have an account?</Text>
+                                <View style={styles.choices}>
+                                    <Button
+                                        variant="secondary"
+                                        label="Create account"
+                                        disabled={pending}
+                                        style={styles.choice}
+                                        labelStyle={styles.choiceLabel}
+                                        onPress={() => {
+                                            setJoining(true);
+                                            setError(null);
+                                        }}
+                                    />
+                                    <Button
+                                        variant="secondary"
+                                        label="Use lofit offline"
+                                        disabled={pending}
+                                        style={styles.choice}
+                                        labelStyle={styles.choiceLabel}
+                                        onPress={() => void enterGuest()}
+                                    />
+                                </View>
+                            </>
+                        )}
                     </View>
+
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -143,4 +181,15 @@ const makeStyles = (colors: Colors) =>
         wordmark: { fontFamily: fonts.semibold, fontSize: 26, color: colors.text, letterSpacing: -0.5 },
         note: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
         error: { fontFamily: fonts.regular, fontSize: 13, color: colors.danger },
+        rule: { height: StyleSheet.hairlineWidth, backgroundColor: colors.divider, marginTop: space[1] },
+        ask: {
+            fontFamily: fonts.regular,
+            fontSize: 12,
+            color: colors.muted,
+            textAlign: "center",
+            marginTop: -space[1],
+        },
+        choices: { flexDirection: "row", gap: space[3], marginTop: -space[2] },
+        choice: { flex: 1, minHeight: 38, paddingHorizontal: 8 },
+        choiceLabel: { fontFamily: fonts.regular, fontSize: 13 },
     });

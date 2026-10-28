@@ -47,7 +47,7 @@ export function SignIn() {
                 <div className="gate-head">
                     <span className="wordmark">lofit</span>
                     <span className="gate-note">
-                        {joining ? "Everything in euros, in one place." : "Welcome back."}
+                        {joining ? "All your financials, in one place." : "Welcome back."}
                     </span>
                 </div>
 

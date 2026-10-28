@@ -6,6 +6,7 @@
         "@expo-google-fonts/geist": "^0.4.2",
         "@lofit/api": "workspace:^",
         "@lofit/domain": "workspace:^",
+        "@lofit/local": "workspace:^",
         "@lofit/view": "workspace:^",
         "@react-native-async-storage/async-storage": "2.2.0",
         "@react-native-community/datetimepicker": "9.1.0",

@@ -1,12 +1,15 @@
 import { signOut } from "@lofit/api";
 import { useMutationState, useQueryClient } from "@tanstack/react-query";
 import { LogOut } from "lucide-react-native";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useOnline } from "../connectivity";
-import { persister } from "../queryClient";
+import { useGuest } from "../mode";
+import { forgetCache } from "../queryClient";
 import { forgetSignIn } from "../signedIn";
 import type { Colors } from "../theme";
 import { fonts, useStyles, useTheme } from "../theme";
+import { EraseSheet } from "./EraseSheet";
 import { useToast } from "./Toast";
 
 function syncLabel(online: boolean, waiting: number): string {
@@ -14,7 +17,32 @@ function syncLabel(online: boolean, waiting: number): string {
     return waiting > 0 ? `Syncing ${waiting}` : "";
 }
 
-export function AppHeader() {
+function GuestHeader() {
+    const { colors } = useTheme();
+    const styles = useStyles(makeStyles);
+    const [leaving, setLeaving] = useState(false);
+
+    return (
+        <View style={styles.header}>
+            <Text style={styles.wordmark}>lofit</Text>
+            <View
+                accessibilityLabel="Stored on this phone"
+                style={[styles.indicator, { backgroundColor: colors.subtle }]}
+            />
+            <Pressable
+                accessibilityLabel="Sign out"
+                hitSlop={10}
+                onPress={() => setLeaving(true)}
+                style={styles.action}
+            >
+                <LogOut size={16} strokeWidth={1.5} color={colors.quiet} />
+            </Pressable>
+            {leaving && <EraseSheet onClose={() => setLeaving(false)} />}
+        </View>
+    );
+}
+
+function AccountHeader() {
     const { colors } = useTheme();
     const styles = useStyles(makeStyles);
     const client = useQueryClient();
@@ -30,8 +58,7 @@ export function AppHeader() {
         }
         await signOut();
         await forgetSignIn();
-        client.clear();
-        await persister.removeClient();
+        await forgetCache(client, "account");
     }
 
     return (
@@ -55,6 +82,10 @@ export function AppHeader() {
             </Pressable>
         </View>
     );
+}
+
+export function AppHeader() {
+    return useGuest() ? <GuestHeader /> : <AccountHeader />;
 }
 
 const makeStyles = (colors: Colors) =>

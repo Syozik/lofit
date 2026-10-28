@@ -1,4 +1,4 @@
-import "../session";
+import "../mode";
 
 import { Geist_400Regular } from "@expo-google-fonts/geist/400Regular";
 import { Geist_500Medium } from "@expo-google-fonts/geist/500Medium";
@@ -10,17 +10,34 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import type { Theme } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ToastProvider } from "../components/Toast";
-import { CACHE_VERSION, createQueryClient, PERSIST_MAX_AGE_MS, persister } from "../queryClient";
+import { useMode } from "../mode";
+import type { Mode } from "../mode";
+import { CACHE_VERSION, createQueryClient, PERSIST_MAX_AGE_MS, persisterFor } from "../queryClient";
 import { useRememberedSignIn } from "../signedIn";
 import type { Colors } from "../theme";
 import { useStyles, useTheme } from "../theme";
 
-function Routes() {
+function AppStack({ open }: { open: boolean }) {
+    const { colors } = useTheme();
+
+    return (
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+            <Stack.Protected guard={open}>
+                <Stack.Screen name="(tabs)" />
+            </Stack.Protected>
+            <Stack.Protected guard={!open}>
+                <Stack.Screen name="sign-in" />
+            </Stack.Protected>
+        </Stack>
+    );
+}
+
+function AccountRoutes() {
     const { colors } = useTheme();
     const styles = useStyles(makeStyles);
     const session = useSession();
@@ -35,24 +52,18 @@ function Routes() {
         );
     }
 
-    const signedIn = Boolean(session.data) || (Boolean(session.error) && remembered);
+    return <AppStack open={Boolean(session.data) || (Boolean(session.error) && remembered)} />;
+}
 
-    return (
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
-            <Stack.Protected guard={signedIn}>
-                <Stack.Screen name="(tabs)" />
-            </Stack.Protected>
-            <Stack.Protected guard={!signedIn}>
-                <Stack.Screen name="sign-in" />
-            </Stack.Protected>
-        </Stack>
-    );
+function Routes({ mode }: { mode: Mode }) {
+    return mode === "guest" ? <AppStack open /> : <AccountRoutes />;
 }
 
 export default function RootLayout() {
     const { scheme, colors } = useTheme();
     const styles = useStyles(makeStyles);
-    const [client] = useState(createQueryClient);
+    const mode = useMode();
+    const client = useMemo(() => (mode ? createQueryClient(mode) : null), [mode]);
     const [fontsLoaded] = useFonts({ Geist_400Regular, Geist_500Medium, Geist_600SemiBold });
     const navigationTheme = useMemo<Theme>(() => {
         const base = scheme === "dark" ? DarkTheme : DefaultTheme;
@@ -77,18 +88,27 @@ export default function RootLayout() {
     return (
         <GestureHandlerRootView style={styles.root}>
             <SafeAreaProvider>
-                <PersistQueryClientProvider
-                    client={client}
-                    persistOptions={{ persister, maxAge: PERSIST_MAX_AGE_MS, buster: CACHE_VERSION }}
-                    onSuccess={() => void client.resumePausedMutations()}
-                >
-                    <ThemeProvider value={navigationTheme}>
-                        <ToastProvider>
-                            <StatusBar style="auto" />
-                            {fontsLoaded ? <Routes /> : <View style={styles.splash} />}
-                        </ToastProvider>
-                    </ThemeProvider>
-                </PersistQueryClientProvider>
+                <ThemeProvider value={navigationTheme}>
+                    <ToastProvider>
+                        <StatusBar style="auto" />
+                        {mode && client && fontsLoaded ? (
+                            <PersistQueryClientProvider
+                                key={mode}
+                                client={client}
+                                persistOptions={{
+                                    persister: persisterFor(mode),
+                                    maxAge: PERSIST_MAX_AGE_MS,
+                                    buster: CACHE_VERSION,
+                                }}
+                                onSuccess={() => void client.resumePausedMutations()}
+                            >
+                                <Routes mode={mode} />
+                            </PersistQueryClientProvider>
+                        ) : (
+                            <View style={styles.splash} />
+                        )}
+                    </ToastProvider>
+                </ThemeProvider>
             </SafeAreaProvider>
         </GestureHandlerRootView>
     );
