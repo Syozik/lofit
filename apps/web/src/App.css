@@ -1019,7 +1019,7 @@
     border: 0;
     padding: 0;
     cursor: pointer;
-    background: color-mix(in srgb, #0b0c16 72%, transparent);
+    background: var(--color-scrim);
     animation: lofitFade 0.18s ease;
 }
 
@@ -1339,7 +1339,7 @@ button.sheet-currency.switchable:hover {
     min-height: 0;
     padding: 2px 6px;
     font-size: 12.5px;
-    color: var(--color-accent-600);
+    color: var(--color-toast-action);
 }
 
 .txn-swipe {
@@ -1897,7 +1897,7 @@ button.sheet-currency.switchable:hover {
     border: 0;
     border-radius: var(--radius-md);
     background: var(--color-accent);
-    color: var(--color-surface);
+    color: var(--color-on-accent);
     cursor: pointer;
     font-family: var(--font-body);
     font-size: 14px;
@@ -1905,7 +1905,7 @@ button.sheet-currency.switchable:hover {
 }
 
 .sidebar-add:hover {
-    background: var(--color-accent-400);
+    background: var(--color-accent-hover);
 }
 
 .sidebar-kbd {
@@ -1916,7 +1916,7 @@ button.sheet-currency.switchable:hover {
     display: grid;
     place-items: center;
     border-radius: var(--radius-sm);
-    background: color-mix(in srgb, var(--color-surface) 18%, transparent);
+    background: color-mix(in srgb, var(--color-on-accent) 18%, transparent);
     font-family: var(--font-body);
     font-size: 11px;
     line-height: 1;
@@ -2577,18 +2577,18 @@ button.sheet-currency.switchable:hover {
     .sheet-actions .btn-primary {
         background: var(--color-accent);
         border-color: var(--color-accent);
-        color: var(--color-surface);
+        color: var(--color-on-accent);
     }
 
     .sheet-actions .btn-primary:not(:disabled):hover {
-        background: var(--color-accent-400);
-        border-color: var(--color-accent-400);
+        background: var(--color-accent-hover);
+        border-color: var(--color-accent-hover);
     }
 
     .sheet-actions .sheet-remove.sheet-save {
         background: var(--color-danger);
         border-color: var(--color-danger);
-        color: var(--color-surface);
+        color: var(--color-on-accent);
     }
 
     .sheet-actions .sheet-remove.sheet-save:not(:disabled):hover {

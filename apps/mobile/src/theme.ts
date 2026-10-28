@@ -27,8 +27,8 @@ const tokens: Record<Scheme, Record<ColorToken, string>> = {
         "accent-2-400": "#b5afe8",
         "accent-2-600": "#7972a9",
         "neutral-600": "#8a8ea0",
-        "neutral-700": "#3a3e4c",
-        "neutral-800": "#2a2d38",
+        "neutral-700": "#5c6070",
+        "neutral-800": "#474b59",
         "neutral-900": "#1d1f27",
     },
 };
