@@ -2,7 +2,8 @@ import type { NetWorthTrendState } from "@lofit/api";
 import { formatEuros } from "@lofit/domain";
 import type { Cents } from "@lofit/domain";
 import { StyleSheet, Text, View } from "react-native";
-import { colors, fonts, space } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, space, useStyles } from "../theme";
 import { LineChart } from "./LineChart";
 import { RangePicker } from "./RangePicker";
 
@@ -19,6 +20,7 @@ type Props = {
 };
 
 export function NetWorthTrend({ trend, parts }: Props) {
+    const styles = useStyles(makeStyles);
     const values = trend.points.map((point) => point.value);
     const low = Math.min(...values);
     const high = Math.max(...values);
@@ -103,30 +105,31 @@ export function NetWorthTrend({ trend, parts }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
-    chart: { gap: space[3] },
-    pending: { height: 152, alignItems: "center", justifyContent: "center" },
-    pendingText: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
-    legend: { flexDirection: "row", gap: 14 },
-    key: { flexDirection: "row", alignItems: "center", gap: 6 },
-    keyValue: { width: 12, height: 2, borderRadius: 1, backgroundColor: colors.accent },
-    keyInvested: {
-        width: 12,
-        height: 0,
-        borderTopWidth: 1.5,
-        borderStyle: "dashed",
-        borderColor: colors.subtle,
-    },
-    keyText: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
-    parts: { gap: space[2] },
-    part: { flexDirection: "row", alignItems: "center", gap: 10 },
-    dot: { width: 6, height: 6, borderRadius: 3 },
-    partName: { flex: 1, fontFamily: fonts.regular, fontSize: 12.5, color: colors.quiet },
-    partValue: {
-        fontFamily: fonts.regular,
-        fontSize: 12.5,
-        color: colors.text,
-        fontVariant: ["tabular-nums"],
-    },
-    negative: { color: colors.muted },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        chart: { gap: space[3] },
+        pending: { height: 152, alignItems: "center", justifyContent: "center" },
+        pendingText: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+        legend: { flexDirection: "row", gap: 14 },
+        key: { flexDirection: "row", alignItems: "center", gap: 6 },
+        keyValue: { width: 12, height: 2, borderRadius: 1, backgroundColor: colors.accent },
+        keyInvested: {
+            width: 12,
+            height: 0,
+            borderTopWidth: 1.5,
+            borderStyle: "dashed",
+            borderColor: colors.subtle,
+        },
+        keyText: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+        parts: { gap: space[2] },
+        part: { flexDirection: "row", alignItems: "center", gap: 10 },
+        dot: { width: 6, height: 6, borderRadius: 3 },
+        partName: { flex: 1, fontFamily: fonts.regular, fontSize: 12.5, color: colors.quiet },
+        partValue: {
+            fontFamily: fonts.regular,
+            fontSize: 12.5,
+            color: colors.text,
+            fontVariant: ["tabular-nums"],
+        },
+        negative: { color: colors.muted },
+    });

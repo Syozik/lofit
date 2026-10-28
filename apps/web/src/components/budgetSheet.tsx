@@ -1,5 +1,5 @@
 import { useBudgets, useSetBudget, useTags, useTransactions } from "@lofit/api";
-import { cents, euros, formatAmount, spendByTag, sumCents } from "@lofit/domain";
+import { cents, euros, formatAmount, spendByTag, sumCents, tagsFor } from "@lofit/domain";
 import type { Cents } from "@lofit/domain";
 import { parsePositive } from "@lofit/view";
 import { useState } from "react";
@@ -18,7 +18,8 @@ type Props = {
 };
 
 export function BudgetSheet({ period, onClose, onSaved }: Props) {
-    const { data: tags = [] } = useTags();
+    const { data: allTags = [] } = useTags();
+    const tags = tagsFor(allTags, "expense");
     const { data: budgets = [] } = useBudgets();
     const { data: transactions = [] } = useTransactions();
     const setBudget = useSetBudget();

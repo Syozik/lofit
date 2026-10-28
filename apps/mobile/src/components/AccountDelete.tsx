@@ -1,7 +1,8 @@
 import { useDeleteAccount } from "@lofit/api";
 import type { Account } from "@lofit/domain";
 import { StyleSheet, Text } from "react-native";
-import { colors, fonts } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, useStyles } from "../theme";
 import { Button } from "./Button";
 import { Sheet, SheetActions } from "./Sheet";
 import { useOnline } from "../connectivity";
@@ -14,6 +15,7 @@ type Props = {
 };
 
 export function AccountDelete({ account, onClose, onDeleted }: Props) {
+    const styles = useStyles(makeStyles);
     const remove = useDeleteAccount();
     const show = useToast();
     const online = useOnline();
@@ -50,6 +52,7 @@ export function AccountDelete({ account, onClose, onDeleted }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
-    warning: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: colors.quiet },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        warning: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: colors.quiet },
+    });

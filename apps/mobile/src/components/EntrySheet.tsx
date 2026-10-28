@@ -10,7 +10,7 @@ import {
     useUpdateTransaction,
 } from "@lofit/api";
 import type { Screenshot } from "@lofit/api";
-import { ASSET_TYPE_LABELS, ASSET_TYPES, CURRENCIES, euros, investingGroups, KIND_LABELS } from "@lofit/domain";
+import { ASSET_TYPE_LABELS, ASSET_TYPES, CURRENCIES, euros, investingGroups, KIND_LABELS, tagsFor } from "@lofit/domain";
 import type {
     Account,
     AssetType,
@@ -26,11 +26,12 @@ import { currencyFormat, dayFormat, parsePositive } from "@lofit/view";
 import { ImagePlus, TriangleAlert } from "lucide-react-native";
 import { useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { colors, fonts } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, useStyles, useTheme } from "../theme";
 import { AmountInput } from "./AmountInput";
 import { Button } from "./Button";
 import { Chip, ChipRow, Segmented } from "./Choices";
-import { Field, fieldStyles } from "./Field";
+import { Field, makeFieldStyles } from "./Field";
 import { pickDay } from "./RangePicker";
 import { pickFile, ScreenshotImportView, skippedText } from "./ScreenshotImport";
 import { Sheet, SheetActions } from "./Sheet";
@@ -64,6 +65,7 @@ function AccountPicker({
     value: string;
     onChange: (id: string) => void;
 }) {
+    const styles = useStyles(makeStyles);
     return (
         <View style={styles.field}>
             <Text style={styles.label}>{label}</Text>
@@ -82,6 +84,8 @@ function AccountPicker({
 }
 
 function DateField({ label, day, onChange, max }: { label: string; day: string; onChange: (day: string) => void; max?: string }) {
+    const styles = useStyles(makeStyles);
+    const fieldStyles = useStyles(makeFieldStyles);
     return (
         <View style={styles.field}>
             <Text style={styles.label}>{label}</Text>
@@ -113,6 +117,9 @@ type Props = {
 };
 
 export function EntrySheet({ entry, onClose }: Props) {
+    const { colors } = useTheme();
+    const styles = useStyles(makeStyles);
+    const fieldStyles = useStyles(makeFieldStyles);
     const { data: accounts } = useAccounts();
     const { data: groups } = useGroups();
     const { data: tags } = useTags();
@@ -160,6 +167,9 @@ export function EntrySheet({ entry, onClose }: Props) {
     const heldAt = custodianId || brokerages[0]?.id || "";
     const to = toId || allAccounts.find((account) => account.id !== from)?.id || "";
 
+    const fitting = isHolding ? [] : tagsFor(tags ?? [], mode);
+    const chosenIds = tags || mode === "transfer" ? tagIds.filter((id) => fitting.some((tag) => tag.id === id)) : tagIds;
+
     const value = parsePositive(amount);
     const units = parsePositive(quantity);
 
@@ -173,6 +183,13 @@ export function EntrySheet({ entry, onClose }: Props) {
     function nextCurrency() {
         const at = CURRENCIES.indexOf(currency);
         setCurrency(CURRENCIES[(at + 1) % CURRENCIES.length]!);
+    }
+
+    function changeMode(next: EntryMode) {
+        setMode(next);
+        if (next === "holding" || !tags) return;
+        const fits = tagsFor(tags, next);
+        setTagIds((chosen) => chosen.filter((id) => fits.some((tag) => tag.id === id)));
     }
 
     function toggleTag(id: string) {
@@ -202,9 +219,9 @@ export function EntrySheet({ entry, onClose }: Props) {
     async function createTag() {
         const wanted = newTag?.trim();
         setNewTag(undefined);
-        if (!wanted) return;
+        if (!wanted || (mode !== "expense" && mode !== "income")) return;
 
-        const tag = await addNewTag.mutateAsync({ name: wanted });
+        const tag = await addNewTag.mutateAsync({ name: wanted, kind: mode });
         setTagIds((chosen) => (chosen.includes(tag.id) ? chosen : [...chosen, tag.id]));
     }
 
@@ -245,7 +262,7 @@ export function EntrySheet({ entry, onClose }: Props) {
         const transaction: NewTransaction = {
             name: name.trim(),
             kind: mode as TransactionKind,
-            tagIds,
+            tagIds: chosenIds,
             accountId: from,
             amount: signed,
             occurredAt: toInstant(day),
@@ -312,7 +329,8 @@ export function EntrySheet({ entry, onClose }: Props) {
         setDay(draft.day);
         setFromId(source);
         setToId(known(draft.toAccountId) && draft.toAccountId !== source ? draft.toAccountId! : "");
-        setTagIds(draft.kind === "transfer" ? [] : draft.tagIds.filter((id) => (tags ?? []).some((tag) => tag.id === id)));
+        const fits = tagsFor(tags ?? [], draft.kind);
+        setTagIds(draft.tagIds.filter((id) => fits.some((tag) => tag.id === id)));
         setNewTag(undefined);
         setRenaming(null);
     }
@@ -385,7 +403,7 @@ export function EntrySheet({ entry, onClose }: Props) {
                 <Segmented
                     options={editing || queue ? TRANSACTION_MODES : ALL_MODES}
                     value={mode}
-                    onChange={setMode}
+                    onChange={changeMode}
                 />
                 {!editing && !queue && (
                     <Pressable
@@ -442,10 +460,10 @@ export function EntrySheet({ entry, onClose }: Props) {
                         />
                     ))}
                 </ChipRow>
-            ) : (
+            ) : mode === "transfer" ? null : (
                 <ChipRow>
-                    {(tags ?? []).map((tag) => {
-                        const chosen = tagIds.indexOf(tag.id);
+                    {fitting.map((tag) => {
+                        const chosen = chosenIds.indexOf(tag.id);
                         if (renaming?.id === tag.id) {
                             return (
                                 <TextInput
@@ -579,32 +597,33 @@ export function EntrySheet({ entry, onClose }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
-    field: { gap: 5 },
-    modeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-    screenshot: {
-        padding: 7,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: colors.divider,
-    },
-    label: { fontFamily: fonts.regular, fontSize: 12, color: colors.quiet },
-    date: { justifyContent: "center" },
-    dateText: { fontFamily: fonts.regular, fontSize: 15, color: colors.text },
-    amountRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-    amountField: { flex: 1 },
-    currencySwitch: {
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 6,
-        borderWidth: 1,
-        borderColor: colors.divider,
-    },
-    currencyText: { fontFamily: fonts.medium, fontSize: 24, color: colors.accent },
-    inlineInput: { minWidth: 120, minHeight: 32, paddingVertical: 4 },
-    pair: { flexDirection: "row", gap: 10 },
-    half: { flex: 1 },
-    warning: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: -8 },
-    warningText: { flexShrink: 1, fontFamily: fonts.medium, fontSize: 12, color: colors.danger },
-    total: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, fontVariant: ["tabular-nums"] },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        field: { gap: 5 },
+        modeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+        screenshot: {
+            padding: 7,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: colors.divider,
+        },
+        label: { fontFamily: fonts.regular, fontSize: 12, color: colors.quiet },
+        date: { justifyContent: "center" },
+        dateText: { fontFamily: fonts.regular, fontSize: 15, color: colors.text },
+        amountRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+        amountField: { flex: 1 },
+        currencySwitch: {
+            paddingHorizontal: 8,
+            paddingVertical: 2,
+            borderRadius: 6,
+            borderWidth: 1,
+            borderColor: colors.divider,
+        },
+        currencyText: { fontFamily: fonts.medium, fontSize: 24, color: colors.accent },
+        inlineInput: { minWidth: 120, minHeight: 32, paddingVertical: 4 },
+        pair: { flexDirection: "row", gap: 10 },
+        half: { flex: 1 },
+        warning: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: -8 },
+        warningText: { flexShrink: 1, fontFamily: fonts.medium, fontSize: 12, color: colors.danger },
+        total: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, fontVariant: ["tabular-nums"] },
+    });

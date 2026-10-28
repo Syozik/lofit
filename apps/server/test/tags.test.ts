@@ -15,8 +15,8 @@ describe("GET /api/tags", () => {
 
         expect(response.status).toBe(200);
         expect(await response.json()).toStrictEqual([
-            { id: expect.any(String), name: "Housing", position: 0 },
-            { id: expect.any(String), name: "Groceries", position: 1 },
+            { id: expect.any(String), name: "Housing", kind: "expense", position: 0 },
+            { id: expect.any(String), name: "Groceries", kind: "expense", position: 1 },
         ]);
     });
 });
@@ -33,6 +33,7 @@ describe("POST /api/tags", () => {
         expect(await response.json()).toStrictEqual({
             id: expect.any(String),
             name: "Holiday",
+            kind: "expense",
             position: 1,
         });
     });
@@ -48,6 +49,7 @@ describe("POST /api/tags", () => {
         expect(await response.json()).toStrictEqual({
             id: existing.id,
             name: "Groceries",
+            kind: "expense",
             position: 0,
         });
         expect((await (await mine.tags.$get()).json())).toHaveLength(1);

@@ -2,7 +2,8 @@ import { cents, formatAmount } from "@lofit/domain";
 import type { Transaction } from "@lofit/domain";
 import { amountFor, monogram, transactionMeta } from "@lofit/view";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, fonts, radius } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, radius, useStyles } from "../theme";
 import { SwipeRow } from "./SwipeRow";
 
 type Props = {
@@ -26,6 +27,7 @@ export function TransactionRow({
     onDelete,
     surface,
 }: Props) {
+    const styles = useStyles(makeStyles);
     const amount = amountFor(transaction, viewedFrom);
 
     const row = (
@@ -66,35 +68,36 @@ export function TransactionRow({
     );
 }
 
-const styles = StyleSheet.create({
-    row: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        paddingVertical: 11,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: colors.divider,
-    },
-    pressed: { opacity: 0.6 },
-    mono: {
-        width: 32,
-        height: 32,
-        borderRadius: radius.sm,
-        backgroundColor: colors.surface,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: colors.divider,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    monoText: { fontFamily: fonts.medium, fontSize: 12, color: colors.quiet },
-    text: { flex: 1, minWidth: 0, gap: 2 },
-    name: { fontFamily: fonts.regular, fontSize: 14, color: colors.text },
-    meta: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
-    amount: {
-        fontFamily: fonts.regular,
-        fontSize: 14,
-        color: colors.text,
-        fontVariant: ["tabular-nums"],
-    },
-    positive: { color: colors.accentStrong },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        row: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            paddingVertical: 11,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: colors.divider,
+        },
+        pressed: { opacity: 0.6 },
+        mono: {
+            width: 32,
+            height: 32,
+            borderRadius: radius.sm,
+            backgroundColor: colors.surface,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.divider,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        monoText: { fontFamily: fonts.medium, fontSize: 12, color: colors.quiet },
+        text: { flex: 1, minWidth: 0, gap: 2 },
+        name: { fontFamily: fonts.regular, fontSize: 14, color: colors.text },
+        meta: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+        amount: {
+            fontFamily: fonts.regular,
+            fontSize: 14,
+            color: colors.text,
+            fontVariant: ["tabular-nums"],
+        },
+        positive: { color: colors.accentStrong },
+    });

@@ -13,7 +13,8 @@ import {
 } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, fonts, radius, space } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, radius, space, useStyles } from "../theme";
 
 const CLOSE_DISTANCE = 96;
 const CLOSE_SPEED = 900;
@@ -28,6 +29,7 @@ type Props = {
 };
 
 export function Sheet({ title, note, action, onClose, children }: Props) {
+    const styles = useStyles(makeStyles);
     const insets = useSafeAreaInsets();
     const offset = useRef(new Animated.Value(Dimensions.get("window").height)).current;
 
@@ -126,47 +128,49 @@ export function Sheet({ title, note, action, onClose, children }: Props) {
 }
 
 export function SheetActions({ children }: { children: ReactNode }) {
+    const styles = useStyles(makeStyles);
     return <View style={styles.actions}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
-    root: { flex: 1 },
-    scrim: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(22, 24, 32, 0.35)",
-    },
-    layer: { flex: 1, justifyContent: "flex-end" },
-    sheet: {
-        maxHeight: "92%",
-        backgroundColor: colors.surface,
-        borderTopLeftRadius: radius.lg,
-        borderTopRightRadius: radius.lg,
-        elevation: 16,
-    },
-    handleArea: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: space[4] },
-    grip: {
-        alignSelf: "center",
-        width: 36,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: colors.chip,
-        marginBottom: 12,
-    },
-    head: { flexDirection: "row", alignItems: "baseline", gap: 10 },
-    title: { flexShrink: 1, fontFamily: fonts.medium, fontSize: 18, color: colors.text },
-    note: {
-        flex: 1,
-        textAlign: "right",
-        fontFamily: fonts.regular,
-        fontSize: 11,
-        color: colors.muted,
-    },
-    actionButton: { marginLeft: "auto" },
-    action: { fontFamily: fonts.medium, fontSize: 13, color: colors.accent },
-    body: { paddingHorizontal: 20, gap: space[6] },
-    actions: { flexDirection: "row", gap: 10 },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        root: { flex: 1 },
+        scrim: {
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: colors.scrim,
+        },
+        layer: { flex: 1, justifyContent: "flex-end" },
+        sheet: {
+            maxHeight: "92%",
+            backgroundColor: colors.surface,
+            borderTopLeftRadius: radius.lg,
+            borderTopRightRadius: radius.lg,
+            elevation: 16,
+        },
+        handleArea: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: space[4] },
+        grip: {
+            alignSelf: "center",
+            width: 36,
+            height: 4,
+            borderRadius: 2,
+            backgroundColor: colors.chip,
+            marginBottom: 12,
+        },
+        head: { flexDirection: "row", alignItems: "baseline", gap: 10 },
+        title: { flexShrink: 1, fontFamily: fonts.medium, fontSize: 18, color: colors.text },
+        note: {
+            flex: 1,
+            textAlign: "right",
+            fontFamily: fonts.regular,
+            fontSize: 11,
+            color: colors.muted,
+        },
+        actionButton: { marginLeft: "auto" },
+        action: { fontFamily: fonts.medium, fontSize: 13, color: colors.accent },
+        body: { paddingHorizontal: 20, gap: space[6] },
+        actions: { flexDirection: "row", gap: 10 },
+    });

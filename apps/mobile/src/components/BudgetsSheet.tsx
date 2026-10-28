@@ -1,12 +1,13 @@
 import { useSetBudget } from "@lofit/api";
-import { cents, euros, formatAmount, sumCents } from "@lofit/domain";
+import { cents, euros, formatAmount, sumCents, tagsFor } from "@lofit/domain";
 import type { Budget, Cents, Tag } from "@lofit/domain";
 import { parsePositive } from "@lofit/view";
 import { useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
-import { colors, fonts, space } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, space, useStyles, useTheme } from "../theme";
 import { Button } from "./Button";
-import { fieldStyles } from "./Field";
+import { makeFieldStyles } from "./Field";
 import { Sheet, SheetActions } from "./Sheet";
 import { useToast } from "./Toast";
 
@@ -29,9 +30,12 @@ function readDraft(value: string): Draft {
 }
 
 export function BudgetsSheet({ tags, budgets, spent, month, onClose }: Props) {
+    const { colors } = useTheme();
+    const styles = useStyles(makeStyles);
+    const fieldStyles = useStyles(makeFieldStyles);
     const setBudget = useSetBudget();
     const show = useToast();
-    const ordered = [...tags].sort((one, other) => one.position - other.position);
+    const ordered = tagsFor(tags, "expense").sort((one, other) => one.position - other.position);
     const limits = new Map(budgets.map((budget) => [budget.tagId, budget.limit]));
 
     const [values, setValues] = useState<Record<string, string>>(() =>
@@ -98,15 +102,16 @@ export function BudgetsSheet({ tags, budgets, spent, month, onClose }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
-    rows: { gap: space[4] },
-    row: { flexDirection: "row", alignItems: "center", gap: space[6] },
-    label: { flex: 1, gap: 2 },
-    name: { fontFamily: fonts.medium, fontSize: 14, color: colors.text },
-    spent: { fontFamily: fonts.regular, fontSize: 11.5, color: colors.muted, fontVariant: ["tabular-nums"] },
-    inputWrap: { flexDirection: "row", alignItems: "center", gap: 6 },
-    currency: { fontFamily: fonts.medium, fontSize: 14, color: colors.subtle },
-    input: { width: 120, textAlign: "right", fontVariant: ["tabular-nums"] },
-    invalid: { borderColor: colors.danger },
-    total: { fontFamily: fonts.medium, fontSize: 14, color: colors.text, textAlign: "right", fontVariant: ["tabular-nums"] },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        rows: { gap: space[4] },
+        row: { flexDirection: "row", alignItems: "center", gap: space[6] },
+        label: { flex: 1, gap: 2 },
+        name: { fontFamily: fonts.medium, fontSize: 14, color: colors.text },
+        spent: { fontFamily: fonts.regular, fontSize: 11.5, color: colors.muted, fontVariant: ["tabular-nums"] },
+        inputWrap: { flexDirection: "row", alignItems: "center", gap: 6 },
+        currency: { fontFamily: fonts.medium, fontSize: 14, color: colors.subtle },
+        input: { width: 120, textAlign: "right", fontVariant: ["tabular-nums"] },
+        invalid: { borderColor: colors.danger },
+        total: { fontFamily: fonts.medium, fontSize: 14, color: colors.text, textAlign: "right", fontVariant: ["tabular-nums"] },
+    });

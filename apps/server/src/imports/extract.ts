@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { cents } from "@lofit/domain";
-import type { ImportDraft } from "@lofit/domain";
+import { cents, tagsFor } from "@lofit/domain";
+import type { ImportDraft, TagKind } from "@lofit/domain";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import { env } from "../env";
@@ -25,7 +25,7 @@ For every entry:
 - currency: the ISO 4217 code shown or implied; "EUR" when the input uses € or shows no currency.
 - account: the exact name of the user's account this list or statement belongs to (match bank name, card, IBAN tail or account name), otherwise null.
 - ownAccount: when the money moved between two of the user's own accounts (a savings deposit, a card top-up, paying off the user's credit card, a transfer to or from the user's own IBAN), the exact name of the other account; otherwise null.
-- tag: the exact name of the user's tag that best fits the entry, otherwise null. Use null for moves between the user's own accounts.
+- tag: the exact name of the user's tag that best fits the entry, otherwise null. Pick spending tags for money out and income tags for money in. Use null for moves between the user's own accounts.
 
 Return no entries when the input is not a transaction list, a statement or a receipt.`;
 
@@ -55,7 +55,7 @@ type Context = {
     mediaType: MediaType;
     today: string;
     accounts: readonly OwnAccount[];
-    tags: readonly Named[];
+    tags: readonly (Named & { kind: TagKind })[];
 };
 
 let client: Anthropic | undefined;
@@ -111,7 +111,16 @@ export async function extractDrafts({
                         text: [
                             `Today is ${today}.`,
                             `My accounts: ${accounts.map(describe).join("; ") || "none"}.`,
-                            `My tags: ${tags.map((tag) => tag.name).join(", ") || "none"}.`,
+                            `My spending tags: ${
+                                tagsFor(tags, "expense")
+                                    .map((tag) => tag.name)
+                                    .join(", ") || "none"
+                            }.`,
+                            `My income tags: ${
+                                tagsFor(tags, "income")
+                                    .map((tag) => tag.name)
+                                    .join(", ") || "none"
+                            }.`,
                         ].join("\n"),
                     },
                 ],
@@ -127,7 +136,8 @@ export async function extractDrafts({
     }
 
     const accountId = byName(accounts);
-    const tagId = byName(tags);
+    const spendingTag = byName(tagsFor(tags, "expense"));
+    const incomeTag = byName(tagsFor(tags, "income"));
 
     return response.parsed_output.entries
         .filter((entry) => entry.amount > 0 && entry.name.trim() !== "")
@@ -150,7 +160,7 @@ export async function extractDrafts({
             } else if (account) {
                 draft.accountId = account;
             }
-            const tag = tagId(entry.tag);
+            const tag = (draft.kind === "income" ? incomeTag : spendingTag)(entry.tag);
             if (tag && !moved) draft.tagIds = [tag];
             if (entry.currency.toUpperCase() !== "EUR") {
                 draft.currency = entry.currency.toUpperCase();

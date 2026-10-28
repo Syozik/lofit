@@ -1,4 +1,4 @@
-import { DEFAULT_GROUP_NAMES, DEFAULT_TAG_NAMES, INVESTMENTS_GROUP } from "@lofit/domain";
+import { DEFAULT_GROUP_NAMES, DEFAULT_TAGS, INVESTMENTS_GROUP } from "@lofit/domain";
 import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -37,9 +37,10 @@ export const auth = betterAuth({
                     );
 
                     await db.insert(tags).values(
-                        DEFAULT_TAG_NAMES.map((name, position) => ({
+                        DEFAULT_TAGS.map(({ name, kind }, position) => ({
                             userId: user.id,
                             name,
+                            kind,
                             position,
                         })),
                     );

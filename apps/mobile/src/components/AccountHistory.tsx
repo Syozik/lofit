@@ -5,8 +5,9 @@ import { historyByMonth, monthName, signedAmount, yearOf } from "@lofit/view";
 import { StyleSheet, Text, View } from "react-native";
 import { useOpenEntry } from "../context/entry";
 import { useRemoveTransaction } from "../hooks/useRemoveTransaction";
-import { colors, fonts, space } from "../theme";
-import { text } from "./Screen";
+import type { Colors } from "../theme";
+import { fonts, space, useStyles, useTheme } from "../theme";
+import { makeText } from "./Screen";
 import { Sheet } from "./Sheet";
 import { TransactionRow } from "./TransactionRow";
 
@@ -17,6 +18,9 @@ type Props = {
 };
 
 export function AccountHistory({ account, accounts, onClose }: Props) {
+    const { colors } = useTheme();
+    const styles = useStyles(makeStyles);
+    const text = useStyles(makeText);
     const transactions = useTransactions();
     const tags = useTags();
     const remove = useRemoveTransaction();
@@ -75,15 +79,16 @@ export function AccountHistory({ account, accounts, onClose }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
-    month: { gap: space[3] },
-    head: { flexDirection: "row", alignItems: "baseline" },
-    net: {
-        marginLeft: "auto",
-        fontFamily: fonts.regular,
-        fontSize: 12,
-        color: colors.muted,
-        fontVariant: ["tabular-nums"],
-    },
-    up: { color: colors.accentStrong },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        month: { gap: space[3] },
+        head: { flexDirection: "row", alignItems: "baseline" },
+        net: {
+            marginLeft: "auto",
+            fontFamily: fonts.regular,
+            fontSize: 12,
+            color: colors.muted,
+            fontVariant: ["tabular-nums"],
+        },
+        up: { color: colors.accentStrong },
+    });

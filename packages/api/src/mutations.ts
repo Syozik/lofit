@@ -1,5 +1,5 @@
 import { balanceChanges, negateCents } from "@lofit/domain";
-import type { Account, BalanceChange, Budget, Group, NewAccount, NewTransaction, Tag, Transaction } from "@lofit/domain";
+import type { Account, BalanceChange, Budget, Group, TagKind, NewAccount, NewTransaction, Tag, Transaction } from "@lofit/domain";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { addAccount, updateAccountBalance } from "./accounts";
 import { setBudget } from "./budgets";
@@ -26,6 +26,7 @@ export type TransactionUpdate = { id: string; draft: NewTransaction };
 export type BalanceUpdate = { id: string; balance: number };
 export type AccountDraft = NewAccount & { id: string };
 export type NamedDraft = { id: string; name: string };
+export type TagDraft = NamedDraft & { kind: TagKind };
 
 const SYNC = { id: "lofit-sync" };
 
@@ -170,7 +171,7 @@ export function configureMutations(client: QueryClient): void {
         ["accounts"],
     );
 
-    register<NamedDraft, Tag>(
+    register<TagDraft, Tag>(
         MUTATIONS.addTag,
         addTag,
         async (draft) => {
@@ -178,7 +179,7 @@ export function configureMutations(client: QueryClient): void {
             client.setQueryData<readonly Tag[]>(["tags"], (tags) =>
                 tags?.some((tag) => tag.id === draft.id)
                     ? tags
-                    : [...(tags ?? []), { id: draft.id, name: draft.name, position: nextPosition(tags) }],
+                    : [...(tags ?? []), { id: draft.id, name: draft.name, kind: draft.kind, position: nextPosition(tags) }],
             );
         },
         ["tags"],

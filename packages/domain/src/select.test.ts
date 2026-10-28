@@ -25,12 +25,12 @@ const loan: Account = { id: "loan", name: "DUO", subtitle: "", groupId: debt.id,
 const broker: Account = { id: "degiro", name: "DEGIRO", subtitle: "", groupId: investments.id, balance: euros(0), provenance: "manual" };
 const vwrl: Holding = { id: "vwrl", symbol: "VWRL", name: "Vanguard FTSE All-World", type: "etf", accountId: broker.id, quantity: 224, cost: euros(0), heldSince: "2025-01-20", nativePrice: euros(117.9), currency: "EUR", price: euros(117.9) };
 
-const housing: Tag = { id: "t-housing", name: "Housing", position: 0 };
-const groceries: Tag = { id: "t-groceries", name: "Groceries", position: 1 };
-const eatingOut: Tag = { id: "t-eating-out", name: "Eating out", position: 2 };
-const transport: Tag = { id: "t-transport", name: "Transport", position: 3 };
-const other: Tag = { id: "t-other", name: "Other", position: 4 };
-const holiday: Tag = { id: "t-holiday", name: "Holiday", position: 5 };
+const housing: Tag = { id: "t-housing", name: "Housing", kind: "expense", position: 0 };
+const groceries: Tag = { id: "t-groceries", name: "Groceries", kind: "expense", position: 1 };
+const eatingOut: Tag = { id: "t-eating-out", name: "Eating out", kind: "expense", position: 2 };
+const transport: Tag = { id: "t-transport", name: "Transport", kind: "expense", position: 3 };
+const other: Tag = { id: "t-other", name: "Other", kind: "expense", position: 4 };
+const holiday: Tag = { id: "t-holiday", name: "Holiday", kind: "expense", position: 5 };
 const tags = [housing, groceries, eatingOut, transport, other, holiday];
 
 function entry(fields: Pick<Transaction, "id" | "amount" | "occurredAt"> & Partial<Transaction>): Transaction {

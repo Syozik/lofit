@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { GestureResponderEvent } from "react-native";
-import { colors, fonts, radius } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, radius, useStyles } from "../theme";
 
 type Option<T extends string> = { value: T; label: string };
 
@@ -11,6 +12,7 @@ type SegmentedProps<T extends string> = {
 };
 
 export function Segmented<T extends string>({ options, value, onChange }: SegmentedProps<T>) {
+    const styles = useStyles(makeStyles);
     return (
         <View style={styles.seg}>
             {options.map((option) => (
@@ -38,6 +40,7 @@ type ChipProps = {
 };
 
 export function Chip({ label, selected = false, strong = false, onPress }: ChipProps) {
+    const styles = useStyles(makeStyles);
     return (
         <Pressable
             onPress={onPress}
@@ -63,6 +66,7 @@ export function ChipRow({
     children: React.ReactNode;
     scroll?: boolean;
 }) {
+    const styles = useStyles(makeStyles);
     if (scroll) {
         return (
             <ScrollView
@@ -77,31 +81,32 @@ export function ChipRow({
     return <View style={[styles.chipRow, styles.wrap]}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
-    seg: {
-        flexDirection: "row",
-        alignSelf: "flex-start",
-        borderWidth: 1,
-        borderColor: colors.divider,
-        borderRadius: radius.md,
-        overflow: "hidden",
-    },
-    segOpt: { paddingVertical: 6, paddingHorizontal: 12 },
-    segOn: { backgroundColor: colors.accentSoft },
-    segText: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.quiet },
-    segTextOn: { color: colors.accentInk, fontFamily: fonts.medium },
-    chipRow: { flexDirection: "row", gap: 6, alignItems: "center" },
-    wrap: { flexWrap: "wrap" },
-    chip: {
-        paddingVertical: 5,
-        paddingHorizontal: 11,
-        borderRadius: radius.md * 0.75,
-        borderWidth: 1,
-        borderColor: colors.divider,
-    },
-    chipOn: { backgroundColor: colors.accentSoft, borderColor: colors.accentSoft },
-    chipStrong: { backgroundColor: colors.accentStrong, borderColor: colors.accentStrong },
-    chipText: { fontFamily: fonts.regular, fontSize: 12, color: colors.quiet },
-    chipTextOn: { color: colors.accentInk },
-    chipTextStrong: { color: "#ffffff" },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        seg: {
+            flexDirection: "row",
+            alignSelf: "flex-start",
+            borderWidth: 1,
+            borderColor: colors.divider,
+            borderRadius: radius.md,
+            overflow: "hidden",
+        },
+        segOpt: { paddingVertical: 6, paddingHorizontal: 12 },
+        segOn: { backgroundColor: colors.accentSoft },
+        segText: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.quiet },
+        segTextOn: { color: colors.accentInk, fontFamily: fonts.medium },
+        chipRow: { flexDirection: "row", gap: 6, alignItems: "center" },
+        wrap: { flexWrap: "wrap" },
+        chip: {
+            paddingVertical: 5,
+            paddingHorizontal: 11,
+            borderRadius: radius.md * 0.75,
+            borderWidth: 1,
+            borderColor: colors.divider,
+        },
+        chipOn: { backgroundColor: colors.accentSoft, borderColor: colors.accentSoft },
+        chipStrong: { backgroundColor: colors.accentStrong, borderColor: colors.accentStrong },
+        chipText: { fontFamily: fonts.regular, fontSize: 12, color: colors.quiet },
+        chipTextOn: { color: colors.accentInk },
+        chipTextStrong: { color: colors.onAccentStrong },
+    });

@@ -4,10 +4,11 @@ import type { Account } from "@lofit/domain";
 import { parseAmount } from "@lofit/view";
 import { useState } from "react";
 import { TextInput } from "react-native";
+import { useStyles } from "../theme";
 import { AmountInput } from "./AmountInput";
 import { Button } from "./Button";
 import { Chip, ChipRow } from "./Choices";
-import { Field, fieldStyles } from "./Field";
+import { Field, makeFieldStyles } from "./Field";
 import { Sheet, SheetActions } from "./Sheet";
 import { useToast } from "./Toast";
 
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export function AccountSheet({ account, onClose }: Props) {
+    const fieldStyles = useStyles(makeFieldStyles);
     const { data: groups } = useGroups();
     const addAccount = useAddAccount();
     const addGroup = useAddGroup();

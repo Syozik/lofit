@@ -7,7 +7,7 @@ import type { Snapshot } from "./snapshot";
 import type { QuoteRef } from "./quote";
 import { INVESTMENTS_GROUP } from "./group";
 import type { Group } from "./group";
-import { DEFAULT_TAG_NAMES } from "./tag";
+import { DEFAULT_TAGS } from "./tag";
 import type { Tag } from "./tag";
 import type { Transaction } from "./transaction";
 import type { Budget } from "./types";
@@ -165,9 +165,10 @@ export const FIXTURE_HOLDINGS: readonly Holding[] = [
     },
 ];
 
-export const FIXTURE_TAGS: readonly Tag[] = DEFAULT_TAG_NAMES.map((name, position) => ({
+export const FIXTURE_TAGS: readonly Tag[] = DEFAULT_TAGS.map(({ name, kind }, position) => ({
     id: `tag-${name.toLowerCase().replace(/ /g, "-")}`,
     name,
+    kind,
     position,
 }));
 

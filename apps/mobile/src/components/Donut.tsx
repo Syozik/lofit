@@ -3,7 +3,8 @@ import { DIMMED_COLOR, toSegments } from "@lofit/view";
 import type { Slice } from "@lofit/view";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
-import { colors, fonts, tokenColor } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, useStyles, useTheme } from "../theme";
 
 const SIZE = 152;
 const RING = 26;
@@ -31,6 +32,8 @@ type Props = {
 };
 
 export function Donut({ slices, focused, onFocus, label, value }: Props) {
+    const { tokenColor } = useTheme();
+    const styles = useStyles(makeStyles);
     const segments = toSegments(slices);
     const paint = (key: string, color: Slice["color"]) =>
         tokenColor(!focused || key === focused ? color : DIMMED_COLOR);
@@ -97,28 +100,29 @@ export function Donut({ slices, focused, onFocus, label, value }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
-    composition: { flexDirection: "row", alignItems: "center", gap: 20, paddingVertical: 6 },
-    donut: { width: SIZE, height: SIZE },
-    hole: {
-        position: "absolute",
-        top: RING,
-        left: RING,
-        right: RING,
-        bottom: RING,
-        alignItems: "center",
-        justifyContent: "center",
-        paddingHorizontal: 8,
-    },
-    holeLabel: { fontFamily: fonts.medium, fontSize: 9, letterSpacing: 0.9, textTransform: "uppercase", color: colors.muted },
-    holeValue: { fontFamily: fonts.medium, fontSize: 17, color: colors.text, fontVariant: ["tabular-nums"] },
-    legend: { flex: 1, minWidth: 0, gap: 11, justifyContent: "center", minHeight: SIZE },
-    item: { gap: 2 },
-    dimmed: { opacity: 0.4 },
-    itemHead: { flexDirection: "row", alignItems: "center", gap: 8 },
-    dot: { width: 6, height: 6, borderRadius: 3 },
-    name: { flex: 1, fontFamily: fonts.regular, fontSize: 12, color: colors.quiet },
-    share: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
-    value: { fontFamily: fonts.regular, fontSize: 14, color: colors.text, paddingLeft: 14, fontVariant: ["tabular-nums"] },
-    negative: { color: colors.quiet },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        composition: { flexDirection: "row", alignItems: "center", gap: 20, paddingVertical: 6 },
+        donut: { width: SIZE, height: SIZE },
+        hole: {
+            position: "absolute",
+            top: RING,
+            left: RING,
+            right: RING,
+            bottom: RING,
+            alignItems: "center",
+            justifyContent: "center",
+            paddingHorizontal: 8,
+        },
+        holeLabel: { fontFamily: fonts.medium, fontSize: 9, letterSpacing: 0.9, textTransform: "uppercase", color: colors.muted },
+        holeValue: { fontFamily: fonts.medium, fontSize: 17, color: colors.text, fontVariant: ["tabular-nums"] },
+        legend: { flex: 1, minWidth: 0, gap: 11, justifyContent: "center", minHeight: SIZE },
+        item: { gap: 2 },
+        dimmed: { opacity: 0.4 },
+        itemHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+        dot: { width: 6, height: 6, borderRadius: 3 },
+        name: { flex: 1, fontFamily: fonts.regular, fontSize: 12, color: colors.quiet },
+        share: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+        value: { fontFamily: fonts.regular, fontSize: 14, color: colors.text, paddingLeft: 14, fontVariant: ["tabular-nums"] },
+        negative: { color: colors.quiet },
+    });

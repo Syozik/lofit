@@ -22,8 +22,8 @@ export type { HoldingGain, Share } from "./portfolio";
 export { allocation, gainsBySymbol, portfolioGain } from "./portfolio";
 export type { BalanceChange, NewTransaction, Transaction } from "./transaction";
 export { balanceChanges, isDay, isInstant, primaryTagId } from "./transaction";
-export type { NewTag, Tag } from "./tag";
-export { DEFAULT_TAG_NAMES, defaultTags, sameTagName } from "./tag";
+export type { NewTag, Tag, TagKind } from "./tag";
+export { DEFAULT_TAG_NAMES, DEFAULT_TAGS, defaultTags, sameTagName, TAG_KINDS, tagsFor } from "./tag";
 
 export type { Cents, Currency } from "./money";
 export {

@@ -8,6 +8,7 @@ import {
     primaryTagId,
     shiftPeriod,
     spendByTag,
+    tagsFor,
 } from "@lofit/domain";
 import type { BudgetProgress, Transaction } from "@lofit/domain";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -121,7 +122,11 @@ export function SpendingTab() {
         setFocused(null);
     }
 
-    const summary = spendByTag(transactions.data, budgets.data, tags.data, period);
+    const expenseTags = tagsFor(tags.data, "expense");
+    const expenseBudgets = budgets.data.filter((budget) =>
+        expenseTags.some((tag) => tag.id === budget.tagId),
+    );
+    const summary = spendByTag(transactions.data, expenseBudgets, tags.data, period);
     const accountNames = new Map(accounts.data.map((account) => [account.id, account.name]));
     const tagNames = new Map(tags.data.map((tag) => [tag.id, tag.name]));
     const { slices, tagsOf } = spendSlices(summary.tags, tags.data);

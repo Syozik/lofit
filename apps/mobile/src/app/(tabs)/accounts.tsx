@@ -37,10 +37,11 @@ import { AccountSheet } from "../../components/AccountSheet";
 import { Button } from "../../components/Button";
 import { HoldingSheet } from "../../components/HoldingSheet";
 import { PortfolioChart } from "../../components/PortfolioChart";
-import { Screen, Status, text } from "../../components/Screen";
+import { Screen, Status, makeText } from "../../components/Screen";
 import { useToast } from "../../components/Toast";
 import { useOnline } from "../../connectivity";
-import { colors, fonts, radius, space } from "../../theme";
+import type { Colors } from "../../theme";
+import { fonts, radius, space, useStyles, useTheme } from "../../theme";
 
 type AccountCardProps = {
     account: Account;
@@ -63,6 +64,8 @@ function AccountCard({
     onDelete,
     children,
 }: AccountCardProps) {
+    const { colors } = useTheme();
+    const styles = useStyles(makeStyles);
     const worth = addCents(account.balance, sumItems(netWorthItems([], holdings)));
 
     return (
@@ -156,6 +159,7 @@ const HoldingRow = memo(function HoldingRow({
     holding: Holding;
     onOpen: (holding: Holding) => void;
 }) {
+    const styles = useStyles(makeStyles);
     const gain = holding.cost > 0 ? gainLabel(holding) : undefined;
 
     return (
@@ -184,6 +188,9 @@ const HoldingRow = memo(function HoldingRow({
 });
 
 export default function AccountsScreen() {
+    const { colors } = useTheme();
+    const styles = useStyles(makeStyles);
+    const text = useStyles(makeText);
     const accountsQuery = useAccounts();
     const holdingsQuery = useHoldings();
     const groupsQuery = useGroups();
@@ -309,7 +316,7 @@ export default function AccountsScreen() {
 
             <Button
                 label="Add an account"
-                icon={<Plus size={16} strokeWidth={1.5} color="#ffffff" />}
+                icon={<Plus size={16} strokeWidth={1.5} color={colors.onAccent} />}
                 onPress={() => setAdding(true)}
             />
 
@@ -342,110 +349,111 @@ export default function AccountsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    head: { gap: 4 },
-    total: {
-        fontFamily: fonts.medium,
-        fontSize: 32,
-        letterSpacing: -0.8,
-        color: colors.text,
-        fontVariant: ["tabular-nums"],
-    },
-    group: { gap: space[3] },
-    groupHead: { flexDirection: "row", alignItems: "baseline", gap: 8 },
-    accent: { color: colors.accent },
-    groupTotal: {
-        marginLeft: "auto",
-        fontFamily: fonts.regular,
-        fontSize: 12,
-        color: colors.quiet,
-        fontVariant: ["tabular-nums"],
-    },
-    note: { flexDirection: "row", alignItems: "center", gap: 6 },
-    noteText: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
-    dim: { opacity: 0.4 },
-    list: { gap: space[2] },
-    card: {
-        borderRadius: radius.md,
-        backgroundColor: colors.surface,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: colors.divider,
-        overflow: "hidden",
-    },
-    row: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        paddingVertical: 13,
-        paddingHorizontal: 14,
-    },
-    rowText: { flex: 1, minWidth: 0 },
-    name: { fontFamily: fonts.regular, fontSize: 14, color: colors.text },
-    sub: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
-    figures: { alignItems: "flex-end" },
-    balance: {
-        fontFamily: fonts.regular,
-        fontSize: 15,
-        color: colors.text,
-        fontVariant: ["tabular-nums"],
-    },
-    negative: { color: colors.quiet },
-    change: {
-        fontFamily: fonts.regular,
-        fontSize: 11,
-        color: colors.muted,
-        fontVariant: ["tabular-nums"],
-    },
-    up: { color: colors.accentStrong },
-    holdings: {
-        marginLeft: 10,
-        marginTop: 4,
-        marginBottom: 2,
-        paddingLeft: 6,
-        borderLeftWidth: 2,
-        borderLeftColor: colors.chip,
-        gap: space[1],
-    },
-    pressed: { opacity: 0.6 },
-    holding: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        paddingVertical: 9,
-        paddingRight: 16,
-    },
-    symbol: {
-        minWidth: 46,
-        paddingVertical: 3,
-        paddingHorizontal: 7,
-        borderRadius: radius.sm,
-        backgroundColor: "rgba(63, 102, 207, 0.12)",
-        color: colors.accent,
-        fontFamily: fonts.medium,
-        fontSize: 11,
-        letterSpacing: 0.3,
-        textAlign: "center",
-    },
-    panel: { paddingHorizontal: 14, paddingBottom: 14, gap: space[3] },
-    divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.divider },
-    line: { flexDirection: "row", alignItems: "center", gap: 10 },
-    lineLabel: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.quiet },
-    lineValue: {
-        marginLeft: "auto",
-        fontFamily: fonts.regular,
-        fontSize: 12.5,
-        color: colors.text,
-        fontVariant: ["tabular-nums"],
-    },
-    actions: { flexDirection: "row", gap: 8, marginTop: 2 },
-    action: { flex: 1, minHeight: 36, paddingHorizontal: 8 },
-    delete: {
-        width: 38,
-        minHeight: 36,
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: radius.md,
-        borderWidth: 1,
-        borderColor: "rgba(209, 69, 59, 0.35)",
-    },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        head: { gap: 4 },
+        total: {
+            fontFamily: fonts.medium,
+            fontSize: 32,
+            letterSpacing: -0.8,
+            color: colors.text,
+            fontVariant: ["tabular-nums"],
+        },
+        group: { gap: space[3] },
+        groupHead: { flexDirection: "row", alignItems: "baseline", gap: 8 },
+        accent: { color: colors.accent },
+        groupTotal: {
+            marginLeft: "auto",
+            fontFamily: fonts.regular,
+            fontSize: 12,
+            color: colors.quiet,
+            fontVariant: ["tabular-nums"],
+        },
+        note: { flexDirection: "row", alignItems: "center", gap: 6 },
+        noteText: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+        dim: { opacity: 0.4 },
+        list: { gap: space[2] },
+        card: {
+            borderRadius: radius.md,
+            backgroundColor: colors.surface,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.divider,
+            overflow: "hidden",
+        },
+        row: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            paddingVertical: 13,
+            paddingHorizontal: 14,
+        },
+        rowText: { flex: 1, minWidth: 0 },
+        name: { fontFamily: fonts.regular, fontSize: 14, color: colors.text },
+        sub: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+        figures: { alignItems: "flex-end" },
+        balance: {
+            fontFamily: fonts.regular,
+            fontSize: 15,
+            color: colors.text,
+            fontVariant: ["tabular-nums"],
+        },
+        negative: { color: colors.quiet },
+        change: {
+            fontFamily: fonts.regular,
+            fontSize: 11,
+            color: colors.muted,
+            fontVariant: ["tabular-nums"],
+        },
+        up: { color: colors.accentStrong },
+        holdings: {
+            marginLeft: 10,
+            marginTop: 4,
+            marginBottom: 2,
+            paddingLeft: 6,
+            borderLeftWidth: 2,
+            borderLeftColor: colors.chip,
+            gap: space[1],
+        },
+        pressed: { opacity: 0.6 },
+        holding: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            paddingVertical: 9,
+            paddingRight: 16,
+        },
+        symbol: {
+            minWidth: 46,
+            paddingVertical: 3,
+            paddingHorizontal: 7,
+            borderRadius: radius.sm,
+            backgroundColor: colors.accentTint,
+            color: colors.accent,
+            fontFamily: fonts.medium,
+            fontSize: 11,
+            letterSpacing: 0.3,
+            textAlign: "center",
+        },
+        panel: { paddingHorizontal: 14, paddingBottom: 14, gap: space[3] },
+        divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.divider },
+        line: { flexDirection: "row", alignItems: "center", gap: 10 },
+        lineLabel: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.quiet },
+        lineValue: {
+            marginLeft: "auto",
+            fontFamily: fonts.regular,
+            fontSize: 12.5,
+            color: colors.text,
+            fontVariant: ["tabular-nums"],
+        },
+        actions: { flexDirection: "row", gap: 8, marginTop: 2 },
+        action: { flex: 1, minHeight: 36, paddingHorizontal: 8 },
+        delete: {
+            width: 38,
+            minHeight: 36,
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: radius.md,
+            borderWidth: 1,
+            borderColor: colors.dangerEdge,
+        },
+    });

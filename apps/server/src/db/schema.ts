@@ -1,6 +1,7 @@
 import {
     ASSET_TYPES,
     PROVENANCES,
+    TAG_KINDS,
     TRANSACTION_KINDS,
 } from "@lofit/domain";
 import type { AccountChange, AccountDetail, Cents, QuoteRef } from "@lofit/domain";
@@ -28,6 +29,7 @@ import {
 export const provenance = pgEnum("provenance", PROVENANCES);
 export const assetType = pgEnum("asset_type", ASSET_TYPES);
 export const transactionKind = pgEnum("transaction_kind", TRANSACTION_KINDS);
+export const tagKind = pgEnum("tag_kind", TAG_KINDS);
 
 const money = (name: string) => bigint(name, { mode: "number" }).$type<Cents>();
 
@@ -184,11 +186,12 @@ export const tags = pgTable(
         id: uuid("id").primaryKey().defaultRandom(),
         userId: owner(),
         name: text("name").notNull(),
+        kind: tagKind("kind").notNull().default("expense"),
         position: integer("position").notNull(),
         createdAt: instant("created_at").notNull().defaultNow(),
     },
     (t) => [
-        uniqueIndex("tags_user_name_unique").on(t.userId, sql`lower(${t.name})`),
+        uniqueIndex("tags_user_kind_name_unique").on(t.userId, t.kind, sql`lower(${t.name})`),
         unique("tags_id_user_unique").on(t.id, t.userId),
     ],
 );

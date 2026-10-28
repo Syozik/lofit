@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
-import { colors, fonts, radius } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, radius, useStyles } from "../theme";
 
 type Props = {
     label: string;
@@ -13,6 +14,8 @@ type Props = {
 };
 
 export function Button({ label, onPress, variant = "primary", disabled = false, icon, style }: Props) {
+    const styles = useStyles(makeStyles);
+    const labels = useStyles(makeLabels);
     return (
         <Pressable
             accessibilityRole="button"
@@ -32,31 +35,33 @@ export function Button({ label, onPress, variant = "primary", disabled = false, 
     );
 }
 
-const styles = StyleSheet.create({
-    base: {
-        minHeight: 42,
-        paddingHorizontal: 16,
-        borderRadius: radius.md,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 8,
-    },
-    primary: { backgroundColor: colors.accent },
-    secondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.divider },
-    ghost: { backgroundColor: "transparent" },
-    danger: {
-        backgroundColor: colors.surface,
-        borderWidth: 1,
-        borderColor: "rgba(209, 69, 59, 0.35)",
-    },
-    dim: { opacity: 0.55 },
-    label: { fontFamily: fonts.medium, fontSize: 14 },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        base: {
+            minHeight: 42,
+            paddingHorizontal: 16,
+            borderRadius: radius.md,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+        },
+        primary: { backgroundColor: colors.accent },
+        secondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.divider },
+        ghost: { backgroundColor: "transparent" },
+        danger: {
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.dangerEdge,
+        },
+        dim: { opacity: 0.55 },
+        label: { fontFamily: fonts.medium, fontSize: 14 },
+    });
 
-const labels = StyleSheet.create({
-    primary: { color: "#ffffff" },
-    secondary: { color: colors.text },
-    ghost: { color: colors.accent },
-    danger: { color: colors.danger },
-});
+const makeLabels = (colors: Colors) =>
+    StyleSheet.create({
+        primary: { color: colors.onAccent },
+        secondary: { color: colors.text },
+        ghost: { color: colors.accent },
+        danger: { color: colors.danger },
+    });

@@ -4,7 +4,8 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { onSyncIssue } from "../syncIssues";
 import { TAB_BAR_HEIGHT } from "../tabBar";
-import { colors, fonts, radius } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, radius, useStyles } from "../theme";
 
 export type ToastAction = { label: string; run: () => void };
 
@@ -19,6 +20,7 @@ export function useToast(): Show {
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+    const styles = useStyles(makeStyles);
     const insets = useSafeAreaInsets();
     const [toast, setToast] = useState<{
         message: string;
@@ -66,20 +68,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     );
 }
 
-const styles = StyleSheet.create({
-    toast: {
-        position: "absolute",
-        left: 16,
-        right: 16,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: radius.md,
-        backgroundColor: colors.text,
-        elevation: 8,
-    },
-    message: { flex: 1, fontFamily: fonts.regular, fontSize: 13, color: colors.surface },
-    action: { fontFamily: fonts.medium, fontSize: 13, color: "#93b0f4" },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        toast: {
+            position: "absolute",
+            left: 16,
+            right: 16,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            paddingVertical: 12,
+            paddingHorizontal: 16,
+            borderRadius: radius.md,
+            backgroundColor: colors.text,
+            elevation: 8,
+        },
+        message: { flex: 1, fontFamily: fonts.regular, fontSize: 13, color: colors.surface },
+        action: { fontFamily: fonts.medium, fontSize: 13, color: colors.toastAction },
+    });

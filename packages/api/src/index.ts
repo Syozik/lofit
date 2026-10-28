@@ -1,7 +1,7 @@
 export type { ApiOptions } from "./client";
 export { ApiError, configureApi, isUnreachable } from "./client";
 export { configureIds, newId } from "./ids";
-export type { AccountDraft, BalanceUpdate, NamedDraft, TransactionDraft, TransactionUpdate } from "./mutations";
+export type { AccountDraft, BalanceUpdate, NamedDraft, TagDraft, TransactionDraft, TransactionUpdate } from "./mutations";
 export { configureMutations, MUTATIONS } from "./mutations";
 export { configureAuth, signIn, signOut, signUp, useSession } from "./auth";
 export { addAccount, deleteAccount, fetchAccounts, updateAccountBalance } from "./accounts";

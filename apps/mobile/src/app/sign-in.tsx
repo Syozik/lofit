@@ -5,11 +5,14 @@ import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } f
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../components/Button";
 import { Field } from "../components/Field";
-import { colors, fonts, radius, space } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, radius, space, useStyles, useTheme } from "../theme";
 
 const MIN_PASSWORD = 8;
 
 export default function SignInScreen() {
+    const { colors } = useTheme();
+    const styles = useStyles(makeStyles);
     const [joining, setJoining] = useState(false);
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -124,19 +127,20 @@ export default function SignInScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    screen: { flex: 1, backgroundColor: colors.bg },
-    center: { flexGrow: 1, justifyContent: "center", padding: 20 },
-    card: {
-        gap: space[6],
-        padding: 22,
-        backgroundColor: colors.surface,
-        borderRadius: radius.lg,
-        borderWidth: 1,
-        borderColor: colors.hairline,
-    },
-    head: { gap: 4, marginBottom: 4 },
-    wordmark: { fontFamily: fonts.semibold, fontSize: 26, color: colors.text, letterSpacing: -0.5 },
-    note: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-    error: { fontFamily: fonts.regular, fontSize: 13, color: colors.danger },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        screen: { flex: 1, backgroundColor: colors.bg },
+        center: { flexGrow: 1, justifyContent: "center", padding: 20 },
+        card: {
+            gap: space[6],
+            padding: 22,
+            backgroundColor: colors.surface,
+            borderRadius: radius.lg,
+            borderWidth: 1,
+            borderColor: colors.hairline,
+        },
+        head: { gap: 4, marginBottom: 4 },
+        wordmark: { fontFamily: fonts.semibold, fontSize: 26, color: colors.text, letterSpacing: -0.5 },
+        note: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
+        error: { fontFamily: fonts.regular, fontSize: 13, color: colors.danger },
+    });

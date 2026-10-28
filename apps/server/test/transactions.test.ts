@@ -104,7 +104,7 @@ describe("POST /api/transactions", () => {
         const me = await createUser();
         const mine = signedIn(me);
         const ing = await createAccount(me.id, { balance: euros(10) });
-        const salary = await createTag(me.id, "Salary", 0);
+        const salary = await createTag(me.id, "Salary", 0, "income");
 
         const response = await mine.transactions.$post({
             json: { name: "Salaris", kind: "income", tagIds: [salary.id], accountId: ing.id, amount: 415000, occurredAt: july29 },

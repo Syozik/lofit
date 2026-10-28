@@ -1,5 +1,6 @@
 import { StyleSheet, Text, TextInput, View } from "react-native";
-import { colors, fonts } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, useStyles, useTheme } from "../theme";
 
 type Props = {
     value: string;
@@ -10,6 +11,8 @@ type Props = {
 };
 
 export function AmountInput({ value, onChange, label, autoFocus = false, prefix = "€" }: Props) {
+    const { colors } = useTheme();
+    const styles = useStyles(makeStyles);
     return (
         <View style={styles.amount}>
             {prefix !== "" && <Text style={styles.currency}>{prefix}</Text>}
@@ -29,16 +32,17 @@ export function AmountInput({ value, onChange, label, autoFocus = false, prefix 
     );
 }
 
-const styles = StyleSheet.create({
-    amount: { flexDirection: "row", alignItems: "center", gap: 8 },
-    currency: { fontFamily: fonts.medium, fontSize: 26, color: colors.subtle },
-    input: {
-        flex: 1,
-        padding: 0,
-        fontFamily: fonts.medium,
-        fontSize: 40,
-        letterSpacing: -1,
-        color: colors.text,
-        fontVariant: ["tabular-nums"],
-    },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        amount: { flexDirection: "row", alignItems: "center", gap: 8 },
+        currency: { fontFamily: fonts.medium, fontSize: 26, color: colors.subtle },
+        input: {
+            flex: 1,
+            padding: 0,
+            fontFamily: fonts.medium,
+            fontSize: 40,
+            letterSpacing: -1,
+            color: colors.text,
+            fontVariant: ["tabular-nums"],
+        },
+    });

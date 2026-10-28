@@ -3,7 +3,8 @@ import type { Cents, DayWindow, HistoryRange, PricePoint } from "@lofit/domain";
 import { currencyFormat, dayFormat, formatChange } from "@lofit/view";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { colors, fonts, space } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, space, useStyles } from "../theme";
 import { LineChart } from "./LineChart";
 import { RangePicker } from "./RangePicker";
 
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export function PriceChart({ points: history, currency, cost, heldSince }: Props) {
+    const styles = useStyles(makeStyles);
     const priceFormat = currencyFormat(currency);
     const formatPrice = (price: number) => priceFormat.format(price / 100);
 
@@ -90,21 +92,22 @@ export function PriceChart({ points: history, currency, cost, heldSince }: Props
     );
 }
 
-const styles = StyleSheet.create({
-    chart: { gap: space[3] },
-    readout: { flexDirection: "row", alignItems: "baseline", gap: 10 },
-    value: {
-        fontFamily: fonts.medium,
-        fontSize: 20,
-        color: colors.text,
-        fontVariant: ["tabular-nums"],
-    },
-    change: {
-        fontFamily: fonts.regular,
-        fontSize: 12,
-        color: colors.muted,
-        fontVariant: ["tabular-nums"],
-    },
-    up: { color: colors.accentStrong },
-    day: { marginLeft: "auto", fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        chart: { gap: space[3] },
+        readout: { flexDirection: "row", alignItems: "baseline", gap: 10 },
+        value: {
+            fontFamily: fonts.medium,
+            fontSize: 20,
+            color: colors.text,
+            fontVariant: ["tabular-nums"],
+        },
+        change: {
+            fontFamily: fonts.regular,
+            fontSize: 12,
+            color: colors.muted,
+            fontVariant: ["tabular-nums"],
+        },
+        up: { color: colors.accentStrong },
+        day: { marginLeft: "auto", fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+    });

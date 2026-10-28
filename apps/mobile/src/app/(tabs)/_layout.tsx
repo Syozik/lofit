@@ -8,9 +8,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { EntrySheet } from "../../components/EntrySheet";
 import { EntryContext } from "../../context/entry";
 import { BlurTargetsProvider, TAB_BAR_HEIGHT, TabBarBackground } from "../../tabBar";
-import { colors, fonts } from "../../theme";
+import type { Colors } from "../../theme";
+import { fonts, useStyles, useTheme } from "../../theme";
 
-function icon(Icon: LucideIcon) {
+function icon(Icon: LucideIcon, colors: Colors) {
     return ({ focused }: { focused: boolean }) => (
         <Icon size={20} strokeWidth={1.5} color={focused ? colors.accent : colors.muted} />
     );
@@ -19,6 +20,8 @@ function icon(Icon: LucideIcon) {
 type Entry = { entry?: Transaction | undefined } | null;
 
 export default function TabsLayout() {
+    const { colors } = useTheme();
+    const styles = useStyles(makeStyles);
     const insets = useSafeAreaInsets();
     const [entry, setEntry] = useState<Entry>(null);
 
@@ -42,9 +45,9 @@ export default function TabsLayout() {
                         tabBarBackground: () => <TabBarBackground />,
                     }}
                 >
-                    <Tabs.Screen name="index" options={{ title: "Net worth", tabBarIcon: icon(ChartPie) }} />
-                    <Tabs.Screen name="accounts" options={{ title: "Accounts", tabBarIcon: icon(WalletCards) }} />
-                    <Tabs.Screen name="spending" options={{ title: "Spending", tabBarIcon: icon(Receipt) }} />
+                    <Tabs.Screen name="index" options={{ title: "Net worth", tabBarIcon: icon(ChartPie, colors) }} />
+                    <Tabs.Screen name="accounts" options={{ title: "Accounts", tabBarIcon: icon(WalletCards, colors) }} />
+                    <Tabs.Screen name="spending" options={{ title: "Spending", tabBarIcon: icon(Receipt, colors) }} />
                     <Tabs.Screen
                         name="add"
                         options={{
@@ -70,17 +73,18 @@ export default function TabsLayout() {
     );
 }
 
-const styles = StyleSheet.create({
-    addSlot: { flex: 1, alignItems: "center", justifyContent: "center" },
-    add: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "rgba(63, 102, 207, 0.14)",
-        borderWidth: 1,
-        borderColor: colors.accent,
-    },
-    pressed: { opacity: 0.8 },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        addSlot: { flex: 1, alignItems: "center", justifyContent: "center" },
+        add: {
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.accentWash,
+            borderWidth: 1,
+            borderColor: colors.accent,
+        },
+        pressed: { opacity: 0.8 },
+    });

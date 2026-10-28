@@ -51,7 +51,7 @@ export function toHolding(row: typeof holdings.$inferSelect): Holding {
 }
 
 export function toTag(row: typeof tags.$inferSelect): Tag {
-    return { id: row.id, name: row.name, position: row.position };
+    return { id: row.id, name: row.name, kind: row.kind, position: row.position };
 }
 
 export function toTransaction(

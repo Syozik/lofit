@@ -3,6 +3,7 @@ import type { Cents } from "./money";
 import { isDay, isInstant } from "./transaction";
 import { CURRENCIES } from "./money";
 import { ASSET_TYPES, TRANSACTION_KINDS } from "./types";
+import { TAG_KINDS } from "./tag";
 
 const centsSchema = z.int().transform((value) => value as Cents);
 
@@ -28,6 +29,9 @@ export const newTransactionSchema = z
     .superRefine((entry, ctx) => {
         if (new Set(entry.tagIds).size !== entry.tagIds.length) {
             ctx.addIssue({ code: "custom", path: ["tagIds"], message: "The same tag twice" });
+        }
+        if (entry.kind === "transfer" && entry.tagIds.length > 0) {
+            ctx.addIssue({ code: "custom", path: ["tagIds"], message: "Transfers have no tags" });
         }
         if (entry.toAccountId && entry.kind !== "transfer") {
             ctx.addIssue({ code: "custom", path: ["toAccountId"], message: "Only transfers have a destination" });
@@ -87,6 +91,7 @@ export const newHoldingSchema = z.object({
 export const newTagSchema = z.object({
     id: z.uuid().optional(),
     name: z.string().trim().min(1).max(40),
+    kind: z.enum(TAG_KINDS).default("expense"),
 });
 
 export const SCREENSHOT_TYPES = [

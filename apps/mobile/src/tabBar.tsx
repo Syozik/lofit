@@ -5,7 +5,8 @@ import { createContext, useCallback, useContext, useId, useRef, useState } from 
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
-import { colors } from "./theme";
+import type { Colors } from "./theme";
+import { useStyles, useTheme } from "./theme";
 
 export const TAB_BAR_HEIGHT = 58;
 
@@ -25,6 +26,7 @@ export function BlurTargetsProvider({ children }: { children: ReactNode }) {
 }
 
 export function BlurSource({ children }: { children: ReactNode }) {
+    const styles = useStyles(makeStyles);
     const id = useId();
     const ref = useRef<View | null>(null);
     const { show } = useContext(BlurTargets);
@@ -43,6 +45,7 @@ export function BlurSource({ children }: { children: ReactNode }) {
 }
 
 export function TabBarBackground() {
+    const { scheme, colors } = useTheme();
     const { current } = useContext(BlurTargets);
 
     return (
@@ -53,7 +56,7 @@ export function TabBarBackground() {
                     blurTarget={current.ref}
                     blurMethod="dimezisBlurView"
                     intensity={8}
-                    tint="light"
+                    tint={scheme}
                     style={StyleSheet.absoluteFill}
                 />
             )}
@@ -71,6 +74,7 @@ export function TabBarBackground() {
     );
 }
 
-const styles = StyleSheet.create({
-    fill: { flex: 1, backgroundColor: colors.bg },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        fill: { flex: 1, backgroundColor: colors.bg },
+    });

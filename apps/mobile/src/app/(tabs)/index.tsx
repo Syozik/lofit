@@ -40,8 +40,9 @@ import { Donut } from "../../components/Donut";
 import { NetWorthTrend } from "../../components/NetWorthTrend";
 import type { TrendPart } from "../../components/NetWorthTrend";
 import { RecentTransactions } from "../../components/RecentTransactions";
-import { Screen, Status, text } from "../../components/Screen";
-import { colors, fonts, radius, space, tokenColor } from "../../theme";
+import { Screen, Status, makeText } from "../../components/Screen";
+import type { Colors } from "../../theme";
+import { fonts, radius, space, useStyles, useTheme } from "../../theme";
 
 type ChartMode = "mix" | "trend";
 
@@ -51,6 +52,7 @@ const CHART_MODES = [
 ] as const;
 
 function DeltaLine({ delta, previous }: { delta: Delta; previous: string }) {
+    const styles = useStyles(makeStyles);
     const tone = delta.favourable ? styles.up : null;
     return (
         <View style={styles.delta}>
@@ -115,6 +117,9 @@ function NetWorthBody({
     refreshing,
     onRefresh,
 }: BodyProps) {
+    const { tokenColor } = useTheme();
+    const styles = useStyles(makeStyles);
+    const text = useStyles(makeText);
     const [scope, setScope] = useState<Scope>(ALL_GROUPS);
     const [mode, setMode] = useState<ChartMode>("mix");
     const [focused, setFocused] = useState<string | null>(null);
@@ -243,48 +248,49 @@ function NetWorthBody({
     );
 }
 
-const styles = StyleSheet.create({
-    summary: { gap: 6 },
-    groups: { gap: 6, marginBottom: 2 },
-    group: {
-        paddingVertical: 4,
-        paddingHorizontal: 10,
-        borderRadius: radius.md * 0.75,
-        borderWidth: 1,
-        borderColor: colors.divider,
-    },
-    groupActive: { backgroundColor: colors.accentSoft, borderColor: colors.accentSoft },
-    groupText: {
-        fontFamily: fonts.regular,
-        fontSize: 11.5,
-        letterSpacing: 0.2,
-        color: colors.quiet,
-    },
-    groupTextActive: { color: colors.accentInk },
-    netWorth: { flexDirection: "row", alignItems: "center", gap: 8 },
-    currency: { fontFamily: fonts.medium, fontSize: 30, color: colors.subtle },
-    amount: {
-        flexShrink: 1,
-        fontFamily: fonts.medium,
-        fontSize: 48,
-        letterSpacing: -1.6,
-        color: colors.text,
-        fontVariant: ["tabular-nums", "lining-nums"],
-    },
-    delta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 2 },
-    deltaAmount: {
-        fontFamily: fonts.regular,
-        fontSize: 13,
-        color: colors.text,
-        fontVariant: ["tabular-nums"],
-    },
-    deltaPct: { fontFamily: fonts.regular, fontSize: 13, color: colors.text, opacity: 0.7 },
-    deltaVs: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-    up: { color: colors.accentStrong },
-    section: { gap: space[6] },
-    chartHead: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-    },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        summary: { gap: 6 },
+        groups: { gap: 6, marginBottom: 2 },
+        group: {
+            paddingVertical: 4,
+            paddingHorizontal: 10,
+            borderRadius: radius.md * 0.75,
+            borderWidth: 1,
+            borderColor: colors.divider,
+        },
+        groupActive: { backgroundColor: colors.accentSoft, borderColor: colors.accentSoft },
+        groupText: {
+            fontFamily: fonts.regular,
+            fontSize: 11.5,
+            letterSpacing: 0.2,
+            color: colors.quiet,
+        },
+        groupTextActive: { color: colors.accentInk },
+        netWorth: { flexDirection: "row", alignItems: "center", gap: 8 },
+        currency: { fontFamily: fonts.medium, fontSize: 30, color: colors.subtle },
+        amount: {
+            flexShrink: 1,
+            fontFamily: fonts.medium,
+            fontSize: 48,
+            letterSpacing: -1.6,
+            color: colors.text,
+            fontVariant: ["tabular-nums", "lining-nums"],
+        },
+        delta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 2 },
+        deltaAmount: {
+            fontFamily: fonts.regular,
+            fontSize: 13,
+            color: colors.text,
+            fontVariant: ["tabular-nums"],
+        },
+        deltaPct: { fontFamily: fonts.regular, fontSize: 13, color: colors.text, opacity: 0.7 },
+        deltaVs: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
+        up: { color: colors.accentStrong },
+        section: { gap: space[6] },
+        chartHead: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+        },
+    });

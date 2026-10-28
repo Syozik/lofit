@@ -4,7 +4,8 @@ import { useRef } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import type { SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
-import { colors } from "../theme";
+import type { Colors } from "../theme";
+import { useStyles, useTheme } from "../theme";
 
 const ACTION_WIDTH = 64;
 
@@ -20,8 +21,10 @@ export function SwipeRow({
     onEdit,
     onDelete,
     children,
-    surface = colors.bg,
+    surface,
 }: Props & { surface?: string }) {
+    const { colors } = useTheme();
+    const styles = useStyles(makeStyles);
     const swipe = useRef<SwipeableMethods>(null);
 
     const run = (action: () => void) => () => {
@@ -56,17 +59,18 @@ export function SwipeRow({
                 </View>
             )}
         >
-            <View style={{ backgroundColor: surface }}>{children}</View>
+            <View style={{ backgroundColor: surface ?? colors.bg }}>{children}</View>
         </ReanimatedSwipeable>
     );
 }
 
-const styles = StyleSheet.create({
-    actions: { flexDirection: "row" },
-    action: {
-        width: ACTION_WIDTH,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: colors.chip,
-    },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        actions: { flexDirection: "row" },
+        action: {
+            width: ACTION_WIDTH,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.chip,
+        },
+    });

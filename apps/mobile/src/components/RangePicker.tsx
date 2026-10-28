@@ -4,7 +4,8 @@ import type { DayWindow, HistoryRange } from "@lofit/domain";
 import { dayFormat } from "@lofit/view";
 import { useEffect, useRef } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, Text } from "react-native";
-import { colors, fonts, radius } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, radius, useStyles } from "../theme";
 import { Chip } from "./Choices";
 
 function toDate(day: string): Date {
@@ -44,6 +45,7 @@ type Props = {
 };
 
 export function RangePicker({ ranges, active, onSelect, custom, onCustom, bounds }: Props) {
+    const styles = useStyles(makeStyles);
     const row = useRef<ScrollView>(null);
 
     useEffect(() => {
@@ -96,20 +98,21 @@ export function RangePicker({ ranges, active, onSelect, custom, onCustom, bounds
     );
 }
 
-const styles = StyleSheet.create({
-    row: { flexDirection: "row", alignItems: "center", gap: 6 },
-    date: {
-        paddingVertical: 5,
-        paddingHorizontal: 8,
-        borderRadius: radius.md * 0.75,
-        borderWidth: 1,
-        borderColor: colors.divider,
-    },
-    dateText: {
-        fontFamily: fonts.regular,
-        fontSize: 11.5,
-        color: colors.text,
-        fontVariant: ["tabular-nums"],
-    },
-    to: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        row: { flexDirection: "row", alignItems: "center", gap: 6 },
+        date: {
+            paddingVertical: 5,
+            paddingHorizontal: 8,
+            borderRadius: radius.md * 0.75,
+            borderWidth: 1,
+            borderColor: colors.divider,
+        },
+        dateText: {
+            fontFamily: fonts.regular,
+            fontSize: 11.5,
+            color: colors.text,
+            fontVariant: ["tabular-nums"],
+        },
+        to: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+    });

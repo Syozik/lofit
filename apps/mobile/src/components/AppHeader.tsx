@@ -5,7 +5,8 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useOnline } from "../connectivity";
 import { persister } from "../queryClient";
 import { forgetSignIn } from "../signedIn";
-import { colors, fonts } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, useStyles, useTheme } from "../theme";
 import { useToast } from "./Toast";
 
 function syncLabel(online: boolean, waiting: number): string {
@@ -14,6 +15,8 @@ function syncLabel(online: boolean, waiting: number): string {
 }
 
 export function AppHeader() {
+    const { colors } = useTheme();
+    const styles = useStyles(makeStyles);
     const client = useQueryClient();
     const online = useOnline();
     const waiting = useMutationState({ filters: { status: "pending" } }).length;
@@ -54,10 +57,11 @@ export function AppHeader() {
     );
 }
 
-const styles = StyleSheet.create({
-    header: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 10 },
-    indicator: { width: 5, height: 5, borderRadius: 2.5, marginTop: 2 },
-    wordmark: { fontFamily: fonts.semibold, fontSize: 20, color: colors.text, letterSpacing: -0.4 },
-    status: { marginLeft: 6, marginTop: 2, fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
-    action: { marginLeft: "auto", padding: 6 },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        header: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 10 },
+        indicator: { width: 5, height: 5, borderRadius: 2.5, marginTop: 2 },
+        wordmark: { fontFamily: fonts.semibold, fontSize: 20, color: colors.text, letterSpacing: -0.4 },
+        status: { marginLeft: 6, marginTop: 2, fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+        action: { marginLeft: "auto", padding: 6 },
+    });

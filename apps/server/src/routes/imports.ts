@@ -41,7 +41,7 @@ export const importsRoute = new Hono<AuthEnv>().post(
                 .from(accounts)
                 .where(eq(accounts.userId, userId)),
             db
-                .select({ id: tags.id, name: tags.name })
+                .select({ id: tags.id, name: tags.name, kind: tags.kind })
                 .from(tags)
                 .where(eq(tags.userId, userId))
                 .orderBy(asc(tags.position)),

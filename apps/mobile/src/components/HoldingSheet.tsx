@@ -4,10 +4,11 @@ import type { Holding } from "@lofit/domain";
 import { dayFormat, inCurrency, parsePositive } from "@lofit/view";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, fonts, space } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, space, useStyles } from "../theme";
 import { Button } from "./Button";
 import { Segmented } from "./Choices";
-import { Field, fieldStyles } from "./Field";
+import { Field, makeFieldStyles } from "./Field";
 import { PriceChart } from "./PriceChart";
 import { pickDay } from "./RangePicker";
 import { Sheet, SheetActions } from "./Sheet";
@@ -30,6 +31,8 @@ type Props = {
 };
 
 export function HoldingSheet({ holding, accountName, onClose }: Props) {
+    const styles = useStyles(makeStyles);
+    const fieldStyles = useStyles(makeFieldStyles);
     const update = useUpdateHolding();
     const sell = useSellHolding();
     const remove = useDeleteHolding();
@@ -217,20 +220,21 @@ export function HoldingSheet({ holding, accountName, onClose }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
-    pending: { minHeight: 196, alignItems: "center", justifyContent: "center" },
-    pendingText: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
-    pair: { flexDirection: "row", gap: 10 },
-    half: { flex: 1 },
-    field: { gap: 5 },
-    label: { fontFamily: fonts.regular, fontSize: 12, color: colors.quiet },
-    dateInput: { justifyContent: "center" },
-    dateText: { fontFamily: fonts.regular, fontSize: 15, color: colors.text },
-    total: {
-        fontFamily: fonts.regular,
-        fontSize: 12,
-        color: colors.muted,
-        fontVariant: ["tabular-nums"],
-        marginTop: -space[2],
-    },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        pending: { minHeight: 196, alignItems: "center", justifyContent: "center" },
+        pendingText: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+        pair: { flexDirection: "row", gap: 10 },
+        half: { flex: 1 },
+        field: { gap: 5 },
+        label: { fontFamily: fonts.regular, fontSize: 12, color: colors.quiet },
+        dateInput: { justifyContent: "center" },
+        dateText: { fontFamily: fonts.regular, fontSize: 15, color: colors.text },
+        total: {
+            fontFamily: fonts.regular,
+            fontSize: 12,
+            color: colors.muted,
+            fontVariant: ["tabular-nums"],
+            marginTop: -space[2],
+        },
+    });

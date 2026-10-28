@@ -6,8 +6,9 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useOpenEntry } from "../context/entry";
 import { useRemoveTransaction } from "../hooks/useRemoveTransaction";
-import { colors, fonts, space } from "../theme";
-import { text } from "./Screen";
+import type { Colors } from "../theme";
+import { fonts, space, useStyles } from "../theme";
+import { makeText } from "./Screen";
 import { TransactionRow } from "./TransactionRow";
 
 const STEP = 10;
@@ -18,6 +19,8 @@ type Props = {
 };
 
 export function RecentTransactions({ accounts, scope }: Props) {
+    const styles = useStyles(makeStyles);
+    const text = useStyles(makeText);
     const [recentCount, setRecentCount] = useState(STEP);
     const transactions = useTransactions();
     const tags = useTags();
@@ -81,9 +84,10 @@ export function RecentTransactions({ accounts, scope }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
-    section: { gap: space[4] },
-    head: { flexDirection: "row", alignItems: "center" },
-    action: { marginLeft: "auto" },
-    actionText: { fontFamily: fonts.medium, fontSize: 13, color: colors.accent },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        section: { gap: space[4] },
+        head: { flexDirection: "row", alignItems: "center" },
+        action: { marginLeft: "auto" },
+        actionText: { fontFamily: fonts.medium, fontSize: 13, color: colors.accent },
+    });

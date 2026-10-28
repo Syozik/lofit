@@ -68,8 +68,13 @@ export async function createAccount(
     return account!;
 }
 
-export async function createTag(userId: string, name = "Groceries", position = 0) {
-    const [tag] = await db.insert(tags).values({ userId, name, position }).returning();
+export async function createTag(
+    userId: string,
+    name = "Groceries",
+    position = 0,
+    kind: "expense" | "income" = "expense",
+) {
+    const [tag] = await db.insert(tags).values({ userId, name, position, kind }).returning();
     return tag!;
 }
 

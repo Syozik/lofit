@@ -3,7 +3,8 @@ import type { Screenshot, useImportScreenshot } from "@lofit/api";
 import * as DocumentPicker from "expo-document-picker";
 import { TriangleAlert } from "lucide-react-native";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { colors, fonts, space } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, space, useStyles, useTheme } from "../theme";
 import { Button } from "./Button";
 import { SheetActions } from "./Sheet";
 
@@ -58,6 +59,8 @@ type Props = {
 };
 
 export function ScreenshotImportView({ reading, statement, onBack, onRetry, onClose }: Props) {
+    const { colors } = useTheme();
+    const styles = useStyles(makeStyles);
     if (reading.isPending) {
         return (
             <>
@@ -108,8 +111,9 @@ export function skippedText(skipped: number): string {
     return `Skipped ${skipped} already logged`;
 }
 
-const styles = StyleSheet.create({
-    status: { alignItems: "center", gap: space[4], paddingVertical: space[8] },
-    statusTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.text },
-    statusText: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, textAlign: "center" },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        status: { alignItems: "center", gap: space[4], paddingVertical: space[8] },
+        statusTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.text },
+        statusText: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, textAlign: "center" },
+    });

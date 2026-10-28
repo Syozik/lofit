@@ -14,7 +14,8 @@ import { StyleSheet, Text, View } from "react-native";
 import type { LayoutChangeEvent } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Svg, { ClipPath, Defs, G, Line, Path, Rect } from "react-native-svg";
-import { colors, fonts, radius } from "../theme";
+import type { Colors } from "../theme";
+import { fonts, radius, useStyles, useTheme } from "../theme";
 
 const HEIGHT = 132;
 const TIP_EDGE = 0.2;
@@ -38,6 +39,8 @@ export function LineChart({
     marker,
     currency = "EUR",
 }: Props) {
+    const { colors } = useTheme();
+    const styles = useStyles(makeStyles);
     const [width, setWidth] = useState(0);
 
     const scale = lineScale(points, level ? [level.value] : [], width, HEIGHT);
@@ -87,7 +90,7 @@ export function LineChart({
                                     <Rect x={0} y={0} width={width} height={HEIGHT} />
                                 </ClipPath>
                             </Defs>
-                            <Path d={area} fill="rgba(63, 102, 207, 0.09)" />
+                            <Path d={area} fill={colors.accentFill} />
                             {level && (
                                 <Line
                                     x1={0}
@@ -215,62 +218,63 @@ export function LineChart({
     );
 }
 
-const styles = StyleSheet.create({
-    plot: { height: HEIGHT },
-    tick: {
-        position: "absolute",
-        left: 0,
-        paddingHorizontal: 3,
-        borderRadius: 3,
-        backgroundColor: "rgba(253, 253, 255, 0.8)",
-        fontFamily: fonts.regular,
-        fontSize: 10,
-        color: colors.muted,
-        fontVariant: ["tabular-nums"],
-    },
-    levelLabel: {
-        position: "absolute",
-        right: 0,
-        paddingHorizontal: 3,
-        backgroundColor: "rgba(253, 253, 255, 0.85)",
-        fontFamily: fonts.regular,
-        fontSize: 10.5,
-        color: colors.subtle,
-    },
-    dot: {
-        position: "absolute",
-        width: 9,
-        height: 9,
-        borderRadius: 4.5,
-        backgroundColor: colors.accent,
-        borderWidth: 2,
-        borderColor: colors.surface,
-    },
-    tip: {
-        position: "absolute",
-        top: 2,
-        alignItems: "center",
-        paddingVertical: 3,
-        paddingHorizontal: 7,
-        borderRadius: radius.md,
-        borderWidth: 1,
-        borderColor: colors.divider,
-        backgroundColor: colors.surface,
-    },
-    tipValue: {
-        fontFamily: fonts.medium,
-        fontSize: 12,
-        color: colors.text,
-        fontVariant: ["tabular-nums"],
-    },
-    tipTime: { fontFamily: fonts.regular, fontSize: 10.5, color: colors.muted },
-    axis: { height: 16, marginTop: 4 },
-    axisText: {
-        position: "absolute",
-        top: 0,
-        fontFamily: fonts.regular,
-        fontSize: 10.5,
-        color: colors.muted,
-        fontVariant: ["tabular-nums"],
-    },
-});
+const makeStyles = (colors: Colors) =>
+    StyleSheet.create({
+        plot: { height: HEIGHT },
+        tick: {
+            position: "absolute",
+            left: 0,
+            paddingHorizontal: 3,
+            borderRadius: 3,
+            backgroundColor: colors.veil,
+            fontFamily: fonts.regular,
+            fontSize: 10,
+            color: colors.muted,
+            fontVariant: ["tabular-nums"],
+        },
+        levelLabel: {
+            position: "absolute",
+            right: 0,
+            paddingHorizontal: 3,
+            backgroundColor: colors.veilStrong,
+            fontFamily: fonts.regular,
+            fontSize: 10.5,
+            color: colors.subtle,
+        },
+        dot: {
+            position: "absolute",
+            width: 9,
+            height: 9,
+            borderRadius: 4.5,
+            backgroundColor: colors.accent,
+            borderWidth: 2,
+            borderColor: colors.surface,
+        },
+        tip: {
+            position: "absolute",
+            top: 2,
+            alignItems: "center",
+            paddingVertical: 3,
+            paddingHorizontal: 7,
+            borderRadius: radius.md,
+            borderWidth: 1,
+            borderColor: colors.divider,
+            backgroundColor: colors.surface,
+        },
+        tipValue: {
+            fontFamily: fonts.medium,
+            fontSize: 12,
+            color: colors.text,
+            fontVariant: ["tabular-nums"],
+        },
+        tipTime: { fontFamily: fonts.regular, fontSize: 10.5, color: colors.muted },
+        axis: { height: 16, marginTop: 4 },
+        axisText: {
+            position: "absolute",
+            top: 0,
+            fontFamily: fonts.regular,
+            fontSize: 10.5,
+            color: colors.muted,
+            fontVariant: ["tabular-nums"],
+        },
+    });

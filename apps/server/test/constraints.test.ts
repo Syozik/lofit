@@ -63,7 +63,7 @@ describe("database constraints", () => {
 
         const duplicate = db.insert(tags).values({ userId: me.id, name: "housing", position: 1 });
 
-        expect(await violatedConstraint(duplicate)).toBe("tags_user_name_unique");
+        expect(await violatedConstraint(duplicate)).toBe("tags_user_kind_name_unique");
     });
 
     it("allow one position per instrument per account", async () => {

@@ -26,7 +26,7 @@ export const tagsRoute = new Hono<AuthEnv>()
             if (!result.success) return invalidBody(c, result.error.issues);
         }),
         async (c) => {
-            const { id, name } = c.req.valid("json");
+            const { id, name, kind } = c.req.valid("json");
             const userId = c.var.userId;
 
             const result = await db.transaction(async (tx) => {
@@ -42,7 +42,13 @@ export const tagsRoute = new Hono<AuthEnv>()
                 const [existing] = await tx
                     .select()
                     .from(tags)
-                    .where(and(eq(tags.userId, userId), sql`lower(${tags.name}) = lower(${name})`))
+                    .where(
+                        and(
+                            eq(tags.userId, userId),
+                            eq(tags.kind, kind),
+                            sql`lower(${tags.name}) = lower(${name})`,
+                        ),
+                    )
                     .limit(1);
                 if (existing) return { tag: existing, created: false };
 
@@ -53,7 +59,7 @@ export const tagsRoute = new Hono<AuthEnv>()
 
                 const [row] = await tx
                     .insert(tags)
-                    .values({ ...(id ? { id } : {}), userId, name, position: end?.next ?? 0 })
+                    .values({ ...(id ? { id } : {}), userId, name, kind, position: end?.next ?? 0 })
                     .returning();
                 if (!row) throw new Error("Creating a tag returned no row.");
 
@@ -77,18 +83,27 @@ export const tagsRoute = new Hono<AuthEnv>()
             const userId = c.var.userId;
 
             const row = await db.transaction(async (tx) => {
+                const [current] = await tx
+                    .select({ kind: tags.kind })
+                    .from(tags)
+                    .where(and(eq(tags.id, id), eq(tags.userId, userId)))
+                    .limit(1);
+                if (!current) throw new HTTPException(404, { message: "No such tag" });
+
                 const [clash] = await tx
                     .select({ id: tags.id })
                     .from(tags)
                     .where(
                         and(
                             eq(tags.userId, userId),
+                            eq(tags.kind, current.kind),
                             ne(tags.id, id),
                             sql`lower(${tags.name}) = lower(${name})`,
                         ),
                     )
                     .limit(1);
-                if (clash) throw new HTTPException(409, { message: `A tag named ${name} already exists` });
+                if (clash)
+                    throw new HTTPException(409, { message: `A tag named ${name} already exists` });
 
                 const [renamed] = await tx
                     .update(tags)

@@ -15,6 +15,7 @@ import {
     euros,
     investingGroups,
     KIND_LABELS,
+    tagsFor,
 } from "@lofit/domain";
 import type {
     AssetType,
@@ -113,6 +114,8 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const editing = entry !== undefined;
     const draft = queue?.drafts[queue.at];
     const isHolding = mode === "holding";
+    const fitting = isHolding ? [] : tagsFor(tags ?? [], mode);
+    const chosenIds = tagIds.filter((id) => fitting.some((tag) => tag.id === id));
 
     const mirrored = assetType === "crypto" ? "" : symbol.trim().toUpperCase();
     const ticker = ownTicker ? liveSymbol : mirrored;
@@ -203,6 +206,13 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
         setCurrency(CURRENCIES[(at + 1) % CURRENCIES.length]!);
     }
 
+    function switchMode(next: EntryMode) {
+        setMode(next);
+        if (next === "holding") return;
+        const allowed = tagsFor(tags ?? [], next);
+        setTagIds((chosen) => chosen.filter((id) => allowed.some((tag) => tag.id === id)));
+    }
+
     function toggleTag(id: string) {
         setTagIds((chosen) =>
             chosen.includes(id) ? chosen.filter((other) => other !== id) : [...chosen, id],
@@ -236,9 +246,9 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     async function createTag() {
         const wanted = newTag?.trim();
         setNewTag(undefined);
-        if (!wanted) return;
+        if (!wanted || (mode !== "expense" && mode !== "income")) return;
 
-        const tag = await addNewTag.mutateAsync({ name: wanted });
+        const tag = await addNewTag.mutateAsync({ name: wanted, kind: mode });
         setTagIds((chosen) => (chosen.includes(tag.id) ? chosen : [...chosen, tag.id]));
     }
 
@@ -280,7 +290,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
         const transaction: NewTransaction = {
             name: name.trim(),
             kind: mode as TransactionKind,
-            tagIds,
+            tagIds: chosenIds,
             accountId: from,
             amount: signed,
             occurredAt: toInstant(day),
@@ -390,7 +400,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                             type="radio"
                             name="entry-mode"
                             checked={mode === option}
-                            onChange={() => setMode(option)}
+                            onChange={() => switchMode(option)}
                         />
                         {MODE_LABELS[option]}
                     </label>
@@ -438,11 +448,11 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                         </button>
                     ))}
                 </div>
-            ) : (
+            ) : mode === "transfer" ? null : (
                 <div className="sheet-tags">
                     <div className="sheet-chips">
-                        {(tags ?? []).map((tag) => {
-                            const chosen = tagIds.indexOf(tag.id);
+                        {fitting.map((tag) => {
+                            const chosen = chosenIds.indexOf(tag.id);
                             if (renaming?.id === tag.id) {
                                 return (
                                     <input

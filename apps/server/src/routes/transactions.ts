@@ -70,12 +70,17 @@ export const transactionsRoute = new Hono<AuthEnv>()
 
                 if (entry.tagIds.length > 0) {
                     const ownedTags = await tx
-                        .select({ id: tags.id })
+                        .select({ id: tags.id, kind: tags.kind })
                         .from(tags)
                         .where(and(eq(tags.userId, userId), inArray(tags.id, entry.tagIds)));
 
                     if (ownedTags.length !== entry.tagIds.length) {
                         throw new HTTPException(422, { message: "Unknown tag" });
+                    }
+                    if (ownedTags.some((tag) => tag.kind !== entry.kind)) {
+                        throw new HTTPException(422, {
+                            message: `Only ${entry.kind} tags fit this entry`,
+                        });
                     }
                 }
 
@@ -152,12 +157,17 @@ export const transactionsRoute = new Hono<AuthEnv>()
 
                 if (entry.tagIds.length > 0) {
                     const ownedTags = await tx
-                        .select({ id: tags.id })
+                        .select({ id: tags.id, kind: tags.kind })
                         .from(tags)
                         .where(and(eq(tags.userId, userId), inArray(tags.id, entry.tagIds)));
 
                     if (ownedTags.length !== entry.tagIds.length) {
                         throw new HTTPException(422, { message: "Unknown tag" });
+                    }
+                    if (ownedTags.some((tag) => tag.kind !== entry.kind)) {
+                        throw new HTTPException(422, {
+                            message: `Only ${entry.kind} tags fit this entry`,
+                        });
                     }
                 }
 
