@@ -41,6 +41,7 @@ export const env = {
     trustedOrigins: origins(),
     devUserEmail: process.env.DEV_USER_EMAIL ?? "dev@lofit.local",
     devUserPassword: process.env.DEV_USER_PASSWORD ?? "lofit-dev-password",
+    clientIpHeader: process.env.CLIENT_IP_HEADER ?? "cf-connecting-ip",
     anthropicApiKey: process.env.ANTHROPIC_API_KEY,
     priceRefreshMinutes: Number(process.env.PRICE_REFRESH_MINUTES ?? 60),
     webRoot: process.env.WEB_ROOT,

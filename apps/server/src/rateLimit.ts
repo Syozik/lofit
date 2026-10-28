@@ -1,5 +1,6 @@
 import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
+import { env } from "./env";
 
 const WINDOW_MS = 60_000;
 const MAX_REQUESTS = 300;
@@ -7,7 +8,7 @@ const MAX_REQUESTS = 300;
 const hits = new Map<string, { count: number; resetAt: number }>();
 
 export const rateLimit = createMiddleware(async (c, next) => {
-    const caller = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
+    const caller = c.req.header(env.clientIpHeader)?.trim() || "local";
     const now = Date.now();
     const seen = hits.get(caller);
 

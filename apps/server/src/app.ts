@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { auth } from "./auth/auth";
+import { guardSignIn } from "./auth/lockout";
 import { requireSession } from "./auth/session";
 import type { AuthEnv } from "./auth/session";
 import { connection } from "./db/client";
@@ -30,6 +31,7 @@ const resources = new Hono<AuthEnv>()
 
 export const app = new Hono()
     .basePath("/api")
+    .post("/auth/sign-in/email", (c) => guardSignIn(c, auth.handler))
     .on(["GET", "POST"], "/auth/*", (c) => auth.handler(c.req.raw))
     .get("/health", async (c) => {
         await connection`select 1`;

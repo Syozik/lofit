@@ -56,6 +56,7 @@ export const auth = betterAuth({
     },
     advanced: {
         database: { generateId: "uuid" },
+        ipAddress: { ipAddressHeaders: [env.clientIpHeader] },
     },
     plugins: [bearer(), expo()],
 });
