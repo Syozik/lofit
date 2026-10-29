@@ -3,11 +3,13 @@ import { useEffect, useState } from "react";
 
 const KEY = "lofit-signed-in";
 
-export function useRememberedSignIn(signedIn: boolean | null): boolean {
-    const [remembered, setRemembered] = useState(false);
+export function useRememberedSignIn(signedIn: boolean | null): boolean | null {
+    const [remembered, setRemembered] = useState<boolean | null>(null);
 
     useEffect(() => {
-        void AsyncStorage.getItem(KEY).then((value) => setRemembered(value === "1"));
+        void AsyncStorage.getItem(KEY)
+            .catch(() => null)
+            .then((value) => setRemembered(value === "1"));
     }, []);
 
     useEffect(() => {

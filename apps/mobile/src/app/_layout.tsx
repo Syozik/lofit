@@ -44,7 +44,9 @@ function AccountRoutes() {
     const known = session.isPending ? null : session.error ? null : Boolean(session.data);
     const remembered = useRememberedSignIn(known);
 
-    if (session.isPending) {
+    if (session.data || (remembered && (session.isPending || session.error))) return <AppStack open />;
+
+    if (session.isPending || remembered === null) {
         return (
             <View style={styles.splash}>
                 <ActivityIndicator color={colors.accent} />
@@ -52,7 +54,7 @@ function AccountRoutes() {
         );
     }
 
-    return <AppStack open={Boolean(session.data) || (Boolean(session.error) && remembered)} />;
+    return <AppStack open={false} />;
 }
 
 function Routes({ mode }: { mode: Mode }) {
