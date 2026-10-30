@@ -12,6 +12,7 @@ import {
     NO_FILTER,
     shortMoney,
     spendSlices,
+    tagUsage,
     toggled,
     toggledAll,
     UNTAGGED_KEY,
@@ -166,7 +167,7 @@ export default function SpendingScreen() {
 
             {summary.budgeted > 0 && <Meter status={total} thick />}
 
-            <SpendFilters filter={filter} options={options} onChange={setFilter} />
+            <SpendFilters filter={filter} options={options} usage={tagUsage(monthly)} onChange={setFilter} />
 
             {slices.length > 0 && (
                 <Donut

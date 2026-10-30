@@ -8,6 +8,7 @@ import {
     useRates,
     useRenameTag,
     useTags,
+    useTransactions,
     useUpdateTransaction,
 } from "@lofit/api";
 import {
@@ -39,7 +40,7 @@ import type {
     Transaction,
     TransactionKind,
 } from "@lofit/domain";
-import { parsePositive } from "@lofit/view";
+import { parsePositive, tagsFromHistory, tagUsage, topTags } from "@lofit/view";
 import { ImagePlus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useToast } from "../toast";
@@ -88,8 +89,11 @@ type Props = {
 
 const DOUBLE_TAP_MS = 350;
 
+const TAGS_SHOWN = 5;
+
 export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const { data: accounts } = useAccounts();
+    const { data: history } = useTransactions();
     const { data: groups } = useGroups();
     const { data: tags } = useTags();
     const addEntry = useAddTransaction();
@@ -105,6 +109,8 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const [amount, setAmount] = useState(typed ? (Math.abs(typed.amount) / 100).toFixed(2) : "");
     const [name, setName] = useState(entry?.name ?? "");
     const [tagIds, setTagIds] = useState<string[]>([...(entry?.tagIds ?? [])]);
+    const [tagsTouched, setTagsTouched] = useState(false);
+    const [allTags, setAllTags] = useState(false);
     const [newTag, setNewTag] = useState<string | undefined>(undefined);
     const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
     const lastTap = useRef<{ id: string; at: number } | null>(null);
@@ -130,6 +136,15 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const isHolding = mode === "holding";
     const fitting = isHolding ? [] : tagsFor(tags ?? [], mode);
     const chosenIds = tagIds.filter((id) => fitting.some((tag) => tag.id === id));
+    const usage = tagUsage(history ?? []);
+    const ranked = topTags(fitting, usage, TAGS_SHOWN, chosenIds);
+    const shownTags = allTags ? fitting : ranked.visible;
+
+    function describe(next: string) {
+        setName(next);
+        if (editing || queue || tagsTouched || mode === "holding" || mode === "transfer") return;
+        setTagIds(tagsFromHistory(history ?? [], next, mode) ?? []);
+    }
 
     const mirrored = assetType === "crypto" ? "" : symbol.trim().toUpperCase();
     const ticker = ownTicker ? liveSymbol : mirrored;
@@ -234,6 +249,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     }
 
     function toggleTag(id: string) {
+        setTagsTouched(true);
         setTagIds((chosen) =>
             chosen.includes(id) ? chosen.filter((other) => other !== id) : [...chosen, id],
         );
@@ -269,6 +285,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
         if (!wanted || (mode !== "expense" && mode !== "income")) return;
 
         const tag = await addNewTag.mutateAsync({ name: wanted, kind: mode });
+        setTagsTouched(true);
         setTagIds((chosen) => (chosen.includes(tag.id) ? chosen : [...chosen, tag.id]));
     }
 
@@ -514,7 +531,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
             ) : mode === "transfer" ? null : (
                 <div className="sheet-tags">
                     <div className="sheet-chips">
-                        {fitting.map((tag) => {
+                        {shownTags.map((tag) => {
                             const chosen = chosenIds.indexOf(tag.id);
                             if (renaming?.id === tag.id) {
                                 return (
@@ -556,6 +573,11 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                                 </button>
                             );
                         })}
+                        {!allTags && ranked.hidden > 0 && (
+                            <button className="tag sheet-chip" onClick={() => setAllTags(true)}>
+                                More ({ranked.hidden})
+                            </button>
+                        )}
                         {newTag === undefined ? (
                             <button className="tag sheet-chip" onClick={() => setNewTag("")}>
                                 + New tag
@@ -681,7 +703,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                                 className="input"
                                 placeholder="Albert Heijn"
                                 value={name}
-                                onChange={(event) => setName(event.target.value)}
+                                onChange={(event) => describe(event.target.value)}
                             />
                         </label>
 

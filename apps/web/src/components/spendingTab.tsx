@@ -27,7 +27,9 @@ import {
     NO_FILTER,
     shortMoney,
     spendSlices,
+    tagUsage,
     toggled,
+    topTags,
     toggledAll,
     UNTAGGED_KEY,
     upcomingSpend,
@@ -120,15 +122,22 @@ function MonthStep({
     );
 }
 
+const FILTER_TAGS_SHOWN = 6;
+
 function FilterBar({
     filter,
     options,
+    usage,
     onChange,
 }: {
     filter: SpendFilter;
     options: { tags: FilterOption[]; accounts: FilterOption[] };
+    usage: ReadonlyMap<string, number>;
     onChange: (filter: SpendFilter) => void;
 }) {
+    const [expanded, setExpanded] = useState(false);
+    const ranked = topTags(options.tags, usage, FILTER_TAGS_SHOWN, filter.tagIds);
+    const tagOptions = expanded ? options.tags : ranked.visible;
     return (
         <div className="spend-filters">
             <label className="spend-search">
@@ -143,7 +152,7 @@ function FilterBar({
                 />
             </label>
             <div className="spend-filter-chips">
-                {options.tags.map((option) => (
+                {tagOptions.map((option) => (
                     <button
                         key={option.id}
                         className={`tag sheet-chip ${filter.tagIds.includes(option.id) ? "selected" : ""}`}
@@ -153,6 +162,11 @@ function FilterBar({
                         {option.label}
                     </button>
                 ))}
+                {!expanded && ranked.hidden > 0 && (
+                    <button className="tag sheet-chip" onClick={() => setExpanded(true)}>
+                        +{ranked.hidden} more
+                    </button>
+                )}
                 {options.accounts.length > 1 && <span className="spend-filter-sep" aria-hidden />}
                 {options.accounts.length > 1 &&
                     options.accounts.map((option) => (
@@ -281,7 +295,7 @@ export function SpendingTab() {
                     )}
                 </div>
 
-                <FilterBar filter={filter} options={options} onChange={setFilter} />
+                <FilterBar filter={filter} options={options} usage={tagUsage(monthly)} onChange={setFilter} />
 
                 <div className="spend-split">
                     <div className="spend-side">

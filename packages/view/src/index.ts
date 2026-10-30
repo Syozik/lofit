@@ -50,3 +50,4 @@ export {
 export { currencyFormat, numberFormat, wholeNumber } from "./intl";
 export type { UpcomingSpend } from "./upcoming";
 export { upcomingSpend } from "./upcoming";
+export { tagsFromHistory, tagUsage, topTags } from "./tags";

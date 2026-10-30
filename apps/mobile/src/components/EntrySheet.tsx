@@ -9,6 +9,7 @@ import {
     useImportScreenshot,
     useRenameTag,
     useTags,
+    useTransactions,
     useUpdateTransaction,
 } from "@lofit/api";
 import type { Screenshot } from "@lofit/api";
@@ -39,7 +40,7 @@ import type {
     Transaction,
     TransactionKind,
 } from "@lofit/domain";
-import { currencyFormat, dayFormat, parsePositive } from "@lofit/view";
+import { currencyFormat, dayFormat, parsePositive, tagsFromHistory, tagUsage, topTags } from "@lofit/view";
 import { ImagePlus, TriangleAlert } from "lucide-react-native";
 import { useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
@@ -71,6 +72,8 @@ const TRANSACTION_MODES = ALL_MODES.filter((option) => option.value !== "holding
 
 
 const DOUBLE_TAP_MS = 350;
+
+const TAGS_SHOWN = 5;
 
 function AccountPicker({
     label,
@@ -139,6 +142,7 @@ export function EntrySheet({ entry, onClose }: Props) {
     const styles = useStyles(makeStyles);
     const fieldStyles = useStyles(makeFieldStyles);
     const { data: accounts } = useAccounts();
+    const { data: history } = useTransactions();
     const { data: groups } = useGroups();
     const { data: tags } = useTags();
     const addEntry = useAddTransaction();
@@ -159,6 +163,8 @@ export function EntrySheet({ entry, onClose }: Props) {
     const [amount, setAmount] = useState(typed ? (Math.abs(typed.amount) / 100).toFixed(2) : "");
     const [name, setName] = useState(entry?.name ?? "");
     const [tagIds, setTagIds] = useState<string[]>([...(entry?.tagIds ?? [])]);
+    const [tagsTouched, setTagsTouched] = useState(false);
+    const [allTags, setAllTags] = useState(false);
     const [newTag, setNewTag] = useState<string | undefined>(undefined);
     const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
     const lastTap = useRef<{ id: string; at: number } | null>(null);
@@ -200,6 +206,14 @@ export function EntrySheet({ entry, onClose }: Props) {
 
     const fitting = isHolding ? [] : tagsFor(tags ?? [], mode);
     const chosenIds = tags || mode === "transfer" ? tagIds.filter((id) => fitting.some((tag) => tag.id === id)) : tagIds;
+    const ranked = topTags(fitting, tagUsage(history ?? []), TAGS_SHOWN, chosenIds);
+    const shownTags = allTags ? fitting : ranked.visible;
+
+    function describe(next: string) {
+        setName(next);
+        if (editing || queue || tagsTouched || mode === "holding" || mode === "transfer") return;
+        setTagIds(tagsFromHistory(history ?? [], next, mode) ?? []);
+    }
 
     const value = parsePositive(amount);
     const units = parsePositive(quantity);
@@ -224,6 +238,7 @@ export function EntrySheet({ entry, onClose }: Props) {
     }
 
     function toggleTag(id: string) {
+        setTagsTouched(true);
         setTagIds((chosen) => (chosen.includes(id) ? chosen.filter((other) => other !== id) : [...chosen, id]));
     }
 
@@ -253,6 +268,7 @@ export function EntrySheet({ entry, onClose }: Props) {
         if (!wanted || (mode !== "expense" && mode !== "income")) return;
 
         const tag = await addNewTag.mutateAsync({ name: wanted, kind: mode });
+        setTagsTouched(true);
         setTagIds((chosen) => (chosen.includes(tag.id) ? chosen : [...chosen, tag.id]));
     }
 
@@ -541,7 +557,7 @@ export function EntrySheet({ entry, onClose }: Props) {
                 </ChipRow>
             ) : mode === "transfer" ? null : (
                 <ChipRow>
-                    {fitting.map((tag) => {
+                    {shownTags.map((tag) => {
                         const chosen = chosenIds.indexOf(tag.id);
                         if (renaming?.id === tag.id) {
                             return (
@@ -569,6 +585,9 @@ export function EntrySheet({ entry, onClose }: Props) {
                             />
                         );
                     })}
+                    {!allTags && ranked.hidden > 0 && (
+                        <Chip label={`More (${ranked.hidden})`} onPress={() => setAllTags(true)} />
+                    )}
                     {newTag === undefined ? (
                         <Chip label="+ New tag" onPress={() => setNewTag("")} />
                     ) : (
@@ -636,7 +655,7 @@ export function EntrySheet({ entry, onClose }: Props) {
                 </>
             ) : (
                 <>
-                    <Field label="Description" placeholder="Albert Heijn" value={name} onChangeText={setName} />
+                    <Field label="Description" placeholder="Albert Heijn" value={name} onChangeText={describe} />
                     <AccountPicker
                         label={mode === "transfer" ? "From" : "Account"}
                         accounts={allAccounts}
