@@ -1,6 +1,7 @@
-import { useAccounts, useBudgets, useTags, useTransactions } from "@lofit/api";
+import { useAccounts, useBudgets, useRecurring, useTags, useTransactions } from "@lofit/api";
 import {
     byRecency,
+    cadenceLabel,
     earliestPeriod,
     formatAmount,
     inPeriod,
@@ -16,6 +17,7 @@ import { useState } from "react";
 import { useRemoveTransaction } from "../useRemoveTransaction";
 import {
     budgetStatus,
+    dayFormat,
     filterOptions,
     filterTransactions,
     isFiltered,
@@ -28,6 +30,7 @@ import {
     toggled,
     toggledAll,
     UNTAGGED_KEY,
+    upcomingSpend,
 } from "@lofit/view";
 import type { BudgetStatus, FilterOption, SpendFilter } from "@lofit/view";
 import { BudgetSheet } from "./budgetSheet";
@@ -62,8 +65,10 @@ function Meter({ status }: { status: BudgetStatus }) {
     );
 }
 
-function BudgetBar({ spent, limit, period }: { spent: Cents; limit: Cents; period: string }) {
-    const status = budgetStatus(spent, limit, period);
+type BarProps = { spent: Cents; limit: Cents; period: string; upcoming: number };
+
+function BudgetBar({ spent, limit, period, upcoming }: BarProps) {
+    const status = budgetStatus(spent, limit, period, upcoming);
     return (
         <>
             <Meter status={status} />
@@ -184,6 +189,7 @@ export function SpendingTab() {
     const budgets = useBudgets();
     const accounts = useAccounts();
     const tags = useTags();
+    const recurring = useRecurring();
 
     if (transactions.isPending || budgets.isPending || accounts.isPending || tags.isPending) {
         return <div className="tab-content">Loading…</div>;
@@ -216,7 +222,8 @@ export function SpendingTab() {
     const lit = filtered ? litSlices(tagsOf, matched) : undefined;
     const activity = byRecency(shown);
     const budgeted = summary.tags.flatMap((row) => (row.budget ? [{ ...row, budget: row.budget }] : []));
-    const total = budgetStatus(summary.spent, summary.budgeted, period);
+    const due = upcomingSpend(recurring.data ?? [], period, new Date().toISOString().slice(0, 10));
+    const total = budgetStatus(summary.spent, summary.budgeted, period, due.total);
 
     function focusSlice(key: string | null) {
         const group = key ? tagsOf.get(key) : undefined;
@@ -327,10 +334,35 @@ export function SpendingTab() {
                                             {withSymbol(formatAmount(row.spent))}
                                         </span>
                                     </div>
-                                    <BudgetBar spent={row.spent} limit={row.budget.limit} period={period} />
+                                    <BudgetBar
+                                        spent={row.spent}
+                                        limit={row.budget.limit}
+                                        period={period}
+                                        upcoming={due.byTag.get(row.tagId ?? UNTAGGED_KEY) ?? 0}
+                                    />
                                 </button>
                             ))}
                         </div>
+                        {due.items.length > 0 && (
+                            <div className="panel spend-upcoming">
+                                <div className="section-head">
+                                    <span className="kicker">Upcoming</span>
+                                </div>
+                                {due.items.map(({ recurring: item, day }) => (
+                                    <div key={`${item.id}-${day}`} className="spend-upcoming-row">
+                                        <span className="spend-upcoming-day">{dayFormat.format(new Date(`${day}T00:00:00Z`))}</span>
+                                        <span className="spend-upcoming-name">
+                                            {item.name}
+                                            <span className="spend-upcoming-how">{cadenceLabel(item)} · logs itself</span>
+                                        </span>
+                                        <span className={`spend-upcoming-amount ${item.shown > 0 ? "positive" : ""}`}>
+                                            {item.shown > 0 ? "+" : "−"}
+                                            {withSymbol(formatAmount(item.shown))}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div className="section recent-section tight panel">

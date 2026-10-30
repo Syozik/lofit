@@ -726,6 +726,53 @@
     opacity: 0.4;
 }
 
+.spend-upcoming {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.spend-upcoming-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 7px 0;
+    font-size: 13px;
+}
+
+.spend-upcoming-row + .spend-upcoming-row {
+    border-top: 1px solid var(--color-divider);
+}
+
+.spend-upcoming-day {
+    flex: none;
+    width: 48px;
+    color: var(--color-neutral-500);
+    font-variant-numeric: tabular-nums;
+}
+
+.spend-upcoming-name {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.spend-upcoming-how {
+    font-size: 11px;
+    color: var(--color-neutral-600);
+}
+
+.spend-upcoming-amount {
+    flex: none;
+    font-variant-numeric: tabular-nums;
+}
+
+.spend-upcoming-amount.positive {
+    color: var(--color-accent-300);
+}
+
 .spend-filters {
     display: flex;
     flex-direction: column;
@@ -1234,6 +1281,12 @@
     opacity: 0;
     cursor: pointer;
     font-size: 16px;
+}
+
+.sheet-when {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
 }
 
 .sheet-received-input {
@@ -2964,6 +3017,50 @@
 .settings-row .btn {
     flex: none;
     padding-inline: 16px;
+}
+
+.settings-recurring {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.settings-recurring-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 10px;
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+}
+
+.settings-recurring-item.paused {
+    opacity: 0.6;
+}
+
+.settings-recurring-amount {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.settings-recurring-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.settings-recurring-actions .input {
+    flex: 1;
+    min-height: 30px;
+}
+
+.settings-recurring-actions .btn-ghost {
+    padding-inline: 8px;
+    font-size: 12px;
+}
+
+.settings-recurring-delete {
+    color: var(--color-danger);
 }
 
 .settings-danger {

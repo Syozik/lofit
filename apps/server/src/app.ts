@@ -13,6 +13,7 @@ import { importsRoute } from "./routes/imports";
 import { portfolioRoute } from "./routes/portfolio";
 import { pricesRoute } from "./routes/prices";
 import { ratesRoute } from "./routes/rates";
+import { recurringRoute } from "./routes/recurring";
 import { settingsRoute } from "./routes/settings";
 import { snapshotsRoute } from "./routes/snapshots";
 import { tagsRoute } from "./routes/tags";
@@ -30,6 +31,7 @@ const resources = new Hono<AuthEnv>()
     .route("/snapshots", snapshotsRoute)
     .route("/settings", settingsRoute)
     .route("/rates", ratesRoute)
+    .route("/recurring", recurringRoute)
     .route("/prices", pricesRoute)
     .route("/imports", importsRoute);
 

@@ -1,8 +1,9 @@
-import { useAccounts, useBudgets, useTags, useTransactions } from "@lofit/api";
-import { byRecency, earliestPeriod, formatAmount, inPeriod, periodOf, shiftPeriod, spendByTag, tagsFor, withSymbol } from "@lofit/domain";
+import { useAccounts, useBudgets, useRecurring, useTags, useTransactions } from "@lofit/api";
+import { byRecency, cadenceLabel, earliestPeriod, formatAmount, inPeriod, periodOf, shiftPeriod, spendByTag, tagsFor, withSymbol } from "@lofit/domain";
 import type { Transaction } from "@lofit/domain";
 import {
     budgetStatus,
+    dayFormat,
     filterOptions,
     filterTransactions,
     isFiltered,
@@ -14,6 +15,7 @@ import {
     toggled,
     toggledAll,
     UNTAGGED_KEY,
+    upcomingSpend,
 } from "@lofit/view";
 import type { SpendFilter } from "@lofit/view";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
@@ -49,6 +51,7 @@ export default function SpendingScreen() {
     const budgets = useBudgets();
     const accounts = useAccounts();
     const tags = useTags();
+    const recurring = useRecurring();
     const remove = useRemoveTransaction();
     const openEntry = useOpenEntry();
     const [filter, setFilter] = useState<SpendFilter>(NO_FILTER);
@@ -98,7 +101,8 @@ export default function SpendingScreen() {
     const lit = filtered ? litSlices(tagsOf, matched) : undefined;
     const activity = byRecency(shown);
     const spentByTag = new Map(summary.tags.flatMap((row) => (row.tagId ? [[row.tagId, row.spent] as const] : [])));
-    const total = budgetStatus(summary.spent, summary.budgeted, period);
+    const due = upcomingSpend(recurring.data ?? [], period, new Date().toISOString().slice(0, 10));
+    const total = budgetStatus(summary.spent, summary.budgeted, period, due.total);
     const budgeted = summary.tags.flatMap((row) => (row.budget ? [{ ...row, limit: row.budget.limit }] : []));
 
     function focusSlice(key: string | null) {
@@ -190,10 +194,34 @@ export default function SpendingScreen() {
                             spent={row.spent}
                             limit={row.limit}
                             period={period}
+                            upcoming={due.byTag.get(row.tagId ?? UNTAGGED_KEY) ?? 0}
                             selected={filter.tagIds.includes(row.tagId ?? UNTAGGED_KEY)}
                             dimmed={filtered && !matched.has(row.tagId ?? UNTAGGED_KEY)}
                             onPress={() => toggleTag(row.tagId ?? UNTAGGED_KEY)}
                         />
+                    ))}
+                </View>
+            )}
+
+            {due.items.length > 0 && (
+                <View>
+                    <View style={styles.sectionHead}>
+                        <Text style={text.kicker}>Upcoming</Text>
+                    </View>
+                    {due.items.map(({ recurring: item, day }) => (
+                        <View key={`${item.id}-${day}`} style={styles.upcoming}>
+                            <Text style={styles.upcomingDay}>{dayFormat.format(new Date(`${day}T00:00:00Z`))}</Text>
+                            <View style={styles.upcomingText}>
+                                <Text style={styles.upcomingName} numberOfLines={1}>
+                                    {item.name}
+                                </Text>
+                                <Text style={styles.upcomingHow}>{cadenceLabel(item)} · logs itself</Text>
+                            </View>
+                            <Text style={styles.upcomingAmount}>
+                                {item.shown > 0 ? "+" : "−"}
+                                {withSymbol(formatAmount(item.shown))}
+                            </Text>
+                        </View>
                     ))}
                 </View>
             )}
@@ -264,6 +292,19 @@ const makeStyles = (colors: Colors) =>
         empty: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, paddingVertical: space[6] },
         left: { fontFamily: fonts.regular, fontSize: 12, color: colors.accentStrong, fontVariant: ["tabular-nums"] },
         sectionHead: { flexDirection: "row", alignItems: "center" },
+        upcoming: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            paddingVertical: 9,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: colors.divider,
+        },
+        upcomingDay: { width: 46, fontFamily: fonts.regular, fontSize: 12, color: colors.muted, fontVariant: ["tabular-nums"] },
+        upcomingText: { flex: 1, gap: 2 },
+        upcomingName: { fontFamily: fonts.regular, fontSize: 14, color: colors.text },
+        upcomingHow: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+        upcomingAmount: { fontFamily: fonts.regular, fontSize: 14, color: colors.text, fontVariant: ["tabular-nums"] },
         showAll: { marginLeft: "auto" },
         showAllText: { fontFamily: fonts.medium, fontSize: 13, color: colors.accent },
     });

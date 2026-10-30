@@ -3,6 +3,7 @@ import {
     useGroups,
     useAddHolding,
     useAddTag,
+    useAddRecurring,
     useAddTransaction,
     useRates,
     useRenameTag,
@@ -13,8 +14,11 @@ import {
     ASSET_TYPE_LABELS,
     ASSET_TYPES,
     CURRENCIES,
+    CADENCE_LABELS,
+    CADENCES,
     convertAt,
     currencyLabel,
+    following,
     currencySymbol,
     displayCurrency,
     euros,
@@ -25,6 +29,7 @@ import {
 } from "@lofit/domain";
 import type {
     AssetType,
+    Cadence,
     Currency,
     ImportDraft,
     QuoteRef,
@@ -93,6 +98,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const rename = useRenameTag();
     const show = useToast();
     const updateEntry = useUpdateTransaction();
+    const addRecurring = useAddRecurring();
 
     const [mode, setMode] = useState<EntryMode>(entry?.kind ?? "expense");
     const typed = entry?.original ?? entry;
@@ -111,6 +117,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const [custodianId, setCustodianId] = useState("");
     const [quantity, setQuantity] = useState("");
     const [picked, setCurrency] = useState<Currency | null>(entry?.original?.currency ?? null);
+    const [repeats, setRepeats] = useState<Cadence | "">("");
     const [received, setReceived] = useState(entry?.toAmount ? (entry.toAmount / 100).toFixed(2) : "");
     const [liveSymbol, setLiveSymbol] = useState("");
     const [ownTicker, setOwnTicker] = useState(false);
@@ -327,6 +334,20 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
 
         addEntry.mutate(transaction, {
             onSuccess: () => {
+                if (repeats && !queue) {
+                    addRecurring.mutate({
+                        name: transaction.name,
+                        kind: transaction.kind,
+                        tagIds: transaction.tagIds,
+                        accountId: transaction.accountId,
+                        ...(transaction.toAccountId ? { toAccountId: transaction.toAccountId } : {}),
+                        amount: transaction.amount,
+                        ...(transaction.toAmount ? { toAmount: transaction.toAmount } : {}),
+                        currency,
+                        cadence: repeats,
+                        anchor: day,
+                    });
+                }
                 if (queue) {
                     advance(queue.added + 1);
                     return;
@@ -698,16 +719,40 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                             </label>
                         )}
 
-                        <label className="field">
-                            <span>Date</span>
-                            <input
-                                autoComplete="off"
-                                className="input"
-                                type="date"
-                                value={day}
-                                onChange={(event) => setDay(event.target.value)}
-                            />
-                        </label>
+                        <div className="sheet-when">
+                            <label className="field">
+                                <span>Date</span>
+                                <input
+                                    autoComplete="off"
+                                    className="input"
+                                    type="date"
+                                    value={day}
+                                    onChange={(event) => setDay(event.target.value)}
+                                />
+                            </label>
+                            {!editing && !queue && (
+                                <label className="field">
+                                    <span>Repeats</span>
+                                    <select
+                                        className="input"
+                                        value={repeats}
+                                        onChange={(event) => setRepeats(event.target.value as Cadence | "")}
+                                    >
+                                        <option value="">Doesn't repeat</option>
+                                        {CADENCES.map((cadence) => (
+                                            <option key={cadence} value={cadence}>
+                                                {CADENCE_LABELS[cadence]}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                            )}
+                        </div>
+                        {repeats && !editing && !queue && (
+                            <span className="gate-hint">
+                                Logged automatically from {following(day, repeats)}. Manage it in Settings.
+                            </span>
+                        )}
                     </>
                 )}
             </div>

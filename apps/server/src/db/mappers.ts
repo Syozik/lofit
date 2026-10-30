@@ -5,12 +5,13 @@ import type {
     Currency,
     Group,
     Holding,
+    Recurring,
     Snapshot,
     Tag,
     Transaction,
 } from "@lofit/domain";
 import type { Fx } from "../prices/fx";
-import type { accounts, budgets, groups, holdings, snapshots, tags, transactions } from "./schema";
+import type { accounts, budgets, groups, holdings, recurring, snapshots, tags, transactions } from "./schema";
 
 export type View = { fx: Fx; currency: string };
 
@@ -114,4 +115,26 @@ export function toSnapshots(rows: readonly (typeof snapshots.$inferSelect)[], vi
     }
 
     return [...byDay.values()];
+}
+
+export function toRecurring(row: typeof recurring.$inferSelect, view?: View): Recurring {
+    const item: Recurring = {
+        id: row.id,
+        name: row.name,
+        kind: row.kind,
+        tagIds: row.tagIds,
+        accountId: row.accountId,
+        amount: row.amount,
+        currency: row.currency as Currency,
+        cadence: row.cadence,
+        anchor: row.anchor,
+        nextDue: row.nextDue,
+        paused: row.paused,
+        shown: shown(view, row.amount, row.currency),
+    };
+
+    if (row.toAccountId) item.toAccountId = row.toAccountId;
+    if (row.toAmount !== null) item.toAmount = row.toAmount;
+
+    return item;
 }

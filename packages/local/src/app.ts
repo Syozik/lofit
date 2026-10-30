@@ -3,6 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import { accountsRoute } from "./routes/accounts";
 import { budgetsRoute } from "./routes/budgets";
 import { groupsRoute } from "./routes/groups";
+import { recurringRoute } from "./routes/recurring";
 import { settingsRoute } from "./routes/settings";
 import { tagsRoute } from "./routes/tags";
 import { transactionsRoute } from "./routes/transactions";
@@ -22,6 +23,7 @@ export function localApp(store: Store) {
         .route("/budgets", budgetsRoute(store))
         .route("/snapshots", new Hono().get("/", (c) => c.json(store.data.snapshots)))
         .route("/settings", settingsRoute(store))
+        .route("/recurring", recurringRoute(store))
         .route("/prices", pricesRoute)
         .route("/imports", importsRoute);
 

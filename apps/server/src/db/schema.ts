@@ -4,7 +4,7 @@ import {
     TAG_KINDS,
     TRANSACTION_KINDS,
 } from "@lofit/domain";
-import type { AccountChange, AccountDetail, Cents, QuoteRef } from "@lofit/domain";
+import type { AccountChange, AccountDetail, Cadence, Cents, QuoteRef } from "@lofit/domain";
 import { sql } from "drizzle-orm";
 import {
     bigint,
@@ -230,6 +230,40 @@ export const transactions = pgTable(
         index("transactions_user_occurred_idx").on(t.userId, t.occurredAt.desc()),
         check("transactions_destination_only_on_transfer", sql`${t.toAccountId} is null or ${t.kind} = 'transfer'`),
         check("transactions_not_to_itself", sql`${t.toAccountId} is null or ${t.toAccountId} <> ${t.accountId}`),
+    ],
+);
+
+export const recurring = pgTable(
+    "recurring",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        userId: owner(),
+        name: text("name").notNull(),
+        kind: transactionKind("kind").notNull(),
+        tagIds: jsonb("tag_ids").$type<string[]>().notNull().default([]),
+        accountId: uuid("account_id").notNull(),
+        toAccountId: uuid("to_account_id"),
+        amount: money("amount").notNull(),
+        toAmount: money("to_amount"),
+        currency: text("currency").notNull(),
+        cadence: text("cadence").$type<Cadence>().notNull(),
+        anchor: date("anchor", { mode: "string" }).notNull(),
+        nextDue: date("next_due", { mode: "string" }).notNull(),
+        paused: boolean("paused").notNull().default(false),
+        createdAt: instant("created_at").notNull().defaultNow(),
+    },
+    (t) => [
+        foreignKey({
+            name: "recurring_account_fk",
+            columns: [t.accountId, t.userId],
+            foreignColumns: [accounts.id, accounts.userId],
+        }).onDelete("cascade"),
+        foreignKey({
+            name: "recurring_to_account_fk",
+            columns: [t.toAccountId, t.userId],
+            foreignColumns: [accounts.id, accounts.userId],
+        }).onDelete("cascade"),
+        index("recurring_due_idx").on(t.nextDue),
     ],
 );
 

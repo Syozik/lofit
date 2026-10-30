@@ -48,3 +48,5 @@ export {
     signedWholeMoney,
 } from "./accounts";
 export { currencyFormat, numberFormat, wholeNumber } from "./intl";
+export type { UpcomingSpend } from "./upcoming";
+export { upcomingSpend } from "./upcoming";

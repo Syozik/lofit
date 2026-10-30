@@ -1,6 +1,7 @@
 import { DEFAULT_GROUP_NAMES, DEFAULT_TAGS, EURO, INVESTMENTS_GROUP, isCurrency } from "@lofit/domain";
-import type { Account, Budget, Group, Settings, Snapshot, Tag, Transaction } from "@lofit/domain";
+import type { Account, Budget, Group, Recurring, Settings, Snapshot, Tag, Transaction } from "@lofit/domain";
 import { newId } from "./ids";
+import { logDue } from "./recurring";
 import { recordSnapshot } from "./snapshots";
 
 export type KeyValueStorage = {
@@ -11,6 +12,7 @@ export type KeyValueStorage = {
 
 export type StoredAccount = Omit<Account, "currency" | "nativeBalance"> & { createdAt: string };
 export type StoredTransaction = Transaction & { createdAt: string };
+export type StoredRecurring = Omit<Recurring, "shown">;
 
 export type Ledger = {
     groups: Group[];
@@ -19,6 +21,7 @@ export type Ledger = {
     tags: Tag[];
     budgets: Budget[];
     snapshots: Snapshot[];
+    recurring: StoredRecurring[];
 };
 
 export type Collection = keyof Ledger;
@@ -30,6 +33,7 @@ const COLLECTIONS: readonly Collection[] = [
     "tags",
     "budgets",
     "snapshots",
+    "recurring",
 ];
 
 const PREFIX = "lofit-local:";
@@ -46,7 +50,7 @@ export type Store = {
 };
 
 function emptyLedger(): Ledger {
-    return { groups: [], accounts: [], transactions: [], tags: [], budgets: [], snapshots: [] };
+    return { groups: [], accounts: [], transactions: [], tags: [], budgets: [], snapshots: [], recurring: [] };
 }
 
 function seed(data: Ledger): void {
@@ -104,7 +108,8 @@ export function createStore(storage: KeyValueStorage): Store {
             const text = stored[index];
             data[key] = text ? JSON.parse(text) : [];
         });
-        await save();
+        if (logDue(data, today())) await save("recurring", "transactions", "accounts");
+        else await save();
     }
 
     function start(): Promise<void> {

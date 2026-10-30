@@ -12,7 +12,7 @@ type Props = {
     onEdit?: (transaction: Transaction) => void;
     onDelete?: (transaction: Transaction) => void;
     onTag?: (tagId: string) => void;
-    selectedTags?: readonly string[];
+    selectedTags?: readonly string[] | undefined;
     viewedFrom?: string;
 };
 

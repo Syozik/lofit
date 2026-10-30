@@ -38,14 +38,15 @@ type RowProps = {
     spent: Cents;
     limit: Cents;
     period: string;
+    upcoming?: number;
     selected?: boolean;
     dimmed?: boolean;
     onPress?: () => void;
 };
 
-export function BudgetRow({ label, spent, limit, period, selected = false, dimmed = false, onPress }: RowProps) {
+export function BudgetRow({ label, spent, limit, period, upcoming = 0, selected = false, dimmed = false, onPress }: RowProps) {
     const styles = useStyles(makeStyles);
-    const status = budgetStatus(spent, limit, period);
+    const status = budgetStatus(spent, limit, period, upcoming);
     return (
         <Pressable
             disabled={!onPress}

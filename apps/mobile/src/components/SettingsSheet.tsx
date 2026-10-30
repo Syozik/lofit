@@ -1,4 +1,15 @@
-import { changePassword, deleteUser, useDisplayCurrency, useUpdateSettings } from "@lofit/api";
+import {
+    changePassword,
+    deleteUser,
+    useDisplayCurrency,
+    useRecurring,
+    useRemoveRecurring,
+    useUpdateRecurring,
+    useUpdateSettings,
+} from "@lofit/api";
+import { cadenceLabel, euros, formatAmount, withSymbol } from "@lofit/domain";
+import type { Recurring } from "@lofit/domain";
+import { dayFormat, parsePositive } from "@lofit/view";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -106,6 +117,103 @@ function PasswordForm() {
     );
 }
 
+function RecurringItem({ item }: { item: Recurring }) {
+    const styles = useStyles(makeStyles);
+    const update = useUpdateRecurring();
+    const remove = useRemoveRecurring();
+    const [amount, setAmount] = useState<string | null>(null);
+    const typed = amount === null ? undefined : parsePositive(amount);
+    const failure = update.error ?? remove.error;
+
+    function saveAmount() {
+        if (!typed) return;
+        const signed = item.kind === "income" ? euros(typed) : euros(-typed);
+        update.mutate({ id: item.id, patch: { amount: signed } }, { onSuccess: () => setAmount(null) });
+    }
+
+    return (
+        <View style={[styles.recurring, item.paused && styles.paused]}>
+            <View style={styles.itemRow}>
+                <View style={styles.settingText}>
+                    <Text style={styles.settingName}>{item.name}</Text>
+                    <Text style={styles.settingHint}>
+                        {cadenceLabel(item)} ·{" "}
+                        {item.paused ? "paused" : `next ${dayFormat.format(new Date(`${item.nextDue}T00:00:00Z`))}`}
+                    </Text>
+                </View>
+                <Text style={styles.settingName}>
+                    {item.amount > 0 ? "+" : "−"}
+                    {withSymbol(formatAmount(item.amount), item.currency)}
+                </Text>
+            </View>
+            {amount === null ? (
+                <View style={styles.row}>
+                    <Button
+                        variant="ghost"
+                        label="Edit amount"
+                        onPress={() => setAmount((Math.abs(item.amount) / 100).toFixed(2))}
+                    />
+                    <Button
+                        variant="ghost"
+                        label={item.paused ? "Resume" : "Pause"}
+                        disabled={update.isPending}
+                        onPress={() => update.mutate({ id: item.id, patch: { paused: !item.paused } })}
+                    />
+                    <Button
+                        variant="ghost"
+                        label="Delete"
+                        labelStyle={styles.danger}
+                        disabled={remove.isPending}
+                        onPress={() => remove.mutate(item.id)}
+                    />
+                </View>
+            ) : (
+                <View style={styles.section}>
+                    <Field
+                        label="Amount"
+                        value={amount}
+                        onChangeText={setAmount}
+                        keyboardType="decimal-pad"
+                        autoFocus
+                        onSubmitEditing={saveAmount}
+                    />
+                    <View style={styles.row}>
+                        <Button variant="secondary" label="Cancel" onPress={() => setAmount(null)} style={{ flex: 1 }} />
+                        <Button
+                            label="Save"
+                            disabled={!typed || update.isPending}
+                            onPress={saveAmount}
+                            style={{ flex: 1 }}
+                        />
+                    </View>
+                </View>
+            )}
+            {failure && <Text style={styles.error}>{failure.message}</Text>}
+        </View>
+    );
+}
+
+function RecurringList() {
+    const styles = useStyles(makeStyles);
+    const items = useRecurring().data ?? [];
+
+    return (
+        <View style={styles.section}>
+            <View style={styles.settingText}>
+                <Text style={styles.settingName}>Recurring</Text>
+                <Text style={styles.settingHint}>
+                    {items.length === 0
+                        ? "Pick “Repeats” when logging an entry and it logs itself from then on."
+                        : "These log themselves on their due date."}
+                </Text>
+            </View>
+            {items.map((item) => (
+                <RecurringItem key={item.id} item={item} />
+            ))}
+        </View>
+    );
+}
+
 function DeleteAccount() {
     const styles = useStyles(makeStyles);
     const client = useQueryClient();
@@ -193,6 +301,10 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
                 />
             </View>
 
+            <View style={styles.divided}>
+                <RecurringList />
+            </View>
+
             {!guest && (
                 <>
                     <View style={styles.divided}>
@@ -220,6 +332,15 @@ const makeStyles = (colors: Colors) =>
         warning: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: colors.quiet },
         danger: { color: colors.danger },
         row: { flexDirection: "row", gap: space[3] },
+        recurring: {
+            gap: space[2],
+            padding: space[3],
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.divider,
+            borderRadius: 8,
+        },
+        paused: { opacity: 0.6 },
+        itemRow: { flexDirection: "row", alignItems: "center", gap: space[4] },
         settingRow: { flexDirection: "row", alignItems: "center", gap: space[4], marginBottom: space[8] },
         settingText: { flex: 1, gap: 2 },
         settingName: { fontFamily: fonts.regular, fontSize: 14, color: colors.text },

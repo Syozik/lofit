@@ -2,6 +2,7 @@ import {
     useAccounts,
     useAddHolding,
     useAddTag,
+    useAddRecurring,
     useAddTransaction,
     useRates,
     useGroups,
@@ -14,10 +15,13 @@ import type { Screenshot } from "@lofit/api";
 import {
     ASSET_TYPE_LABELS,
     ASSET_TYPES,
+    CADENCE_LABELS,
+    CADENCES,
     convertAt,
     currencySymbol,
     displayCurrency,
     euros,
+    following,
     investingGroups,
     isCurrency,
     KIND_LABELS,
@@ -26,6 +30,7 @@ import {
 import type {
     Account,
     AssetType,
+    Cadence,
     Currency,
     ImportDraft,
     NewHolding,
@@ -137,6 +142,7 @@ export function EntrySheet({ entry, onClose }: Props) {
     const { data: groups } = useGroups();
     const { data: tags } = useTags();
     const addEntry = useAddTransaction();
+    const addRecurring = useAddRecurring();
     const addPosition = useAddHolding();
     const addNewTag = useAddTag();
     const rename = useRenameTag();
@@ -165,6 +171,7 @@ export function EntrySheet({ entry, onClose }: Props) {
     const [custodianId, setCustodianId] = useState("");
     const [quantity, setQuantity] = useState("");
     const [picked, setCurrency] = useState<Currency | null>(entry?.original?.currency ?? null);
+    const [repeats, setRepeats] = useState<Cadence | null>(null);
     const [received, setReceived] = useState(entry?.toAmount ? (entry.toAmount / 100).toFixed(2) : "");
     const [choosing, setChoosing] = useState(false);
     const [liveSymbol, setLiveSymbol] = useState("");
@@ -304,6 +311,23 @@ export function EntrySheet({ entry, onClose }: Props) {
             return;
         } else {
             addEntry.mutate(transaction);
+            if (repeats) {
+                addRecurring.mutate(
+                    {
+                        name: transaction.name,
+                        kind: transaction.kind,
+                        tagIds: transaction.tagIds,
+                        accountId: transaction.accountId,
+                        ...(transaction.toAccountId ? { toAccountId: transaction.toAccountId } : {}),
+                        amount: transaction.amount,
+                        ...(transaction.toAmount ? { toAmount: transaction.toAmount } : {}),
+                        currency,
+                        cadence: repeats,
+                        anchor: day,
+                    },
+                    { onError: (error) => show(`Couldn't set up the repeat: ${error.message}`) },
+                );
+            }
             show(`Saved ${name.trim()}`);
         }
         onClose();
@@ -628,6 +652,27 @@ export function EntrySheet({ entry, onClose }: Props) {
                         />
                     )}
                     <DateField label="Date" day={day} onChange={setDay} />
+                    {!editing && !queue && (
+                        <View style={styles.field}>
+                            <Text style={styles.label}>Repeats</Text>
+                            <ChipRow scroll>
+                                <Chip label="Once" selected={repeats === null} onPress={() => setRepeats(null)} />
+                                {CADENCES.map((cadence) => (
+                                    <Chip
+                                        key={cadence}
+                                        label={CADENCE_LABELS[cadence]}
+                                        selected={repeats === cadence}
+                                        onPress={() => setRepeats(cadence)}
+                                    />
+                                ))}
+                            </ChipRow>
+                            {repeats && (
+                                <Text style={styles.total}>
+                                    Logged automatically from {following(day, repeats)}. Manage it in Settings.
+                                </Text>
+                            )}
+                        </View>
+                    )}
                 </>
             )}
 

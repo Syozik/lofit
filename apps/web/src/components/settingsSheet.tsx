@@ -1,4 +1,15 @@
-import { changePassword, deleteUser, useDisplayCurrency, useUpdateSettings } from "@lofit/api";
+import {
+    changePassword,
+    deleteUser,
+    useDisplayCurrency,
+    useRecurring,
+    useRemoveRecurring,
+    useUpdateRecurring,
+    useUpdateSettings,
+} from "@lofit/api";
+import { cadenceLabel, euros, formatAmount, withSymbol } from "@lofit/domain";
+import type { Recurring } from "@lofit/domain";
+import { dayFormat, parsePositive } from "@lofit/view";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { ThemePreference } from "../theme";
@@ -99,6 +110,105 @@ function ChangePassword({ onSaved }: { onSaved: (message: string) => void }) {
                 </button>
             </div>
         </form>
+    );
+}
+
+function RecurringItem({ item }: { item: Recurring }) {
+    const update = useUpdateRecurring();
+    const remove = useRemoveRecurring();
+    const [amount, setAmount] = useState<string | null>(null);
+    const typed = amount === null ? undefined : parsePositive(amount);
+
+    function saveAmount() {
+        if (!typed) return;
+        const signed = item.kind === "income" ? euros(typed) : euros(-typed);
+        update.mutate({ id: item.id, patch: { amount: signed } }, { onSuccess: () => setAmount(null) });
+    }
+
+    return (
+        <div className={`settings-recurring-item ${item.paused ? "paused" : ""}`}>
+            <div className="settings-row">
+                <div className="settings-row-text">
+                    <span>{item.name}</span>
+                    <span className="gate-hint">
+                        {cadenceLabel(item)} ·{" "}
+                        {item.paused ? "paused" : `next ${dayFormat.format(new Date(`${item.nextDue}T00:00:00Z`))}`}
+                    </span>
+                </div>
+                <span className="settings-recurring-amount">
+                    {item.amount > 0 ? "+" : "−"}
+                    {withSymbol(formatAmount(item.amount), item.currency)}
+                </span>
+            </div>
+            {amount === null ? (
+                <div className="settings-recurring-actions">
+                    <button className="btn btn-ghost" onClick={() => setAmount((Math.abs(item.amount) / 100).toFixed(2))}>
+                        Edit amount
+                    </button>
+                    <button
+                        className="btn btn-ghost"
+                        disabled={update.isPending}
+                        onClick={() => update.mutate({ id: item.id, patch: { paused: !item.paused } })}
+                    >
+                        {item.paused ? "Resume" : "Pause"}
+                    </button>
+                    <button
+                        className="btn btn-ghost settings-recurring-delete"
+                        disabled={remove.isPending}
+                        onClick={() => remove.mutate(item.id)}
+                    >
+                        Delete
+                    </button>
+                </div>
+            ) : (
+                <form
+                    className="settings-recurring-actions"
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        saveAmount();
+                    }}
+                >
+                    <input
+                        className="input"
+                        inputMode="decimal"
+                        autoFocus
+                        aria-label={`Amount for ${item.name}`}
+                        value={amount}
+                        onChange={(event) => setAmount(event.target.value)}
+                    />
+                    <button className="btn btn-secondary" type="button" onClick={() => setAmount(null)}>
+                        Cancel
+                    </button>
+                    <button className="btn btn-primary" type="submit" disabled={!typed || update.isPending}>
+                        Save
+                    </button>
+                </form>
+            )}
+            {(update.error ?? remove.error) && (
+                <span className="gate-error">{(update.error ?? remove.error)?.message}</span>
+            )}
+        </div>
+    );
+}
+
+function RecurringList() {
+    const recurring = useRecurring();
+    const items = recurring.data ?? [];
+
+    return (
+        <div className="settings-password settings-recurring">
+            <div className="settings-row-text">
+                <span>Recurring</span>
+                <span className="gate-hint">
+                    {items.length === 0
+                        ? "Pick “Repeats” when logging an entry and it logs itself from then on."
+                        : "These log themselves on their due date."}
+                </span>
+            </div>
+            {items.map((item) => (
+                <RecurringItem key={item.id} item={item} />
+            ))}
+        </div>
     );
 }
 
@@ -216,6 +326,8 @@ export function SettingsSheet({ onClose, onSaved }: Props) {
                     </span>
                     {updateSettings.error && <span className="gate-error">{updateSettings.error.message}</span>}
                 </label>
+
+                <RecurringList />
 
                 <ChangePassword onSaved={onSaved} />
 

@@ -101,7 +101,8 @@ export function accountsRoute(store: Store) {
             const gone = data.transactions.length - kept.length;
             data.transactions = kept;
             data.accounts = data.accounts.filter((account) => account.id !== id);
-            await store.save("accounts", "transactions");
+            data.recurring = data.recurring.filter((item) => item.accountId !== id && item.toAccountId !== id);
+            await store.save("accounts", "transactions", "recurring");
 
             return c.json({ transactions: gone, holdings: 0 });
         });

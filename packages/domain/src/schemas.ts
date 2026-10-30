@@ -4,6 +4,7 @@ import { isDay, isInstant } from "./transaction";
 import { CURRENCIES } from "./money";
 import { ASSET_TYPES, TRANSACTION_KINDS } from "./types";
 import { TAG_KINDS } from "./tag";
+import { CADENCES } from "./recurring";
 
 const centsSchema = z.int().transform((value) => value as Cents);
 
@@ -149,4 +150,39 @@ export const newGroupSchema = z.object({
 
 export const settingsSchema = z.object({
     currency: z.enum(CURRENCIES),
+});
+
+export const newRecurringSchema = z
+    .object({
+        id: z.uuid().optional(),
+        name: z.string().trim().min(1).max(200),
+        kind: z.enum(TRANSACTION_KINDS),
+        tagIds: z.array(z.uuid()).max(MAX_TAGS).default([]),
+        accountId: z.uuid(),
+        toAccountId: z.uuid().optional(),
+        amount: centsSchema,
+        toAmount: centsSchema.optional(),
+        currency: z.enum(CURRENCIES),
+        cadence: z.enum(CADENCES),
+        anchor: daySchema,
+    })
+    .superRefine((entry, ctx) => {
+        if (entry.kind === "transfer" ? !entry.toAccountId : entry.toAccountId) {
+            ctx.addIssue({ code: "custom", path: ["toAccountId"], message: "Only transfers have a destination" });
+        }
+        if (entry.toAccountId === entry.accountId) {
+            ctx.addIssue({ code: "custom", path: ["toAccountId"], message: "A transfer needs two different accounts" });
+        }
+        const signOk = entry.kind === "income" ? entry.amount > 0 : entry.amount < 0;
+        if (!signOk) {
+            ctx.addIssue({ code: "custom", path: ["amount"], message: "Income is positive; expenses and transfers are negative" });
+        }
+    });
+
+export const recurringPatchSchema = z.object({
+    name: z.string().trim().min(1).max(200).optional(),
+    amount: centsSchema.optional(),
+    cadence: z.enum(CADENCES).optional(),
+    nextDue: daySchema.optional(),
+    paused: z.boolean().optional(),
 });
