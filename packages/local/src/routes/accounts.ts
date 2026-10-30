@@ -1,4 +1,4 @@
-import { restated } from "@lofit/domain";
+import { addCents, balanceChanges, negateCents, restated } from "@lofit/domain";
 import { accountBalanceSchema, newAccountSchema } from "@lofit/domain/schemas";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -87,6 +87,17 @@ export function accountsRoute(store: Store) {
             const kept = data.transactions.filter(
                 (entry) => entry.accountId !== id && entry.toAccountId !== id,
             );
+            for (const entry of data.transactions) {
+                if (kept.includes(entry)) continue;
+                for (const change of balanceChanges(entry)) {
+                    if (change.accountId === id) continue;
+                    data.accounts = data.accounts.map((account) =>
+                        account.id === change.accountId
+                            ? { ...account, balance: addCents(account.balance, negateCents(change.delta)) }
+                            : account,
+                    );
+                }
+            }
             const gone = data.transactions.length - kept.length;
             data.transactions = kept;
             data.accounts = data.accounts.filter((account) => account.id !== id);

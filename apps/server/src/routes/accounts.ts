@@ -1,7 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
-import { restated } from "@lofit/domain";
+import { balanceChanges, negateCents, restated } from "@lofit/domain";
 import { accountBalanceSchema, newAccountSchema } from "@lofit/domain/schemas";
-import { and, asc, eq, or } from "drizzle-orm";
+import { and, asc, eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -142,7 +142,22 @@ export const accountsRoute = new Hono<AuthEnv>()
                             or(eq(transactions.accountId, id), eq(transactions.toAccountId, id)),
                         ),
                     )
-                    .returning({ id: transactions.id });
+                    .returning();
+
+                for (const entry of gone) {
+                    const changes = balanceChanges({
+                        accountId: entry.accountId,
+                        toAccountId: entry.toAccountId ?? undefined,
+                        amount: entry.amount,
+                        toAmount: entry.toAmount ?? undefined,
+                    });
+                    for (const change of changes.filter((other) => other.accountId !== id)) {
+                        await tx
+                            .update(accounts)
+                            .set({ balance: sql`${accounts.balance} + ${negateCents(change.delta)}` })
+                            .where(and(eq(accounts.id, change.accountId), eq(accounts.userId, userId)));
+                    }
+                }
 
                 const sold = await tx
                     .delete(holdings)
