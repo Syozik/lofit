@@ -1,6 +1,8 @@
+export type { BudgetState, BudgetStatus } from "./budgets";
+export { budgetStatus } from "./budgets";
 export type { Segment, Slice } from "./donut";
 export { toSegments } from "./donut";
-export { monthName, shortEuros, signedAmount, signedPercent, yearOf } from "./format";
+export { monthName, shortMoney, signedAmount, signedPercent, yearOf } from "./format";
 export { centreLabel, kickerFor, netWorthSlices } from "./netWorth";
 export type { ColorToken, Palette } from "./palette";
 export {
@@ -14,7 +16,10 @@ export {
 } from "./palette";
 export type { SpendSlices } from "./spending";
 export { spendSlices, UNTAGGED_KEY } from "./spending";
-export { amountFor, monogram, transactionMeta } from "./transaction";
+export type { MetaParts } from "./transaction";
+export { amountFor, metaParts, monogram, transactionMeta } from "./transaction";
+export type { FilterOption, SpendFilter } from "./filter";
+export { filterOptions, filterTransactions, isFiltered, litSlices, matchedKeys, NO_FILTER, toggled, toggledAll } from "./filter";
 export type { LinePoint, LineScale } from "./chart";
 export {
     formatChange,
@@ -39,6 +44,6 @@ export {
     latestPricing,
     parseAmount,
     parsePositive,
-    signedWholeEuros,
+    signedWholeMoney,
 } from "./accounts";
 export { currencyFormat, numberFormat, wholeNumber } from "./intl";

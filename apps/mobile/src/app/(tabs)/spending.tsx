@@ -1,13 +1,29 @@
 import { useAccounts, useBudgets, useTags, useTransactions } from "@lofit/api";
-import { byRecency, earliestPeriod, formatAmount, inPeriod, periodOf, primaryTagId, shiftPeriod, spendByTag, tagsFor } from "@lofit/domain";
+import { byRecency, earliestPeriod, formatAmount, inPeriod, periodOf, shiftPeriod, spendByTag, tagsFor, withSymbol } from "@lofit/domain";
 import type { Transaction } from "@lofit/domain";
-import { shortEuros, spendSlices, UNTAGGED_KEY } from "@lofit/view";
+import {
+    budgetStatus,
+    filterOptions,
+    filterTransactions,
+    isFiltered,
+    litSlices,
+    matchedKeys,
+    NO_FILTER,
+    shortMoney,
+    spendSlices,
+    toggled,
+    toggledAll,
+    UNTAGGED_KEY,
+} from "@lofit/view";
+import type { SpendFilter } from "@lofit/view";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { BudgetRow, Meter, StatusNote } from "../../components/BudgetMeter";
 import { BudgetsSheet } from "../../components/BudgetsSheet";
 import { Donut } from "../../components/Donut";
 import { ListScreen, Screen, Status, makeText } from "../../components/Screen";
+import { SpendFilters } from "../../components/SpendFilters";
 import { TransactionRow } from "../../components/TransactionRow";
 import { useOpenEntry } from "../../context/entry";
 import { useRemoveTransaction } from "../../hooks/useRemoveTransaction";
@@ -35,7 +51,7 @@ export default function SpendingScreen() {
     const tags = useTags();
     const remove = useRemoveTransaction();
     const openEntry = useOpenEntry();
-    const [focused, setFocused] = useState<string | null>(null);
+    const [filter, setFilter] = useState<SpendFilter>(NO_FILTER);
     const [period, setPeriod] = useState(currentPeriod);
     const [editingBudgets, setEditingBudgets] = useState(false);
 
@@ -65,24 +81,34 @@ export default function SpendingScreen() {
 
     function shift(months: number) {
         setPeriod((value) => shiftPeriod(value, months));
-        setFocused(null);
     }
 
     const expenseIds = new Set(tagsFor(tags.data, "expense").map((tag) => tag.id));
     const expenseBudgets = budgets.data.filter((budget) => expenseIds.has(budget.tagId));
-    const summary = spendByTag(transactions.data, expenseBudgets, tags.data, period);
     const accountNames = new Map(accounts.data.map((account) => [account.id, account.name]));
     const tagNames = new Map(tags.data.map((tag) => [tag.id, tag.name]));
-    const { slices, tagsOf } = spendSlices(summary.tags, tags.data);
-    const focusedTags = focused ? tagsOf.get(focused) : undefined;
     const monthly = inPeriod(transactions.data, period);
-    const activity = byRecency(
-        focusedTags
-            ? monthly.filter((transaction) => focusedTags.has(primaryTagId(transaction) ?? UNTAGGED_KEY))
-            : monthly,
-    );
+    const filtered = isFiltered(filter);
+    const shown = filtered ? filterTransactions(monthly, filter, tagNames, accountNames) : monthly;
+    const options = filterOptions(monthly, tags.data, accountNames, filter);
+    const summary = spendByTag(monthly, expenseBudgets, tags.data, period);
+    const matching = spendByTag(shown, expenseBudgets, tags.data, period);
+    const matched = matchedKeys(matching);
+    const { slices, tagsOf } = spendSlices(summary.tags, tags.data);
+    const lit = filtered ? litSlices(tagsOf, matched) : undefined;
+    const activity = byRecency(shown);
     const spentByTag = new Map(summary.tags.flatMap((row) => (row.tagId ? [[row.tagId, row.spent] as const] : [])));
-    const focusedLabel = focusedTags ? slices.find((slice) => slice.key === focused)?.label : undefined;
+    const total = budgetStatus(summary.spent, summary.budgeted, period);
+    const budgeted = summary.tags.flatMap((row) => (row.budget ? [{ ...row, limit: row.budget.limit }] : []));
+
+    function focusSlice(key: string | null) {
+        const group = key ? tagsOf.get(key) : undefined;
+        setFilter({ ...filter, tagIds: group ? toggledAll(filter.tagIds, group) : [] });
+    }
+
+    function toggleTag(tagId: string) {
+        setFilter({ ...filter, tagIds: toggled(filter.tagIds, tagId) });
+    }
 
     const header = (
         <>
@@ -114,7 +140,7 @@ export default function SpendingScreen() {
                             <ChevronRight size={16} color={canGoForward ? colors.quiet : colors.chip} />
                         </Pressable>
                     </View>
-                    <Text style={styles.amount}>€ {formatAmount(summary.spent)}</Text>
+                    <Text style={styles.amount}>{withSymbol(formatAmount(summary.spent))}</Text>
                 </View>
                 <Pressable
                     accessibilityRole="button"
@@ -125,8 +151,8 @@ export default function SpendingScreen() {
                 >
                     {summary.budgeted > 0 ? (
                         <>
-                            <Text style={styles.of}>of € {formatAmount(summary.budgeted)}</Text>
-                            <Text style={styles.left}>€ {formatAmount(summary.left)} left</Text>
+                            <Text style={styles.of}>of {withSymbol(formatAmount(summary.budgeted))}</Text>
+                            <StatusNote status={total} style={styles.left} />
                         </>
                     ) : (
                         <Text style={styles.setBudget}>Set a budget</Text>
@@ -134,20 +160,48 @@ export default function SpendingScreen() {
                 </Pressable>
             </View>
 
+            {summary.budgeted > 0 && <Meter status={total} thick />}
+
+            <SpendFilters filter={filter} options={options} onChange={setFilter} />
+
             {slices.length > 0 && (
                 <Donut
                     slices={slices}
-                    focused={focusedTags ? focused : null}
-                    onFocus={setFocused}
-                    label="Spent"
-                    value={shortEuros(summary.spent)}
+                    focused={null}
+                    lit={lit}
+                    onFocus={focusSlice}
+                    label={filtered ? "Matching" : "Spent"}
+                    value={shortMoney(filtered ? matching.spent : summary.spent)}
                 />
             )}
 
+            {budgeted.length > 0 && (
+                <View>
+                    <View style={styles.sectionHead}>
+                        <Text style={text.kicker}>Budgets</Text>
+                        <Pressable hitSlop={8} onPress={() => setEditingBudgets(true)} style={styles.showAll}>
+                            <Text style={styles.showAllText}>Edit</Text>
+                        </Pressable>
+                    </View>
+                    {budgeted.map((row) => (
+                        <BudgetRow
+                            key={row.tagId ?? "untagged"}
+                            label={row.label}
+                            spent={row.spent}
+                            limit={row.limit}
+                            period={period}
+                            selected={filter.tagIds.includes(row.tagId ?? UNTAGGED_KEY)}
+                            dimmed={filtered && !matched.has(row.tagId ?? UNTAGGED_KEY)}
+                            onPress={() => toggleTag(row.tagId ?? UNTAGGED_KEY)}
+                        />
+                    ))}
+                </View>
+            )}
+
             <View style={styles.sectionHead}>
-                <Text style={text.kicker}>{focusedLabel ?? "All activity"}</Text>
-                {focusedTags && (
-                    <Pressable hitSlop={8} onPress={() => setFocused(null)} style={styles.showAll}>
+                <Text style={text.kicker}>{filtered ? "Matching activity" : "All activity"}</Text>
+                {filtered && (
+                    <Pressable hitSlop={8} onPress={() => setFilter(NO_FILTER)} style={styles.showAll}>
                         <Text style={styles.showAllText}>Show all</Text>
                     </Pressable>
                 )}
@@ -160,7 +214,13 @@ export default function SpendingScreen() {
             <ListScreen<Transaction>
                 header={header}
                 data={activity}
-                empty={<Text style={styles.empty}>No activity in {formatPeriod(period, monthFormat)}</Text>}
+                empty={
+                    <Text style={styles.empty}>
+                        {filtered
+                            ? `Nothing in ${formatPeriod(period, monthFormat)} matches`
+                            : `No activity in ${formatPeriod(period, monthFormat)}`}
+                    </Text>
+                }
                 keyExtractor={(transaction) => transaction.id}
                 renderItem={({ item }) => (
                     <TransactionRow
@@ -169,6 +229,8 @@ export default function SpendingScreen() {
                         tagNames={tagNames}
                         onEdit={openEntry}
                         onDelete={remove}
+                        onTag={toggleTag}
+                        selectedTags={filter.tagIds}
                     />
                 )}
                 refreshing={refreshing}

@@ -1,4 +1,4 @@
-import { balanceChanges, KIND_LABELS } from "@lofit/domain";
+import { balanceChanges, displayCurrency, formatAmount, KIND_LABELS, withSymbol } from "@lofit/domain";
 import type { Transaction } from "@lofit/domain";
 
 const dayFormat = new Intl.DateTimeFormat("en-GB", {
@@ -7,15 +7,19 @@ const dayFormat = new Intl.DateTimeFormat("en-GB", {
     timeZone: "UTC",
 });
 
-export function transactionMeta(
+export type MetaParts = {
+    lead: string;
+    tags: { id: string; name: string }[];
+    kind: string;
+    where: string;
+};
+
+export function metaParts(
     transaction: Transaction,
     accountNames: ReadonlyMap<string, string>,
     tagNames: ReadonlyMap<string, string>,
     viewedFrom?: string,
-): string {
-    const labels = transaction.tagIds.map((id) => tagNames.get(id) ?? "Unknown tag");
-    const what = labels.length > 0 ? labels.join(" · ") : KIND_LABELS[transaction.kind];
-
+): MetaParts {
     const from = accountNames.get(transaction.accountId) ?? "Unknown account";
     const to = transaction.toAccountId ? accountNames.get(transaction.toAccountId) : undefined;
     const where = viewedFrom
@@ -28,7 +32,28 @@ export function transactionMeta(
           ? `${from} → ${to}`
           : from;
 
-    return [dayFormat.format(new Date(transaction.occurredAt)), what, where].filter(Boolean).join(" · ");
+    const paid =
+        transaction.original && transaction.original.currency !== displayCurrency()
+            ? withSymbol(formatAmount(transaction.original.amount), transaction.original.currency)
+            : "";
+
+    return {
+        lead: [dayFormat.format(new Date(transaction.occurredAt)), paid].filter(Boolean).join(" · "),
+        tags: transaction.tagIds.map((id) => ({ id, name: tagNames.get(id) ?? "Unknown tag" })),
+        kind: KIND_LABELS[transaction.kind],
+        where,
+    };
+}
+
+export function transactionMeta(
+    transaction: Transaction,
+    accountNames: ReadonlyMap<string, string>,
+    tagNames: ReadonlyMap<string, string>,
+    viewedFrom?: string,
+): string {
+    const parts = metaParts(transaction, accountNames, tagNames, viewedFrom);
+    const what = parts.tags.length > 0 ? parts.tags.map((tag) => tag.name).join(" · ") : parts.kind;
+    return [parts.lead, what, parts.where].filter(Boolean).join(" · ");
 }
 
 export function amountFor(transaction: Transaction, viewedFrom?: string): number {

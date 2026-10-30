@@ -1,4 +1,4 @@
-import { formatEuros } from "@lofit/domain";
+import { formatMoney } from "@lofit/domain";
 import { DIMMED_COLOR, toSegments } from "@lofit/view";
 import type { Slice } from "@lofit/view";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -29,14 +29,15 @@ type Props = {
     onFocus: (key: string | null) => void;
     label: string;
     value: string;
+    lit?: ReadonlySet<string> | undefined;
 };
 
-export function Donut({ slices, focused, onFocus, label, value }: Props) {
+export function Donut({ slices, focused, onFocus, label, value, lit }: Props) {
     const { tokenColor } = useTheme();
     const styles = useStyles(makeStyles);
     const segments = toSegments(slices);
-    const paint = (key: string, color: Slice["color"]) =>
-        tokenColor(!focused || key === focused ? color : DIMMED_COLOR);
+    const on = (key: string) => (lit ? lit.has(key) : !focused || key === focused);
+    const paint = (key: string, color: Slice["color"]) => tokenColor(on(key) ? color : DIMMED_COLOR);
 
     return (
         <View style={styles.composition}>
@@ -79,9 +80,9 @@ export function Donut({ slices, focused, onFocus, label, value }: Props) {
                     <Pressable
                         key={segment.key}
                         accessibilityRole="button"
-                        accessibilityState={{ selected: focused === segment.key }}
+                        accessibilityState={{ selected: lit ? lit.has(segment.key) : focused === segment.key }}
                         onPress={() => onFocus(focused === segment.key ? null : segment.key)}
-                        style={[styles.item, focused && focused !== segment.key ? styles.dimmed : null]}
+                        style={[styles.item, on(segment.key) ? null : styles.dimmed]}
                     >
                         <View style={styles.itemHead}>
                             <View style={[styles.dot, { backgroundColor: tokenColor(segment.color) }]} />
@@ -91,7 +92,7 @@ export function Donut({ slices, focused, onFocus, label, value }: Props) {
                             <Text style={styles.share}>{segment.share}%</Text>
                         </View>
                         <Text style={[styles.value, segment.value < 0 ? styles.negative : null]}>
-                            {formatEuros(segment.value)}
+                            {formatMoney(segment.value)}
                         </Text>
                     </Pressable>
                 ))}

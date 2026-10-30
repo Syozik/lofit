@@ -1,6 +1,6 @@
-import { cents, formatAmount } from "@lofit/domain";
+import { cents, formatAmount, withSymbol } from "@lofit/domain";
 import type { Transaction } from "@lofit/domain";
-import { amountFor, monogram, transactionMeta } from "@lofit/view";
+import { amountFor, metaParts, monogram, transactionMeta } from "@lofit/view";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { Colors } from "../theme";
 import { fonts, radius, useStyles } from "../theme";
@@ -14,6 +14,8 @@ type Props = {
     onPress?: (transaction: Transaction) => void;
     onEdit?: (transaction: Transaction) => void;
     onDelete?: (transaction: Transaction) => void;
+    onTag?: (tagId: string) => void;
+    selectedTags?: readonly string[];
     surface?: string;
 };
 
@@ -25,9 +27,12 @@ export function TransactionRow({
     onPress,
     onEdit,
     onDelete,
+    onTag,
+    selectedTags = [],
     surface,
 }: Props) {
     const styles = useStyles(makeStyles);
+    const parts = onTag ? metaParts(transaction, accountNames, tagNames, viewedFrom) : undefined;
     const amount = amountFor(transaction, viewedFrom);
 
     const row = (
@@ -44,12 +49,36 @@ export function TransactionRow({
                     {transaction.name}
                 </Text>
                 <Text style={styles.meta} numberOfLines={1}>
-                    {transactionMeta(transaction, accountNames, tagNames, viewedFrom)}
+                    {parts && onTag ? (
+                        <>
+                            {parts.lead}
+                            {" · "}
+                            {parts.tags.length === 0
+                                ? parts.kind
+                                : parts.tags.map((tag, index) => (
+                                      <Text key={tag.id}>
+                                          {index > 0 && " · "}
+                                          <Text
+                                              accessibilityRole="button"
+                                              accessibilityLabel={`Show only ${tag.name}`}
+                                              suppressHighlighting
+                                              onPress={() => onTag(tag.id)}
+                                              style={[styles.tag, selectedTags.includes(tag.id) && styles.tagOn]}
+                                          >
+                                              {tag.name}
+                                          </Text>
+                                      </Text>
+                                  ))}
+                            {parts.where ? ` · ${parts.where}` : ""}
+                        </>
+                    ) : (
+                        transactionMeta(transaction, accountNames, tagNames, viewedFrom)
+                    )}
                 </Text>
             </View>
             <Text style={[styles.amount, amount > 0 ? styles.positive : null]}>
-                {amount > 0 ? "+ € " : "− € "}
-                {formatAmount(cents(amount))}
+                {amount > 0 ? "+" : "−"}
+                {withSymbol(formatAmount(cents(amount)))}
             </Text>
         </Pressable>
     );
@@ -79,6 +108,8 @@ const makeStyles = (colors: Colors) =>
             borderBottomColor: colors.divider,
         },
         pressed: { opacity: 0.6 },
+        tag: { textDecorationLine: "underline", textDecorationStyle: "dotted" },
+        tagOn: { color: colors.accent },
         mono: {
             width: 32,
             height: 32,

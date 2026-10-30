@@ -5,16 +5,31 @@ import {
     formatAmount,
     inPeriod,
     periodOf,
-    primaryTagId,
     shiftPeriod,
     spendByTag,
     tagsFor,
+    withSymbol,
 } from "@lofit/domain";
-import type { BudgetProgress, Transaction } from "@lofit/domain";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import type { Cents, Transaction } from "@lofit/domain";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useState } from "react";
 import { useRemoveTransaction } from "../useRemoveTransaction";
-import { monthName, spendSlices, UNTAGGED_KEY } from "@lofit/view";
+import {
+    budgetStatus,
+    filterOptions,
+    filterTransactions,
+    isFiltered,
+    litSlices,
+    matchedKeys,
+    monthName,
+    NO_FILTER,
+    shortMoney,
+    spendSlices,
+    toggled,
+    toggledAll,
+    UNTAGGED_KEY,
+} from "@lofit/view";
+import type { BudgetStatus, FilterOption, SpendFilter } from "@lofit/view";
 import { BudgetSheet } from "./budgetSheet";
 import { Donut } from "./donut";
 import { EntrySheet } from "./entrySheet";
@@ -32,23 +47,29 @@ function formatPeriod(period: string): string {
     return monthFormat.format(new Date(`${period}-01T00:00:00Z`));
 }
 
-function Meter({ pct, over }: { pct: number; over: boolean }) {
+function Meter({ status }: { status: BudgetStatus }) {
     return (
         <div className="spend-bar">
-            <div className={`spend-fill ${over ? "over" : ""}`} style={{ width: `${pct}%` }} />
+            <div className={`spend-fill ${status.state}`} style={{ width: `${status.pct}%` }} />
+            {status.pace !== undefined && (
+                <div
+                    className="spend-pace"
+                    title="Today"
+                    style={{ left: `${Math.round(status.pace * 100)}%` }}
+                />
+            )}
         </div>
     );
 }
 
-function BudgetBar({ budget }: { budget: BudgetProgress }) {
+function BudgetBar({ spent, limit, period }: { spent: Cents; limit: Cents; period: string }) {
+    const status = budgetStatus(spent, limit, period);
     return (
         <>
-            <Meter pct={budget.pct} over={budget.over} />
+            <Meter status={status} />
             <div className="spend-cat-foot">
-                <span className="spend-cat-limit">of € {formatAmount(budget.limit)}</span>
-                <span className={`spend-note ${budget.over ? "over" : ""}`}>
-                    € {formatAmount(budget.gap)} {budget.over ? "over" : "left"}
-                </span>
+                <span className="spend-cat-limit">of {withSymbol(formatAmount(limit))}</span>
+                <span className={`spend-note ${status.state}`}>{status.note}</span>
             </div>
         </>
     );
@@ -94,12 +115,69 @@ function MonthStep({
     );
 }
 
+function FilterBar({
+    filter,
+    options,
+    onChange,
+}: {
+    filter: SpendFilter;
+    options: { tags: FilterOption[]; accounts: FilterOption[] };
+    onChange: (filter: SpendFilter) => void;
+}) {
+    return (
+        <div className="spend-filters">
+            <label className="spend-search">
+                <Search size={14} strokeWidth={1.5} aria-hidden />
+                <input
+                    className="input"
+                    type="search"
+                    aria-label="Search this month"
+                    placeholder="Name, tag, or account"
+                    value={filter.query}
+                    onChange={(event) => onChange({ ...filter, query: event.target.value })}
+                />
+            </label>
+            <div className="spend-filter-chips">
+                {options.tags.map((option) => (
+                    <button
+                        key={option.id}
+                        className={`tag sheet-chip ${filter.tagIds.includes(option.id) ? "selected" : ""}`}
+                        aria-pressed={filter.tagIds.includes(option.id)}
+                        onClick={() => onChange({ ...filter, tagIds: toggled(filter.tagIds, option.id) })}
+                    >
+                        {option.label}
+                    </button>
+                ))}
+                {options.accounts.length > 1 && <span className="spend-filter-sep" aria-hidden />}
+                {options.accounts.length > 1 &&
+                    options.accounts.map((option) => (
+                        <button
+                            key={option.id}
+                            className={`tag sheet-chip ${filter.accountIds.includes(option.id) ? "selected" : ""}`}
+                            aria-pressed={filter.accountIds.includes(option.id)}
+                            onClick={() =>
+                                onChange({ ...filter, accountIds: toggled(filter.accountIds, option.id) })
+                            }
+                        >
+                            {option.label}
+                        </button>
+                    ))}
+                {isFiltered(filter) && (
+                    <button className="btn btn-ghost section-action" onClick={() => onChange(NO_FILTER)}>
+                        Clear
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
 export function SpendingTab() {
     const remove = useRemoveTransaction();
     const show = useToast();
     const desktop = useDesktop();
     const [editing, setEditing] = useState<Transaction | null>(null);
-    const [focused, setFocused] = useState<string | null>(null);
+    const [filter, setFilter] = useState<SpendFilter>(NO_FILTER);
     const [period, setPeriod] = useState(currentPeriod);
     const [budgeting, setBudgeting] = useState(false);
     const transactions = useTransactions();
@@ -119,31 +197,35 @@ export function SpendingTab() {
 
     function step(next: string) {
         setPeriod(next);
-        setFocused(null);
     }
 
     const expenseTags = tagsFor(tags.data, "expense");
     const expenseBudgets = budgets.data.filter((budget) =>
         expenseTags.some((tag) => tag.id === budget.tagId),
     );
-    const summary = spendByTag(transactions.data, expenseBudgets, tags.data, period);
     const accountNames = new Map(accounts.data.map((account) => [account.id, account.name]));
     const tagNames = new Map(tags.data.map((tag) => [tag.id, tag.name]));
-    const { slices, tagsOf } = spendSlices(summary.tags, tags.data);
-    const focusedTags = focused ? tagsOf.get(focused) : undefined;
     const monthly = inPeriod(transactions.data, period);
-    const activity = byRecency(
-        focusedTags
-            ? monthly.filter((transaction) =>
-                  focusedTags.has(primaryTagId(transaction) ?? UNTAGGED_KEY),
-              )
-            : monthly,
-    );
-    const budgeted = summary.tags.flatMap((row) =>
-        row.budget ? [{ ...row, budget: row.budget }] : [],
-    );
-    const focusedLabel = slices.find((slice) => slice.key === focused)?.label;
-    const budgetPct = Math.min(100, Math.round((summary.spent / summary.budgeted) * 100));
+    const filtered = isFiltered(filter);
+    const shown = filtered ? filterTransactions(monthly, filter, tagNames, accountNames) : monthly;
+    const options = filterOptions(monthly, tags.data, accountNames, filter);
+    const summary = spendByTag(monthly, expenseBudgets, tags.data, period);
+    const matching = spendByTag(shown, expenseBudgets, tags.data, period);
+    const matched = matchedKeys(matching);
+    const { slices, tagsOf } = spendSlices(summary.tags, tags.data);
+    const lit = filtered ? litSlices(tagsOf, matched) : undefined;
+    const activity = byRecency(shown);
+    const budgeted = summary.tags.flatMap((row) => (row.budget ? [{ ...row, budget: row.budget }] : []));
+    const total = budgetStatus(summary.spent, summary.budgeted, period);
+
+    function focusSlice(key: string | null) {
+        const group = key ? tagsOf.get(key) : undefined;
+        setFilter({ ...filter, tagIds: group ? toggledAll(filter.tagIds, group) : [] });
+    }
+
+    function toggleTag(tagId: string) {
+        setFilter({ ...filter, tagIds: toggled(filter.tagIds, tagId) });
+    }
 
     return (
         <div className="tab-content">
@@ -156,22 +238,17 @@ export function SpendingTab() {
                             latest={latest}
                             onChange={step}
                         />
-                        <span className="spend-amount">€ {formatAmount(summary.spent)}</span>
+                        <span className="spend-amount">{withSymbol(formatAmount(summary.spent))}</span>
                     </div>
                     {desktop ? (
                         <div className="spend-budget">
                             {summary.budgeted > 0 ? (
                                 <>
-                                    <Meter
-                                        pct={budgetPct}
-                                        over={summary.spent > summary.budgeted}
-                                    />
+                                    <Meter status={total} />
                                     <span className="spend-of">
-                                        of € {formatAmount(summary.budgeted)}
+                                        of {withSymbol(formatAmount(summary.budgeted))}
                                     </span>
-                                    <span className="spend-left">
-                                        € {formatAmount(summary.left)} left
-                                    </span>
+                                    <span className={`spend-left ${total.state}`}>{total.note}</span>
                                 </>
                             ) : (
                                 <span className="spend-of">No budget set</span>
@@ -184,12 +261,11 @@ export function SpendingTab() {
                         >
                             {summary.budgeted > 0 ? (
                                 <>
+                                    <Meter status={total} />
                                     <span className="spend-of">
-                                        of € {formatAmount(summary.budgeted)}
+                                        of {withSymbol(formatAmount(summary.budgeted))}
                                     </span>
-                                    <span className="spend-left">
-                                        € {formatAmount(summary.left)} left
-                                    </span>
+                                    <span className={`spend-left ${total.state}`}>{total.note}</span>
                                 </>
                             ) : (
                                 <span className="spend-left">Set a budget</span>
@@ -198,6 +274,8 @@ export function SpendingTab() {
                     )}
                 </div>
 
+                <FilterBar filter={filter} options={options} onChange={setFilter} />
+
                 <div className="spend-split">
                     <div className="spend-side">
                         {slices.length > 0 && (
@@ -205,10 +283,11 @@ export function SpendingTab() {
                                 {desktop && <span className="kicker">By category</span>}
                                 <Donut
                                     slices={slices}
-                                    focused={focusedTags ? focused : null}
-                                    onFocus={setFocused}
-                                    label="Spent"
-                                    value={`€ ${Math.round(summary.spent / 100).toLocaleString("en-US")}`}
+                                    focused={null}
+                                    lit={lit}
+                                    onFocus={focusSlice}
+                                    label={filtered ? "Matching" : "Spent"}
+                                    value={shortMoney(filtered ? matching.spent : summary.spent)}
                                 />
                             </div>
                         )}
@@ -236,28 +315,31 @@ export function SpendingTab() {
                                 </div>
                             )}
                             {budgeted.map((row) => (
-                                <div key={row.tagId ?? "untagged"} className="spend-cat">
+                                <button
+                                    key={row.tagId ?? "untagged"}
+                                    className={`spend-cat spend-cat-button ${filter.tagIds.includes(row.tagId ?? UNTAGGED_KEY) ? "selected" : ""} ${filtered && !matched.has(row.tagId ?? UNTAGGED_KEY) ? "dimmed" : ""}`}
+                                    aria-pressed={filter.tagIds.includes(row.tagId ?? UNTAGGED_KEY)}
+                                    onClick={() => toggleTag(row.tagId ?? UNTAGGED_KEY)}
+                                >
                                     <div className="spend-cat-head">
                                         <span className="spend-cat-name">{row.label}</span>
                                         <span className="spend-cat-spent">
-                                            € {formatAmount(row.spent)}
+                                            {withSymbol(formatAmount(row.spent))}
                                         </span>
                                     </div>
-                                    <BudgetBar budget={row.budget} />
-                                </div>
+                                    <BudgetBar spent={row.spent} limit={row.budget.limit} period={period} />
+                                </button>
                             ))}
                         </div>
                     </div>
 
                     <div className="section recent-section tight panel">
                         <div className="section-head">
-                            <span className="kicker">
-                                {focusedLabel && focusedTags ? focusedLabel : "All activity"}
-                            </span>
-                            {focusedTags && (
+                            <span className="kicker">{filtered ? "Matching activity" : "All activity"}</span>
+                            {filtered && (
                                 <button
                                     className="btn btn-ghost section-action"
-                                    onClick={() => setFocused(null)}
+                                    onClick={() => setFilter(NO_FILTER)}
                                 >
                                     Show all
                                 </button>
@@ -266,7 +348,9 @@ export function SpendingTab() {
                         <div className="recent">
                             {activity.length === 0 && (
                                 <span className="recent-empty">
-                                    No activity in {monthName(period, "long")}
+                                    {filtered
+                                        ? `Nothing in ${monthName(period, "long")} matches`
+                                        : `No activity in ${monthName(period, "long")}`}
                                 </span>
                             )}
                             {activity.map((transaction) => (
@@ -277,6 +361,8 @@ export function SpendingTab() {
                                     tagNames={tagNames}
                                     onEdit={setEditing}
                                     onDelete={remove}
+                                    onTag={toggleTag}
+                                    selectedTags={filter.tagIds}
                                 />
                             ))}
                         </div>

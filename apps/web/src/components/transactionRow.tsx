@@ -1,6 +1,6 @@
-import { cents, formatAmount } from "@lofit/domain";
+import { cents, formatAmount, withSymbol } from "@lofit/domain";
 import type { Transaction } from "@lofit/domain";
-import { amountFor, monogram, transactionMeta } from "@lofit/view";
+import { amountFor, metaParts, monogram, transactionMeta } from "@lofit/view";
 import { Pencil, Trash2 } from "lucide-react";
 import { useDesktop } from "../useDesktop";
 import { ACTION_WIDTH, useSwipe } from "../useSwipe";
@@ -11,8 +11,45 @@ type Props = {
     tagNames: Map<string, string>;
     onEdit?: (transaction: Transaction) => void;
     onDelete?: (transaction: Transaction) => void;
+    onTag?: (tagId: string) => void;
+    selectedTags?: readonly string[];
     viewedFrom?: string;
 };
+
+function TaggedMeta({
+    transaction,
+    accountNames,
+    tagNames,
+    onTag,
+    selectedTags = [],
+}: Pick<Props, "transaction" | "accountNames" | "tagNames" | "selectedTags"> & {
+    onTag: (tagId: string) => void;
+}) {
+    const parts = metaParts(transaction, accountNames, tagNames);
+    return (
+        <span className="recent-meta">
+            {parts.lead}
+            {" · "}
+            {parts.tags.length === 0
+                ? parts.kind
+                : parts.tags.map((tag) => (
+                      <button
+                          key={tag.id}
+                          className={`row-tag ${selectedTags.includes(tag.id) ? "selected" : ""}`}
+                          title={`Show only ${tag.name}`}
+                          onPointerDown={(event) => event.stopPropagation()}
+                          onClick={(event) => {
+                              event.stopPropagation();
+                              onTag(tag.id);
+                          }}
+                      >
+                          {tag.name}
+                      </button>
+                  ))}
+            {parts.where && ` · ${parts.where}`}
+        </span>
+    );
+}
 
 export function TransactionRow({
     transaction,
@@ -20,6 +57,8 @@ export function TransactionRow({
     tagNames,
     onEdit,
     onDelete,
+    onTag,
+    selectedTags,
     viewedFrom,
 }: Props) {
     const amount = amountFor(transaction, viewedFrom);
@@ -67,7 +106,17 @@ export function TransactionRow({
                 <span className="recent-name" title={transaction.name}>
                     {transaction.name}
                 </span>
-                <span className="recent-meta">{transactionMeta(transaction, accountNames, tagNames, viewedFrom)}</span>
+                {onTag ? (
+                    <TaggedMeta
+                        transaction={transaction}
+                        accountNames={accountNames}
+                        tagNames={tagNames}
+                        onTag={onTag}
+                        selectedTags={selectedTags}
+                    />
+                ) : (
+                    <span className="recent-meta">{transactionMeta(transaction, accountNames, tagNames, viewedFrom)}</span>
+                )}
             </span>
             {inline && (
                 <span
@@ -78,8 +127,8 @@ export function TransactionRow({
                 </span>
             )}
             <span className={`recent-amount ${amount > 0 ? "positive" : ""}`}>
-                {amount > 0 ? "+ € " : "− € "}
-                {formatAmount(cents(amount))}
+                {amount > 0 ? "+" : "−"}
+                {withSymbol(formatAmount(cents(amount)))}
             </span>
         </div>
     );

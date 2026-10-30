@@ -700,6 +700,98 @@
     gap: 7px;
 }
 
+.spend-cat-button {
+    width: 100%;
+    margin: -6px -8px;
+    padding: 6px 8px;
+    box-sizing: content-box;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.spend-cat-button:hover {
+    background: color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+
+.spend-cat-button.selected {
+    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.spend-cat-button.dimmed {
+    opacity: 0.4;
+}
+
+.spend-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.spend-search {
+    position: relative;
+    display: block;
+    max-width: 420px;
+    color: var(--color-neutral-500);
+}
+
+.spend-search svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.spend-search .input {
+    padding-left: 30px;
+}
+
+.spend-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+}
+
+.spend-filter-chips:empty {
+    display: none;
+}
+
+.spend-filter-sep {
+    width: 1px;
+    height: 16px;
+    margin: 0 3px;
+    background: var(--color-divider);
+}
+
+.row-tag {
+    padding: 0 1px;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+}
+
+.row-tag + .row-tag::before {
+    content: "· ";
+    text-decoration: none;
+    display: inline-block;
+    margin-right: 3px;
+}
+
+.row-tag:hover,
+.row-tag.selected {
+    color: var(--color-accent);
+}
+
 .spend-cat-head {
     display: flex;
     align-items: baseline;
@@ -719,10 +811,10 @@
 }
 
 .spend-bar {
+    position: relative;
     height: 4px;
     border-radius: 2px;
     background: color-mix(in srgb, var(--color-text) 8%, transparent);
-    overflow: hidden;
 }
 
 .spend-fill {
@@ -732,8 +824,23 @@
     transition: width 0.3s;
 }
 
+.spend-fill.ahead {
+    background: var(--color-warning);
+}
+
 .spend-fill.over {
-    background: var(--color-neutral-400);
+    background: var(--color-danger);
+}
+
+.spend-pace {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    width: 2px;
+    margin-left: -1px;
+    border-radius: 1px;
+    background: var(--color-text);
+    opacity: 0.55;
 }
 
 .spend-note {
@@ -741,8 +848,14 @@
     color: var(--color-neutral-600);
 }
 
-.spend-note.over {
-    color: var(--color-neutral-300);
+.spend-note.ahead,
+.spend-left.ahead {
+    color: var(--color-warning);
+}
+
+.spend-note.over,
+.spend-left.over {
+    color: var(--color-danger);
 }
 
 .spend-period {
@@ -794,6 +907,12 @@
     color: inherit;
     cursor: pointer;
     align-items: flex-end;
+}
+
+.spend-budget-button .spend-bar {
+    align-self: stretch;
+    min-width: 120px;
+    margin-bottom: 4px;
 }
 
 .spend-cats-empty {
@@ -1095,19 +1214,32 @@
     color: var(--color-neutral-500);
 }
 
-button.sheet-currency.switchable {
-    border: 0;
+.sheet-currency.switchable {
+    position: relative;
     padding: 0 2px;
-    background: transparent;
-    font-family: inherit;
-    line-height: inherit;
     cursor: pointer;
     border-bottom: 1px dashed var(--color-neutral-700);
 }
 
-button.sheet-currency.switchable:hover {
+.sheet-currency.switchable:hover,
+.sheet-currency.switchable:focus-within {
     color: var(--color-accent);
     border-bottom-color: var(--color-accent);
+}
+
+.sheet-currency.switchable select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    opacity: 0;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.sheet-fx {
+    margin-top: -8px;
+    font-size: 11px;
+    color: var(--color-neutral-600);
 }
 
 .sheet-amount-input {
@@ -1964,8 +2096,14 @@ button.sheet-currency.switchable:hover {
     color: var(--color-accent);
 }
 
-.sidebar-out {
+.sidebar-foot {
     margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sidebar-out {
     font-size: 13px;
     color: var(--color-neutral-400);
 }
@@ -2770,4 +2908,66 @@ button.sheet-currency.switchable:hover {
         background: color-mix(in srgb, var(--color-danger) 10%, transparent);
         color: var(--color-danger);
     }
+}
+
+.settings-seg {
+    display: flex;
+}
+
+.settings-seg .seg-opt {
+    flex: 1;
+    justify-content: center;
+}
+
+.settings-password {
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-divider);
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.settings-row-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 13px;
+}
+
+.settings-row-text .gate-hint {
+    font-size: 12px;
+}
+
+.settings-row .btn {
+    flex: none;
+    padding-inline: 16px;
+}
+
+.settings-danger {
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-divider);
+}
+
+.settings-delete {
+    color: var(--color-danger);
+    border-color: color-mix(in srgb, var(--color-danger) 35%, transparent);
+}
+
+.settings-delete-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.settings-delete-actions .btn {
+    flex: 1;
+}
+
+.settings-delete-confirm {
+    background: var(--color-danger);
+    border-color: var(--color-danger);
+    color: var(--color-on-accent);
 }
