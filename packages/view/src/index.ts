@@ -40,6 +40,7 @@ export {
     formatUnits,
     gainLabel,
     historyByMonth,
+    inOwnCurrency,
     inCurrency,
     latestPricing,
     parseAmount,

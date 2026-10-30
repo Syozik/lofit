@@ -30,6 +30,7 @@ import {
     latestPricing,
     signedPercent,
     signedWholeMoney,
+    inOwnCurrency,
 } from "@lofit/view";
 import { useState } from "react";
 import { useToast } from "../toast";
@@ -58,6 +59,8 @@ function GroupHead({ name, total }: GroupHeadProps) {
 
 function AccountSummary({ account, holdings }: { account: Account; holdings: readonly Holding[] }) {
     const worth = netWorth([account], holdings);
+    const foreign = inOwnCurrency(account);
+    const change = account.change ? accountChangeLabel(account.change, account.currency) : undefined;
     return (
         <>
             <span className="acct-text">
@@ -66,18 +69,23 @@ function AccountSummary({ account, holdings }: { account: Account; holdings: rea
             </span>
             <span className="acct-figures">
                 <span className={`acct-balance ${worth < 0 ? "negative" : ""}`}>
-                    {formatMoney(worth)}
+                    {foreign && holdings.length === 0
+                        ? formatMoney(account.nativeBalance, account.currency)
+                        : formatMoney(worth)}
                 </span>
                 {holdings.length > 0 ? (
                     <span className="acct-change">
                         {holdings.length} {holdings.length === 1 ? "position" : "positions"} · cash{" "}
-                        {formatMoney(account.balance)}
+                        {formatMoney(account.nativeBalance, account.currency)}
+                    </span>
+                ) : foreign ? (
+                    <span className="acct-change">
+                        ≈ {formatMoney(account.balance)}
+                        {change && ` · ${change}`}
                     </span>
                 ) : (
-                    account.change && (
-                        <span className={`acct-change ${account.change.favourable ? "up" : ""}`}>
-                            {accountChangeLabel(account.change)}
-                        </span>
+                    change && (
+                        <span className={`acct-change ${account.change?.favourable ? "up" : ""}`}>{change}</span>
                     )
                 )}
             </span>
@@ -238,7 +246,7 @@ function brokerLines(account: Account, holdings: readonly Holding[]): readonly L
     const gain = portfolioGain(holdings);
     return [
         { label: "Positions", value: formatMoney(cents(value)) },
-        { label: "Cash", value: formatMoney(account.balance) },
+        { label: "Cash", value: formatMoney(account.nativeBalance, account.currency) },
         ...(gain
             ? [
                   {

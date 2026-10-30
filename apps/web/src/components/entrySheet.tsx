@@ -4,6 +4,7 @@ import {
     useAddHolding,
     useAddTag,
     useAddTransaction,
+    useRates,
     useRenameTag,
     useTags,
     useUpdateTransaction,
@@ -12,6 +13,7 @@ import {
     ASSET_TYPE_LABELS,
     ASSET_TYPES,
     CURRENCIES,
+    convertAt,
     currencyLabel,
     currencySymbol,
     displayCurrency,
@@ -108,7 +110,8 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const [assetType, setAssetType] = useState<AssetType>("stock");
     const [custodianId, setCustodianId] = useState("");
     const [quantity, setQuantity] = useState("");
-    const [currency, setCurrency] = useState<Currency>(entry?.original?.currency ?? displayCurrency);
+    const [picked, setCurrency] = useState<Currency | null>(entry?.original?.currency ?? null);
+    const [received, setReceived] = useState(entry?.toAmount ? (entry.toAmount / 100).toFixed(2) : "");
     const [liveSymbol, setLiveSymbol] = useState("");
     const [ownTicker, setOwnTicker] = useState(false);
     const [screenshot, setScreenshot] = useState<File | null>(null);
@@ -131,8 +134,18 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const heldAt = custodianId || brokerages[0]?.id || "";
     const to = toId || accounts?.find((account) => account.id !== from)?.id || "";
 
+    const accountOf = (id: string) => accounts?.find((account) => account.id === id);
+    const booking = accountOf(isHolding ? heldAt : from)?.currency ?? displayCurrency();
+    const currency = picked ?? booking;
+    const destination = mode === "transfer" ? accountOf(to)?.currency : undefined;
+    const crossing = destination !== undefined && destination !== booking;
+    const rates = useRates(crossing);
+
     const value = parsePositive(amount);
     const units = parsePositive(quantity);
+    const receivedValue = parsePositive(received);
+    const estimate =
+        crossing && value && rates.data ? convertAt(rates.data, euros(value), currency, destination) : undefined;
 
     const blocked = isHolding
         ? !value || !units || !symbol.trim() || !heldAt || !day
@@ -164,7 +177,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
         setDay(next.day);
         setFromId(next.accountId ?? account);
         setToId(next.toAccountId ?? "");
-        setCurrency(isCurrency(next.currency) ? next.currency : displayCurrency());
+        setCurrency(isCurrency(next.currency) ? next.currency : null);
         setNewTag(undefined);
         setRenaming(null);
     }, []);
@@ -295,6 +308,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
             amount: signed,
             occurredAt: toInstant(day),
             ...(mode === "transfer" ? { toAccountId: to } : {}),
+            ...(crossing && receivedValue ? { toAmount: euros(receivedValue) } : {}),
             ...(currency !== displayCurrency() ? { currency } : {}),
         };
 
@@ -434,10 +448,28 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                 />
             </div>
 
-            {currency !== displayCurrency() && !isHolding && (
+            {currency !== booking && !isHolding && (
                 <span className="sheet-fx">
-                    Converted to {displayCurrency()} at the rate on {day}
+                    Converted to {booking} at the rate on {day}
                 </span>
+            )}
+
+            {crossing && destination && (
+                <label className="field sheet-received">
+                    <span>Received in {accountOf(to)?.name}</span>
+                    <span className="sheet-received-input">
+                        <span className="sheet-received-symbol">{currencySymbol(destination)}</span>
+                        <input
+                            autoComplete="off"
+                            className="input"
+                            inputMode="decimal"
+                            placeholder={estimate !== undefined ? (estimate / 100).toFixed(2) : "0.00"}
+                            value={received}
+                            onChange={(event) => setReceived(event.target.value)}
+                        />
+                    </span>
+                    <span className="gate-hint">Leave it empty to use the rate on {day}.</span>
+                </label>
             )}
 
             {draft?.currency && !isCurrency(draft.currency) && (

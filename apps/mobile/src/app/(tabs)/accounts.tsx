@@ -21,6 +21,7 @@ import {
 import type { Account, Holding } from "@lofit/domain";
 import {
     accountChangeLabel,
+    inOwnCurrency,
     detailLines,
     formatSync,
     formatUnits,
@@ -67,6 +68,8 @@ function AccountCard({
     const { colors } = useTheme();
     const styles = useStyles(makeStyles);
     const worth = addCents(account.balance, sumItems(netWorthItems([], holdings)));
+    const foreign = inOwnCurrency(account);
+    const change = account.change ? accountChangeLabel(account.change, account.currency) : undefined;
 
     return (
         <View style={styles.card}>
@@ -85,18 +88,23 @@ function AccountCard({
                 </View>
                 <View style={styles.figures}>
                     <Text style={[styles.balance, worth < 0 && styles.negative]}>
-                        {formatMoney(worth)}
+                        {foreign && holdings.length === 0
+                            ? formatMoney(account.nativeBalance, account.currency)
+                            : formatMoney(worth)}
                     </Text>
                     {holdings.length > 0 ? (
                         <Text style={styles.change}>
                             {holdings.length} {holdings.length === 1 ? "position" : "positions"} ·
-                            cash {formatMoney(account.balance)}
+                            cash {formatMoney(account.nativeBalance, account.currency)}
+                        </Text>
+                    ) : foreign ? (
+                        <Text style={styles.change}>
+                            ≈ {formatMoney(account.balance)}
+                            {change ? ` · ${change}` : ""}
                         </Text>
                     ) : (
-                        account.change && (
-                            <Text style={[styles.change, account.change.favourable && styles.up]}>
-                                {accountChangeLabel(account.change)}
-                            </Text>
+                        change && (
+                            <Text style={[styles.change, account.change?.favourable && styles.up]}>{change}</Text>
                         )
                     )}
                 </View>

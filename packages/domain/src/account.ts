@@ -1,5 +1,5 @@
 import { addCents, cents, negateCents } from "./money";
-import type { Cents } from "./money";
+import type { Cents, Currency } from "./money";
 import type { AccountChange, AccountDetail, Provenance } from "./types";
 
 export interface Account {
@@ -8,6 +8,8 @@ export interface Account {
     subtitle: string;
     groupId: string;
     balance: Cents;
+    currency: Currency;
+    nativeBalance: Cents;
     provenance: Provenance;
     lastSyncedAt?: string;
     statedAt?: string;
@@ -21,6 +23,7 @@ export interface NewAccount {
     subtitle: string;
     groupId: string;
     balance: Cents;
+    currency?: Currency;
 }
 
 export function withBalance(account: Account, balance: Cents): Account {

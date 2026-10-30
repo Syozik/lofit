@@ -1,12 +1,12 @@
 import { useAddAccount, useAddGroup, useGroups, useUpdateAccountBalance } from "@lofit/api";
-import { currencySymbol, euros } from "@lofit/domain";
-import type { Account } from "@lofit/domain";
+import { CURRENCIES, currencyLabel, currencySymbol, displayCurrency, euros } from "@lofit/domain";
+import type { Account, Currency } from "@lofit/domain";
 import { parseAmount } from "@lofit/view";
 import { useState } from "react";
 import { Sheet } from "./sheet";
 
 function startingAmount(account: Account): string {
-    return (account.balance / 100).toFixed(2);
+    return (account.nativeBalance / 100).toFixed(2);
 }
 
 type Props = {
@@ -26,6 +26,7 @@ export function AccountSheet({ account, onClose, onSaved }: Props) {
     const [groupId, setGroupId] = useState(account?.groupId ?? "");
     const [newGroup, setNewGroup] = useState<string | undefined>(undefined);
     const [amount, setAmount] = useState(account ? startingAmount(account) : "");
+    const [currency, setCurrency] = useState<Currency>(account?.currency ?? displayCurrency());
 
     const editing = account !== undefined;
     const value = parseAmount(amount);
@@ -61,7 +62,7 @@ export function AccountSheet({ account, onClose, onSaved }: Props) {
         }
 
         addAccount.mutate(
-            { name: name.trim(), subtitle: subtitle.trim(), groupId: chosen, balance },
+            { name: name.trim(), subtitle: subtitle.trim(), groupId: chosen, balance, currency },
             {
                 onSuccess: () => {
                     onSaved(`Added ${name.trim()}`);
@@ -123,7 +124,24 @@ export function AccountSheet({ account, onClose, onSaved }: Props) {
                 </div>
             )}
             <div className="sheet-amount">
-                <span className="sheet-currency">{currencySymbol()}</span>
+                {editing ? (
+                    <span className="sheet-currency">{currencySymbol(currency)}</span>
+                ) : (
+                    <label className="sheet-currency switchable">
+                        {currencySymbol(currency)}
+                        <select
+                            aria-label="Account currency"
+                            value={currency}
+                            onChange={(event) => setCurrency(event.target.value as Currency)}
+                        >
+                            {CURRENCIES.map((option) => (
+                                <option key={option} value={option}>
+                                    {currencyLabel(option)}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                )}
                 <input
                     autoComplete="off"
                     className="sheet-amount-input"

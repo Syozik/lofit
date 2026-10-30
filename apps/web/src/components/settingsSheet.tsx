@@ -212,7 +212,7 @@ export function SettingsSheet({ onClose, onSaved }: Props) {
                         }
                     />
                     <span className="gate-hint">
-                        Amounts keep previous numbers, holdings are re-priced in the new currency.
+                        Totals convert to this currency. Each account keeps its own.
                     </span>
                     {updateSettings.error && <span className="gate-error">{updateSettings.error.message}</span>}
                 </label>

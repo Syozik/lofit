@@ -24,6 +24,7 @@ export const newTransactionSchema = z
         accountId: z.uuid(),
         toAccountId: z.uuid().optional(),
         amount: centsSchema,
+        toAmount: centsSchema.optional(),
         occurredAt: instantSchema,
         currency: z.enum(CURRENCIES).optional(),
     })
@@ -36,6 +37,9 @@ export const newTransactionSchema = z
         }
         if (entry.toAccountId && entry.kind !== "transfer") {
             ctx.addIssue({ code: "custom", path: ["toAccountId"], message: "Only transfers have a destination" });
+        }
+        if (entry.toAmount !== undefined && (!entry.toAccountId || entry.toAmount <= 0)) {
+            ctx.addIssue({ code: "custom", path: ["toAmount"], message: "Only transfers receive a positive amount" });
         }
         if (entry.toAccountId && entry.toAccountId === entry.accountId) {
             ctx.addIssue({ code: "custom", path: ["toAccountId"], message: "A transfer needs two different accounts" });
@@ -120,6 +124,7 @@ export const newAccountSchema = z.object({
     subtitle: z.string().trim().max(100).default(""),
     groupId: z.uuid(),
     balance: centsSchema,
+    currency: z.enum(CURRENCIES).optional(),
 });
 
 export const accountBalanceSchema = z.object({

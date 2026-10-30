@@ -102,8 +102,20 @@ export function withSymbol(amount: string, currency: Currency = displayed): stri
     return /\p{L}$/u.test(symbol) ? `${symbol} ${amount}` : `${symbol}${amount}`;
 }
 
-export function formatMoney(value: Cents): string {
-    return `${value < 0 ? "−" : ""}${withSymbol(formatAmount(value))}`;
+export function formatMoney(value: Cents, currency: Currency = displayed): string {
+    return `${value < 0 ? "−" : ""}${withSymbol(formatAmount(value), currency)}`;
+}
+
+export function convertAt(
+    rates: Readonly<Record<string, number>>,
+    amount: Cents,
+    from: Currency,
+    to: Currency,
+): Cents | undefined {
+    if (from === to) return amount;
+    const source = rates[from];
+    const target = rates[to];
+    return source && target ? cents(Math.round((amount / source) * target)) : undefined;
 }
 
 export function toBase(amount: Cents, perBase: number): Cents {

@@ -36,6 +36,7 @@ export {
     CURRENCIES,
     CURRENCY_NAMES,
     CURRENCY_SYMBOLS,
+    convertAt,
     currencyLabel,
     currencySymbol,
     withSymbol,

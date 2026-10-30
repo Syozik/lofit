@@ -3,6 +3,7 @@ import {
     useAddHolding,
     useAddTag,
     useAddTransaction,
+    useRates,
     useGroups,
     useImportScreenshot,
     useRenameTag,
@@ -10,7 +11,18 @@ import {
     useUpdateTransaction,
 } from "@lofit/api";
 import type { Screenshot } from "@lofit/api";
-import { ASSET_TYPE_LABELS, ASSET_TYPES, currencySymbol, displayCurrency, euros, investingGroups, isCurrency, KIND_LABELS, tagsFor } from "@lofit/domain";
+import {
+    ASSET_TYPE_LABELS,
+    ASSET_TYPES,
+    convertAt,
+    currencySymbol,
+    displayCurrency,
+    euros,
+    investingGroups,
+    isCurrency,
+    KIND_LABELS,
+    tagsFor,
+} from "@lofit/domain";
 import type {
     Account,
     AssetType,
@@ -152,7 +164,8 @@ export function EntrySheet({ entry, onClose }: Props) {
     const [assetType, setAssetType] = useState<AssetType>("stock");
     const [custodianId, setCustodianId] = useState("");
     const [quantity, setQuantity] = useState("");
-    const [currency, setCurrency] = useState<Currency>(entry?.original?.currency ?? displayCurrency);
+    const [picked, setCurrency] = useState<Currency | null>(entry?.original?.currency ?? null);
+    const [received, setReceived] = useState(entry?.toAmount ? (entry.toAmount / 100).toFixed(2) : "");
     const [choosing, setChoosing] = useState(false);
     const [liveSymbol, setLiveSymbol] = useState("");
     const [ownTicker, setOwnTicker] = useState(false);
@@ -171,11 +184,21 @@ export function EntrySheet({ entry, onClose }: Props) {
     const heldAt = custodianId || brokerages[0]?.id || "";
     const to = toId || allAccounts.find((account) => account.id !== from)?.id || "";
 
+    const accountOf = (id: string) => allAccounts.find((account) => account.id === id);
+    const booking = accountOf(isHolding ? heldAt : from)?.currency ?? displayCurrency();
+    const currency = picked ?? booking;
+    const destination = mode === "transfer" ? accountOf(to)?.currency : undefined;
+    const crossing = destination !== undefined && destination !== booking;
+    const rates = useRates(crossing && !guest);
+
     const fitting = isHolding ? [] : tagsFor(tags ?? [], mode);
     const chosenIds = tags || mode === "transfer" ? tagIds.filter((id) => fitting.some((tag) => tag.id === id)) : tagIds;
 
     const value = parsePositive(amount);
     const units = parsePositive(quantity);
+    const receivedValue = parsePositive(received);
+    const estimate =
+        crossing && value && rates.data ? convertAt(rates.data, euros(value), currency, destination) : undefined;
 
     const blocked = isHolding
         ? !value || !units || !symbol.trim() || !heldAt || !day
@@ -268,6 +291,7 @@ export function EntrySheet({ entry, onClose }: Props) {
             amount: signed,
             occurredAt: toInstant(day),
             ...(mode === "transfer" ? { toAccountId: to } : {}),
+            ...(crossing && receivedValue ? { toAmount: euros(receivedValue) } : {}),
             ...(foreign ? { currency } : {}),
         };
 
@@ -331,7 +355,7 @@ export function EntrySheet({ entry, onClose }: Props) {
         setDay(draft.day);
         setFromId(source);
         setToId(known(draft.toAccountId) && draft.toAccountId !== source ? draft.toAccountId! : "");
-        setCurrency(!guest && isCurrency(draft.currency) ? draft.currency : displayCurrency());
+        setCurrency(!guest && isCurrency(draft.currency) ? draft.currency : null);
         const fits = tagsFor(tags ?? [], draft.kind);
         setTagIds(draft.tagIds.filter((id) => fits.some((tag) => tag.id === id)));
         setNewTag(undefined);
@@ -453,10 +477,21 @@ export function EntrySheet({ entry, onClose }: Props) {
                 />
             )}
 
-            {foreign && !isHolding && (
+            {currency !== booking && !isHolding && (
                 <Text style={styles.total}>
-                    Converted to {displayCurrency()} at the rate on {day}
+                    Converted to {booking} at the rate on {day}
                 </Text>
+            )}
+
+            {crossing && destination && (
+                <Field
+                    label={`Received in ${accountOf(to)?.name ?? "the other account"} (${currencySymbol(destination)})`}
+                    value={received}
+                    onChangeText={setReceived}
+                    keyboardType="decimal-pad"
+                    placeholder={estimate !== undefined ? (estimate / 100).toFixed(2) : "0.00"}
+                    hint={`Leave it empty to use the rate on ${day}.`}
+                />
             )}
 
             {draft?.currency && !isCurrency(draft.currency) && (

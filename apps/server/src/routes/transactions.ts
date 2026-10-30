@@ -9,23 +9,59 @@ import { HTTPException } from "hono/http-exception";
 import type { AuthEnv } from "../auth/session";
 import { db } from "../db/client";
 import { toTransaction } from "../db/mappers";
+import { viewFor } from "../db/view";
 import { accounts, tags, transactions, transactionTags } from "../db/schema";
 import { invalidBody } from "../http";
 import { perBaseOn } from "../prices/history";
 
 type Entry = z.output<typeof newTransactionSchema>;
 
-async function inBase(entry: Entry, base: string): Promise<Entry & { original: { amount: Cents; currency: string } | null }> {
-    if (!entry.currency || entry.currency === base) return { ...entry, original: null };
+type Booked = Omit<Entry, "toAmount"> & {
+    toAmount: Cents | null;
+    original: { amount: Cents; currency: string } | null;
+    bookedIn: string;
+};
 
-    const rate = await perBaseOn(entry.currency, base, entry.occurredAt.slice(0, 10));
-    if (!rate) throw new HTTPException(422, { message: `No exchange rate for ${entry.currency}` });
+async function currenciesOf(userId: string): Promise<Map<string, string>> {
+    const rows = await db
+        .select({ id: accounts.id, currency: accounts.currency })
+        .from(accounts)
+        .where(eq(accounts.userId, userId));
+    return new Map(rows.map((row) => [row.id, row.currency]));
+}
 
-    return {
-        ...entry,
-        amount: toBase(entry.amount, rate),
-        original: { amount: entry.amount, currency: entry.currency },
-    };
+async function converted(amount: Cents, from: string, to: string, day: string): Promise<Cents> {
+    const rate = await perBaseOn(from, to, day);
+    if (!rate) throw new HTTPException(422, { message: `No exchange rate from ${from} to ${to}` });
+    return toBase(amount, rate);
+}
+
+async function booked(entry: Entry, owned: Map<string, string>, display: string): Promise<Booked> {
+    const currency = owned.get(entry.accountId);
+    if (!currency) throw new HTTPException(422, { message: "Unknown account" });
+    const target = entry.toAccountId ? owned.get(entry.toAccountId) : undefined;
+    if (entry.toAccountId && !target) throw new HTTPException(422, { message: "Unknown account" });
+
+    const day = entry.occurredAt.slice(0, 10);
+    const paid = entry.currency ?? display;
+    const amount = paid === currency ? entry.amount : await converted(entry.amount, paid, currency, day);
+    const original = paid === currency ? null : { amount: entry.amount, currency: paid };
+
+    let toAmount: Cents | null = null;
+    if (target && target !== currency) {
+        toAmount = entry.toAmount ?? (await converted(negateCents(amount), currency, target, day));
+    }
+
+    return { ...entry, amount, toAmount, original, bookedIn: currency };
+}
+
+function moves(row: { accountId: string; toAccountId: string | null; amount: Cents; toAmount: Cents | null }) {
+    return balanceChanges({
+        accountId: row.accountId,
+        toAccountId: row.toAccountId ?? undefined,
+        amount: row.amount,
+        toAmount: row.toAmount ?? undefined,
+    });
 }
 
 export const transactionsRoute = new Hono<AuthEnv>()
@@ -51,7 +87,11 @@ export const transactionsRoute = new Hono<AuthEnv>()
             else tagIds.set(row.transactionId, [row.tagId]);
         }
 
-        return c.json(rows.map((row) => toTransaction(row, tagIds.get(row.id) ?? [])));
+        const owned = await currenciesOf(userId);
+        const view = await viewFor(userId, c.var.currency, rows.at(-1)?.occurredAt.toISOString().slice(0, 10));
+        return c.json(
+            rows.map((row) => toTransaction(row, tagIds.get(row.id) ?? [], owned.get(row.accountId), view)),
+        );
     })
     .post(
         "/",
@@ -59,9 +99,9 @@ export const transactionsRoute = new Hono<AuthEnv>()
             if (!result.success) return invalidBody(c, result.error.issues);
         }),
         async (c) => {
-            const entry = await inBase(c.req.valid("json"), c.var.currency);
             const userId = c.var.userId;
-            const changes = balanceChanges(entry);
+            const entry = await booked(c.req.valid("json"), await currenciesOf(userId), c.var.currency);
+            const changes = moves({ ...entry, toAccountId: entry.toAccountId ?? null });
 
             const result = await db.transaction(async (tx) => {
                 if (entry.id) {
@@ -111,6 +151,7 @@ export const transactionsRoute = new Hono<AuthEnv>()
                         accountId: entry.accountId,
                         toAccountId: entry.toAccountId ?? null,
                         amount: entry.amount,
+                        toAmount: entry.toAmount,
                         originalAmount: entry.original?.amount ?? null,
                         originalCurrency: entry.original?.currency ?? null,
                         occurredAt: new Date(entry.occurredAt),
@@ -139,7 +180,8 @@ export const transactionsRoute = new Hono<AuthEnv>()
                 return { row: inserted, created: true };
             });
 
-            return c.json(toTransaction(result.row, entry.tagIds), result.created ? 201 : 200);
+            const view = await viewFor(userId, c.var.currency);
+            return c.json(toTransaction(result.row, entry.tagIds, entry.bookedIn, view), result.created ? 201 : 200);
         },
     )
     .patch(
@@ -152,9 +194,9 @@ export const transactionsRoute = new Hono<AuthEnv>()
         }),
         async (c) => {
             const id = c.req.param("id");
-            const entry = await inBase(c.req.valid("json"), c.var.currency);
             const userId = c.var.userId;
-            const wanted = balanceChanges(entry);
+            const entry = await booked(c.req.valid("json"), await currenciesOf(userId), c.var.currency);
+            const wanted = moves({ ...entry, toAccountId: entry.toAccountId ?? null });
 
             const row = await db.transaction(async (tx) => {
                 const [current] = await tx
@@ -190,11 +232,7 @@ export const transactionsRoute = new Hono<AuthEnv>()
                     }
                 }
 
-                const undo = balanceChanges({
-                    accountId: current.accountId,
-                    toAccountId: current.toAccountId ?? undefined,
-                    amount: current.amount,
-                });
+                const undo = moves(current);
 
                 for (const change of undo) {
                     await tx
@@ -211,6 +249,7 @@ export const transactionsRoute = new Hono<AuthEnv>()
                         accountId: entry.accountId,
                         toAccountId: entry.toAccountId ?? null,
                         amount: entry.amount,
+                        toAmount: entry.toAmount,
                         originalAmount: entry.original?.amount ?? null,
                         originalCurrency: entry.original?.currency ?? null,
                         occurredAt: new Date(entry.occurredAt),
@@ -242,7 +281,7 @@ export const transactionsRoute = new Hono<AuthEnv>()
                 return updated;
             });
 
-            return c.json(toTransaction(row, entry.tagIds));
+            return c.json(toTransaction(row, entry.tagIds, entry.bookedIn, await viewFor(userId, c.var.currency)));
         },
     )
     .delete(
@@ -262,11 +301,7 @@ export const transactionsRoute = new Hono<AuthEnv>()
 
                 if (!gone) throw new HTTPException(404, { message: "No such transaction" });
 
-                const changes = balanceChanges({
-                    accountId: gone.accountId,
-                    toAccountId: gone.toAccountId ?? undefined,
-                    amount: gone.amount,
-                });
+                const changes = moves(gone);
 
                 for (const change of changes) {
                     await tx

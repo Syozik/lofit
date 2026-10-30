@@ -5,7 +5,7 @@ export type { AccountDraft, BalanceUpdate, NamedDraft, TagDraft, TransactionDraf
 export { configureMutations, MUTATIONS } from "./mutations";
 export { changePassword, configureAuth, deleteUser, signIn, signOut, signUp, useSession } from "./auth";
 export { fetchSettings, updateSettings } from "./settings";
-export { useDisplayCurrency, useSettings, useUpdateSettings } from "./useSettings";
+export { useDisplayCurrency, useRates, useSettings, useUpdateSettings } from "./useSettings";
 export { addAccount, deleteAccount, fetchAccounts, updateAccountBalance } from "./accounts";
 export { useDeleteAccount } from "./useDeleteAccount";
 export { useAccounts } from "./useAccounts";

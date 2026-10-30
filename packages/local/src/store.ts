@@ -9,7 +9,7 @@ export type KeyValueStorage = {
     removeItem(key: string): Promise<void>;
 };
 
-export type StoredAccount = Account & { createdAt: string };
+export type StoredAccount = Omit<Account, "currency" | "nativeBalance"> & { createdAt: string };
 export type StoredTransaction = Transaction & { createdAt: string };
 
 export type Ledger = {

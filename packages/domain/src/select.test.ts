@@ -19,10 +19,10 @@ const investments: Group = { id: "g-inv", name: "Investments", position: 1, inve
 const debt: Group = { id: "g-debt", name: "Debt", position: 2, invests: false };
 const groups = [cash, investments, debt];
 
-const ing: Account = { id: "ing", name: "ING", subtitle: "", groupId: cash.id, balance: euros(3240.18), provenance: "synced", lastSyncedAt: "2026-08-01T07:55:00Z" };
-const savings: Account = { id: "savings", name: "Savings", subtitle: "", groupId: cash.id, balance: euros(18500), provenance: "synced", lastSyncedAt: "2026-08-01T08:12:00Z" };
-const loan: Account = { id: "loan", name: "DUO", subtitle: "", groupId: debt.id, balance: euros(-8750), provenance: "manual" };
-const broker: Account = { id: "degiro", name: "DEGIRO", subtitle: "", groupId: investments.id, balance: euros(0), provenance: "manual" };
+const ing: Account = { id: "ing", name: "ING", subtitle: "", groupId: cash.id, balance: euros(3240.18), currency: "EUR", nativeBalance: euros(3240.18), provenance: "synced", lastSyncedAt: "2026-08-01T07:55:00Z" };
+const savings: Account = { id: "savings", name: "Savings", subtitle: "", groupId: cash.id, balance: euros(18500), currency: "EUR", nativeBalance: euros(18500), provenance: "synced", lastSyncedAt: "2026-08-01T08:12:00Z" };
+const loan: Account = { id: "loan", name: "DUO", subtitle: "", groupId: debt.id, balance: euros(-8750), currency: "EUR", nativeBalance: euros(-8750), provenance: "manual" };
+const broker: Account = { id: "degiro", name: "DEGIRO", subtitle: "", groupId: investments.id, balance: euros(0), currency: "EUR", nativeBalance: euros(0), provenance: "manual" };
 const vwrl: Holding = { id: "vwrl", symbol: "VWRL", name: "Vanguard FTSE All-World", type: "etf", accountId: broker.id, quantity: 224, cost: euros(0), heldSince: "2025-01-20", nativePrice: euros(117.9), currency: "EUR", price: euros(117.9) };
 
 const housing: Tag = { id: "t-housing", name: "Housing", kind: "expense", position: 0 };

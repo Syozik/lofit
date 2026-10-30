@@ -134,6 +134,13 @@
       "when": 1793356867471,
       "tag": "0018_transaction_original",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793362062143,
+      "tag": "0019_account_currency",
+      "breakpoints": true
     }
   ]
 }

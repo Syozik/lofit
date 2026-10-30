@@ -1,8 +1,9 @@
-import { netWorthGroups, netWorthItems } from "@lofit/domain";
+import { EURO, netWorthGroups, netWorthItems } from "@lofit/domain";
 import { and, eq } from "drizzle-orm";
 import { db } from "./db/client";
 import { toAccount, toGroup, toHolding } from "./db/mappers";
 import { accounts, groups, holdings, snapshots, users } from "./db/schema";
+import { viewFor } from "./db/view";
 
 async function totalsFor(userId: string) {
     const [accountRows, holdingRows, groupRows] = await Promise.all([
@@ -11,7 +12,11 @@ async function totalsFor(userId: string) {
         db.select().from(groups).where(eq(groups.userId, userId)),
     ]);
 
-    const items = netWorthItems(accountRows.map(toAccount), holdingRows.map(toHolding));
+    const view = await viewFor(userId, EURO);
+    const items = netWorthItems(
+        accountRows.map((row) => toAccount(row, view)),
+        holdingRows.map((row) => toHolding(row, view)),
+    );
     return netWorthGroups(items, groupRows.map(toGroup));
 }
 

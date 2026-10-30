@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import type { AuthEnv } from "../auth/session";
 import { db } from "../db/client";
 import { toSnapshots } from "../db/mappers";
+import { viewFor } from "../db/view";
 import { snapshots } from "../db/schema";
 
 export const snapshotsRoute = new Hono<AuthEnv>().get("/", async (c) => {
@@ -12,5 +13,6 @@ export const snapshotsRoute = new Hono<AuthEnv>().get("/", async (c) => {
         .where(eq(snapshots.userId, c.var.userId))
         .orderBy(asc(snapshots.day));
 
-    return c.json(toSnapshots(rows));
+    const view = await viewFor(c.var.userId, c.var.currency, rows[0]?.day);
+    return c.json(toSnapshots(rows, view));
 });

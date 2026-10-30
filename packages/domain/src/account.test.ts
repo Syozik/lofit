@@ -8,7 +8,7 @@ const CHECKING: Account = {
     name: "ING",
     subtitle: "checking",
     groupId: "g-cash",
-    balance: euros(3200),
+    balance: euros(3200), currency: "EUR", nativeBalance: euros(3200),
     provenance: "manual",
 };
 
@@ -17,7 +17,7 @@ const LOAN: Account = {
     name: "Studieschuld",
     subtitle: "student loan",
     groupId: "g-debt",
-    balance: euros(-8750),
+    balance: euros(-8750), currency: "EUR", nativeBalance: euros(-8750),
     provenance: "manual",
 };
 

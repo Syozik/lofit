@@ -185,7 +185,11 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
                         if (chosen === currency || updateSettings.isPending) return;
                         updateSettings.mutate({ currency: chosen }, { onError: (error) => show(error.message) });
                     }}
-                    hint="Amounts keep previous numbers, holdings are re-priced in the new currency."
+                    hint={
+                        guest
+                            ? "Amounts keep previous numbers, holdings are re-priced in the new currency."
+                            : "Totals convert to this currency. Each account keeps its own."
+                    }
                 />
             </View>
 

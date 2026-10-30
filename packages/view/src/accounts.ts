@@ -1,7 +1,7 @@
 import { currencyFormat, wholeNumber } from "./intl";
 import { amountFor } from "./transaction";
-import { byRecency, holdingGain, periodOf, withSymbol } from "@lofit/domain";
-import type { Account, AccountChange, Holding, Transaction } from "@lofit/domain";
+import { byRecency, displayCurrency, holdingGain, periodOf, withSymbol } from "@lofit/domain";
+import type { Account, AccountChange, Currency, Holding, Transaction } from "@lofit/domain";
 
 const timeFormat = new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
@@ -35,9 +35,13 @@ export function formatSync(instant: string): string {
         : dateTimeFormat.format(when).replace(",", "");
 }
 
-export function accountChangeLabel(change: AccountChange): string {
+export function accountChangeLabel(change: AccountChange, currency?: Currency): string {
     const rounded = wholeNumber(Math.round(Math.abs(change.amount) / 100));
-    return `${change.amount < 0 ? "−" : "+"}${withSymbol(rounded)} ${change.period}`;
+    return `${change.amount < 0 ? "−" : "+"}${withSymbol(rounded, currency)} ${change.period}`;
+}
+
+export function inOwnCurrency(account: Account): boolean {
+    return account.currency !== displayCurrency();
 }
 
 export function detailLines(account: Account): readonly { label: string; value: string }[] {

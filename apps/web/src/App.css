@@ -1236,6 +1236,25 @@
     font-size: 16px;
 }
 
+.sheet-received-input {
+    position: relative;
+    display: block;
+}
+
+.sheet-received-symbol {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-neutral-500);
+    font-size: 14px;
+    pointer-events: none;
+}
+
+.sheet-received-input .input {
+    padding-left: 28px;
+}
+
 .sheet-fx {
     margin-top: -8px;
     font-size: 11px;

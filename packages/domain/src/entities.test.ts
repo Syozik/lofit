@@ -53,7 +53,7 @@ describe("holdings", () => {
 
 describe("accounts", () => {
     it("change balance by copy, leaving the original untouched", () => {
-        const ing: Account = { id: "ing", name: "ING", subtitle: "", groupId: "g-cash", balance: euros(3240.18), provenance: "synced" };
+        const ing: Account = { id: "ing", name: "ING", subtitle: "", groupId: "g-cash", balance: euros(3240.18), currency: "EUR", nativeBalance: euros(3240.18), provenance: "synced" };
 
         expect(withBalance(ing, euros(3000))).toStrictEqual({ ...ing, balance: 300000 });
         expect(ing.balance).toBe(324018);

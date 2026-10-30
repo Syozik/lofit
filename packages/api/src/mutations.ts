@@ -1,4 +1,4 @@
-import { balanceChanges, negateCents } from "@lofit/domain";
+import { balanceChanges, displayCurrency, negateCents } from "@lofit/domain";
 import type { Account, BalanceChange, Budget, Group, TagKind, NewAccount, NewTransaction, Tag, Transaction } from "@lofit/domain";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { addAccount, updateAccountBalance } from "./accounts";
@@ -47,6 +47,19 @@ function toTransaction(id: string, draft: NewTransaction): Transaction {
 
 function shifts(transaction: Transaction): readonly BalanceChange[] {
     return transaction.original ? [] : balanceChanges(transaction);
+}
+
+function restatedLocally(account: Account, balance: number, statedAt: string): Account {
+    const shown =
+        account.currency === displayCurrency() || account.nativeBalance === 0
+            ? balance
+            : Math.round((balance * account.balance) / account.nativeBalance);
+    return {
+        ...account,
+        balance: shown as Account["balance"],
+        nativeBalance: balance as Account["nativeBalance"],
+        statedAt,
+    };
 }
 
 function shiftBalances(client: QueryClient, changes: readonly BalanceChange[], direction: 1 | -1): void {
@@ -147,9 +160,7 @@ export function configureMutations(client: QueryClient): void {
             await hold("accounts");
             const statedAt = new Date().toISOString();
             client.setQueryData<readonly Account[]>(["accounts"], (accounts) =>
-                accounts?.map((account) =>
-                    account.id === id ? { ...account, balance: balance as Account["balance"], statedAt } : account,
-                ),
+                accounts?.map((account) => (account.id === id ? restatedLocally(account, balance, statedAt) : account)),
             );
         },
         ["accounts"],
@@ -166,6 +177,8 @@ export function configureMutations(client: QueryClient): void {
                 subtitle: draft.subtitle,
                 groupId: draft.groupId,
                 balance: draft.balance,
+                currency: draft.currency ?? displayCurrency(),
+                nativeBalance: draft.balance,
                 provenance: "manual",
                 statedAt: new Date().toISOString(),
             };

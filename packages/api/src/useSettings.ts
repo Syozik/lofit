@@ -1,10 +1,14 @@
 import { EURO, setDisplayCurrency } from "@lofit/domain";
 import type { Currency, Settings } from "@lofit/domain";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchSettings, updateSettings } from "./settings";
+import { fetchRates, fetchSettings, updateSettings } from "./settings";
 
 export function useSettings() {
     return useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
+}
+
+export function useRates(enabled = true) {
+    return useQuery({ queryKey: ["rates"], queryFn: fetchRates, enabled, staleTime: 60 * 60 * 1000 });
 }
 
 export function useDisplayCurrency(fallback: Currency = EURO): Currency {

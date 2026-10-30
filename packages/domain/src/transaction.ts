@@ -10,6 +10,7 @@ export interface Transaction {
     accountId: string;
     toAccountId?: string;
     amount: Cents;
+    toAmount?: Cents;
     occurredAt: string;
     original?: { amount: Cents; currency: Currency };
 }
@@ -41,13 +42,17 @@ export function balanceChanges(transaction: {
     accountId: string;
     toAccountId?: string | undefined;
     amount: Cents;
+    toAmount?: Cents | undefined;
 }): BalanceChange[] {
     const changes: BalanceChange[] = [
         { accountId: transaction.accountId, delta: transaction.amount },
     ];
 
     if (transaction.toAccountId) {
-        changes.push({ accountId: transaction.toAccountId, delta: negateCents(transaction.amount) });
+        changes.push({
+            accountId: transaction.toAccountId,
+            delta: transaction.toAmount ?? negateCents(transaction.amount),
+        });
     }
 
     return changes;

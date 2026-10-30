@@ -1,13 +1,15 @@
 import { useAddAccount, useAddGroup, useGroups, useUpdateAccountBalance } from "@lofit/api";
-import { euros } from "@lofit/domain";
-import type { Account } from "@lofit/domain";
+import { currencySymbol, displayCurrency, euros } from "@lofit/domain";
+import type { Account, Currency } from "@lofit/domain";
 import { parseAmount } from "@lofit/view";
 import { useState } from "react";
 import { TextInput } from "react-native";
+import { useGuest } from "../mode";
 import { useStyles } from "../theme";
 import { AmountInput } from "./AmountInput";
 import { Button } from "./Button";
 import { Chip, ChipRow } from "./Choices";
+import { CurrencyPicker } from "./CurrencyPicker";
 import { Field, makeFieldStyles } from "./Field";
 import { Sheet, SheetActions } from "./Sheet";
 import { useToast } from "./Toast";
@@ -29,7 +31,9 @@ export function AccountSheet({ account, onClose }: Props) {
     const [subtitle, setSubtitle] = useState(account?.subtitle ?? "");
     const [groupId, setGroupId] = useState(account?.groupId ?? "");
     const [newGroup, setNewGroup] = useState<string | undefined>(undefined);
-    const [amount, setAmount] = useState(account ? (account.balance / 100).toFixed(2) : "");
+    const [amount, setAmount] = useState(account ? (account.nativeBalance / 100).toFixed(2) : "");
+    const [currency, setCurrency] = useState<Currency>(account?.currency ?? displayCurrency());
+    const guest = useGuest();
 
     const editing = account !== undefined;
     const value = parseAmount(amount);
@@ -54,7 +58,7 @@ export function AccountSheet({ account, onClose }: Props) {
             updateBalance.mutate({ id: account.id, balance });
             show(`Updated ${account.name}`);
         } else {
-            addAccount.mutate({ name: name.trim(), subtitle: subtitle.trim(), groupId: chosen, balance });
+            addAccount.mutate({ name: name.trim(), subtitle: subtitle.trim(), groupId: chosen, balance, currency });
             show(`Added ${name.trim()}`);
         }
         onClose();
@@ -89,7 +93,21 @@ export function AccountSheet({ account, onClose }: Props) {
                 </ChipRow>
             )}
 
-            <AmountInput label="Balance" value={amount} onChange={setAmount} autoFocus={editing} />
+            <AmountInput
+                label="Balance"
+                value={amount}
+                onChange={setAmount}
+                autoFocus={editing}
+                prefix={currencySymbol(currency)}
+            />
+
+            {!editing && !guest && (
+                <CurrencyPicker
+                    value={currency}
+                    onChange={setCurrency}
+                    hint="Fixed once the account exists. Totals convert to your display currency."
+                />
+            )}
 
             {!editing && (
                 <>

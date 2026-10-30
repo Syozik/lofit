@@ -8,6 +8,7 @@ import { HTTPException } from "hono/http-exception";
 import type { AuthEnv } from "../auth/session";
 import { db } from "../db/client";
 import { toAccount } from "../db/mappers";
+import { viewFor } from "../db/view";
 import { accounts, groups, holdings, transactions } from "../db/schema";
 import { invalidBody } from "../http";
 
@@ -20,7 +21,8 @@ export const accountsRoute = new Hono<AuthEnv>()
             .where(eq(accounts.userId, c.var.userId))
             .orderBy(asc(groups.position), asc(accounts.createdAt), asc(accounts.name));
 
-        return c.json(rows.map((row) => toAccount(row.account)));
+        const view = await viewFor(c.var.userId, c.var.currency);
+        return c.json(rows.map((row) => toAccount(row.account, view)));
     })
     .post(
         "/",
@@ -58,6 +60,7 @@ export const accountsRoute = new Hono<AuthEnv>()
                         subtitle: draft.subtitle,
                         groupId: draft.groupId,
                         balance: draft.balance,
+                        currency: draft.currency ?? c.var.currency,
                         provenance: "manual",
                         statedAt: new Date(),
                     })
@@ -66,7 +69,8 @@ export const accountsRoute = new Hono<AuthEnv>()
                 return { row: created!, created: true };
             });
 
-            return c.json(toAccount(result.row), result.created ? 201 : 200);
+            const view = await viewFor(userId, c.var.currency);
+            return c.json(toAccount(result.row, view), result.created ? 201 : 200);
         },
     )
     .patch(
@@ -109,7 +113,7 @@ export const accountsRoute = new Hono<AuthEnv>()
                 return updated!;
             });
 
-            return c.json(toAccount(row));
+            return c.json(toAccount(row, await viewFor(userId, c.var.currency)));
         },
     )
     .delete(

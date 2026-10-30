@@ -7,6 +7,12 @@ export async function fetchSettings(): Promise<Settings> {
     return fromJson(await response.json());
 }
 
+export async function fetchRates(): Promise<Record<string, number>> {
+    const response = await api().rates.$get();
+    if (!response.ok) throw await apiError(response);
+    return fromJson(await response.json());
+}
+
 export async function updateSettings(settings: Settings): Promise<Settings> {
     const response = await api().settings.$patch({ json: settings });
     if (!response.ok) throw await apiError(response);

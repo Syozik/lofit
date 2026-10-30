@@ -1,8 +1,9 @@
 import { netWorthGroups, netWorthItems } from "@lofit/domain";
+import { toAccount } from "./mappers";
 import type { Ledger } from "./store";
 
 export function recordSnapshot(data: Ledger, day: string): void {
-    const totals = netWorthGroups(netWorthItems(data.accounts, []), data.groups);
+    const totals = netWorthGroups(netWorthItems(data.accounts.map(toAccount), []), data.groups);
     const others = data.snapshots.filter((snapshot) => snapshot.day !== day);
 
     data.snapshots =
