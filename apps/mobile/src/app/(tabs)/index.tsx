@@ -13,6 +13,7 @@ import {
     amountIn,
     byPosition,
     cents,
+    currencySymbol,
     deltaAt,
     formatAmount,
     itemsInScope,
@@ -29,7 +30,7 @@ import {
     kickerFor,
     monthName,
     netWorthSlices,
-    shortEuros,
+    shortMoney,
     signedAmount,
     signedPercent,
 } from "@lofit/view";
@@ -208,7 +209,7 @@ function NetWorthBody({
                 </ScrollView>
                 <Text style={text.kicker}>{kicker}</Text>
                 <View style={styles.netWorth}>
-                    <Text style={styles.currency}>{total < 0 ? "−€" : "€"}</Text>
+                    <Text style={styles.currency}>{total < 0 ? `−${currencySymbol()}` : currencySymbol()}</Text>
                     <Text style={styles.amount} numberOfLines={1} adjustsFontSizeToFit>
                         {formatAmount(total)}
                     </Text>
@@ -237,7 +238,7 @@ function NetWorthBody({
                             focused={focused}
                             onFocus={setFocused}
                             label={centreLabel(selected)}
-                            value={shortEuros(centre)}
+                            value={shortMoney(centre)}
                         />
                     )}
                 </View>

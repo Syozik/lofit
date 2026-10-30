@@ -10,7 +10,7 @@ import {
     useUpdateTransaction,
 } from "@lofit/api";
 import type { Screenshot } from "@lofit/api";
-import { ASSET_TYPE_LABELS, ASSET_TYPES, CURRENCIES, euros, investingGroups, KIND_LABELS, tagsFor } from "@lofit/domain";
+import { ASSET_TYPE_LABELS, ASSET_TYPES, currencySymbol, displayCurrency, euros, investingGroups, isCurrency, KIND_LABELS, tagsFor } from "@lofit/domain";
 import type {
     Account,
     AssetType,
@@ -31,6 +31,7 @@ import { fonts, useStyles, useTheme } from "../theme";
 import { AmountInput } from "./AmountInput";
 import { Button } from "./Button";
 import { Chip, ChipRow, Segmented } from "./Choices";
+import { CurrencyList } from "./CurrencyPicker";
 import { Field, makeFieldStyles } from "./Field";
 import { pickDay } from "./RangePicker";
 import { pickFile, ScreenshotImportView, skippedText } from "./ScreenshotImport";
@@ -51,7 +52,6 @@ const ALL_MODES = (["expense", "income", "transfer", "holding"] as const).map((v
 
 const TRANSACTION_MODES = ALL_MODES.filter((option) => option.value !== "holding");
 
-const CURRENCY_SYMBOLS: Record<Currency, string> = { EUR: "€", USD: "$" };
 
 const DOUBLE_TAP_MS = 350;
 
@@ -137,7 +137,8 @@ export function EntrySheet({ entry, onClose }: Props) {
     const [queue, setQueue] = useState<Queue | null>(null);
 
     const [mode, setMode] = useState<EntryMode>(entry?.kind ?? "expense");
-    const [amount, setAmount] = useState(entry ? (Math.abs(entry.amount) / 100).toFixed(2) : "");
+    const typed = entry?.original ?? entry;
+    const [amount, setAmount] = useState(typed ? (Math.abs(typed.amount) / 100).toFixed(2) : "");
     const [name, setName] = useState(entry?.name ?? "");
     const [tagIds, setTagIds] = useState<string[]>([...(entry?.tagIds ?? [])]);
     const [newTag, setNewTag] = useState<string | undefined>(undefined);
@@ -151,7 +152,8 @@ export function EntrySheet({ entry, onClose }: Props) {
     const [assetType, setAssetType] = useState<AssetType>("stock");
     const [custodianId, setCustodianId] = useState("");
     const [quantity, setQuantity] = useState("");
-    const [currency, setCurrency] = useState<Currency>("EUR");
+    const [currency, setCurrency] = useState<Currency>(entry?.original?.currency ?? displayCurrency);
+    const [choosing, setChoosing] = useState(false);
     const [liveSymbol, setLiveSymbol] = useState("");
     const [ownTicker, setOwnTicker] = useState(false);
 
@@ -182,10 +184,7 @@ export function EntrySheet({ entry, onClose }: Props) {
     const pending = (!queue && addEntry.isPending) || addPosition.isPending || updateEntry.isPending;
     const needsConnection = isHolding && !online;
 
-    function nextCurrency() {
-        const at = CURRENCIES.indexOf(currency);
-        setCurrency(CURRENCIES[(at + 1) % CURRENCIES.length]!);
-    }
+    const foreign = currency !== displayCurrency();
 
     function changeMode(next: EntryMode) {
         setMode(next);
@@ -269,6 +268,7 @@ export function EntrySheet({ entry, onClose }: Props) {
             amount: signed,
             occurredAt: toInstant(day),
             ...(mode === "transfer" ? { toAccountId: to } : {}),
+            ...(foreign ? { currency } : {}),
         };
 
         if (entry) {
@@ -331,6 +331,7 @@ export function EntrySheet({ entry, onClose }: Props) {
         setDay(draft.day);
         setFromId(source);
         setToId(known(draft.toAccountId) && draft.toAccountId !== source ? draft.toAccountId! : "");
+        setCurrency(!guest && isCurrency(draft.currency) ? draft.currency : displayCurrency());
         const fits = tagsFor(tags ?? [], draft.kind);
         setTagIds(draft.tagIds.filter((id) => fits.some((tag) => tag.id === id)));
         setNewTag(undefined);
@@ -421,13 +422,14 @@ export function EntrySheet({ entry, onClose }: Props) {
             </View>
 
             <View style={styles.amountRow}>
-                {isHolding && (
+                {!guest && (
                     <Pressable
-                        accessibilityLabel={`Priced in ${currency}, tap to change`}
-                        onPress={nextCurrency}
+                        accessibilityRole="button"
+                        accessibilityLabel={`In ${currency}, change currency`}
+                        onPress={() => setChoosing((shown) => !shown)}
                         style={styles.currencySwitch}
                     >
-                        <Text style={styles.currencyText}>{CURRENCY_SYMBOLS[currency]}</Text>
+                        <Text style={styles.currencyText}>{currencySymbol(currency)}</Text>
                     </Pressable>
                 )}
                 <View style={styles.amountField}>
@@ -436,12 +438,28 @@ export function EntrySheet({ entry, onClose }: Props) {
                         value={amount}
                         onChange={setAmount}
                         autoFocus={!editing}
-                        prefix={isHolding ? "" : "€"}
+                        prefix={guest ? currencySymbol() : ""}
                     />
                 </View>
             </View>
 
-            {draft?.currency && (
+            {choosing && (
+                <CurrencyList
+                    value={currency}
+                    onPick={(picked) => {
+                        setCurrency(picked);
+                        setChoosing(false);
+                    }}
+                />
+            )}
+
+            {foreign && !isHolding && (
+                <Text style={styles.total}>
+                    Converted to {displayCurrency()} at the rate on {day}
+                </Text>
+            )}
+
+            {draft?.currency && !isCurrency(draft.currency) && (
                 <View style={styles.warning}>
                     <TriangleAlert size={13} color={colors.danger} />
                     <Text style={styles.warningText}>

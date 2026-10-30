@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { LogOut, Plus } from "lucide-react";
+import { LogOut, Plus, Settings } from "lucide-react";
 import type { TabName } from "../navigation";
 import { Indicator } from "./indicator";
 
@@ -13,10 +13,11 @@ type Props = {
     current: TabName;
     onSelect: (tab: TabName) => void;
     onAdd: () => void;
+    onSettings: () => void;
     onSignOut: () => void;
 };
 
-export function Sidebar({ items, current, onSelect, onAdd, onSignOut }: Props) {
+export function Sidebar({ items, current, onSelect, onAdd, onSettings, onSignOut }: Props) {
     return (
         <aside className="sidebar">
             <div className="sidebar-brand">
@@ -46,10 +47,17 @@ export function Sidebar({ items, current, onSelect, onAdd, onSignOut }: Props) {
                 ))}
             </nav>
 
-            <button className="sidebar-link sidebar-out" onClick={onSignOut}>
-                <LogOut size={16} strokeWidth={1.5} aria-hidden />
-                Sign out
-            </button>
+            <div className="sidebar-foot">
+                <button className="sidebar-link sidebar-out" onClick={onSettings}>
+                    <Settings size={16} strokeWidth={1.5} aria-hidden />
+                    Settings
+                </button>
+
+                <button className="sidebar-link sidebar-out" onClick={onSignOut}>
+                    <LogOut size={16} strokeWidth={1.5} aria-hidden />
+                    Sign out
+                </button>
+            </div>
         </aside>
     );
 }

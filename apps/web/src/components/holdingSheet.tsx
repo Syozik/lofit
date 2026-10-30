@@ -1,5 +1,5 @@
 import { useDeleteHolding, useHoldingHistory, useSellHolding, useUpdateHolding } from "@lofit/api";
-import { euros, formatAmount, formatEuros, holdingValue, unitCost } from "@lofit/domain";
+import { euros, formatAmount, formatMoney, holdingValue, unitCost, withSymbol } from "@lofit/domain";
 import type { Holding } from "@lofit/domain";
 import { dayFormat, inCurrency, parsePositive } from "@lofit/view";
 import { useState } from "react";
@@ -83,7 +83,7 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
                 {desktop && <span className="holding-head-name">{holding.name}</span>}
                 <span className="sheet-note">
                     {!desktop && `${holding.name} · `}
-                    {accountName} · worth {formatEuros(holdingValue(holding))} ·
+                    {accountName} · worth {formatMoney(holdingValue(holding))} ·
                     since {dayFormat.format(new Date(holding.heldSince))}
                 </span>
             </div>
@@ -95,7 +95,7 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
                         currency={history.data.currency}
                         cost={
                             holding.cost > 0
-                                ? unitCost(holding, history.data.perEuroWhenBought)
+                                ? unitCost(holding, history.data.perBaseWhenBought)
                                 : undefined
                         }
                         heldSince={holding.heldSince}
@@ -157,7 +157,7 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
 
                         <span className="sheet-total">
                             {proceeds > 0
-                                ? `€ ${formatAmount(euros(proceeds))} into ${accountName}`
+                                ? `${withSymbol(formatAmount(euros(proceeds)))} into ${accountName}`
                                 : `Proceeds go into ${accountName}`}
                         </span>
 

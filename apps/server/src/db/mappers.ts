@@ -69,6 +69,9 @@ export function toTransaction(
     };
 
     if (row.toAccountId) transaction.toAccountId = row.toAccountId;
+    if (row.originalAmount !== null && row.originalCurrency) {
+        transaction.original = { amount: row.originalAmount, currency: row.originalCurrency as Currency };
+    }
 
     return transaction;
 }

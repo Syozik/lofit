@@ -48,3 +48,10 @@ export async function perEuro(currency: string): Promise<number | undefined> {
 
     return fetched?.perEuro;
 }
+
+export async function perBase(currency: string, base: string): Promise<number | undefined> {
+    if (currency === base) return 1;
+
+    const [from, to] = await Promise.all([perEuro(currency), perEuro(base)]);
+    return from && to ? from / to : undefined;
+}

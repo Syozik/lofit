@@ -1,9 +1,4 @@
-import {
-    allocation,
-    formatEuros,
-    gainsBySymbol,
-    portfolioGain,
-} from "@lofit/domain";
+import { allocation, formatMoney, gainsBySymbol, portfolioGain, withSymbol } from "@lofit/domain";
 import type { Cents, Delta, Holding, HoldingGain } from "@lofit/domain";
 import { useState } from "react";
 import { rankColor } from "@lofit/view";
@@ -17,7 +12,7 @@ const MODES: readonly Mode[] = ["allocation", "gains"];
 const MODE_LABELS: Record<Mode, string> = { allocation: "Allocation", gains: "Gains" };
 
 function signedEuros(amount: Cents): string {
-    return `${amount < 0 ? "−" : "+"}€${Math.round(Math.abs(amount) / 100).toLocaleString("en-US")}`;
+    return `${amount < 0 ? "−" : "+"}${withSymbol(Math.round(Math.abs(amount) / 100).toLocaleString("en-US"))}`;
 }
 
 function signedPercent(pct: number): string {
@@ -52,7 +47,7 @@ function Allocation({ holdings }: { holdings: readonly Holding[] }) {
                     <div key={share.key} className="trend-part">
                         <span className="trend-dot" style={{ background: cssColor(rankColor(rank, share.key === "other")) }} />
                         <span className="trend-name">{share.label}</span>
-                        <span className="trend-value">{formatEuros(share.value)}</span>
+                        <span className="trend-value">{formatMoney(share.value)}</span>
                         <span className="trend-share">{Math.round(share.pct)}%</span>
                     </div>
                 ))}

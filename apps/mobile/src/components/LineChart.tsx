@@ -1,3 +1,4 @@
+import { displayCurrency } from "@lofit/domain";
 import {
     currencyFormat,
     linePath,
@@ -37,7 +38,7 @@ export function LineChart({
     guide,
     level,
     marker,
-    currency = "EUR",
+    currency = displayCurrency(),
 }: Props) {
     const { colors } = useTheme();
     const styles = useStyles(makeStyles);

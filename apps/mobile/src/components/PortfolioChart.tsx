@@ -1,6 +1,6 @@
-import { allocation, formatEuros, gainsBySymbol, portfolioGain } from "@lofit/domain";
+import { allocation, formatMoney, gainsBySymbol, portfolioGain } from "@lofit/domain";
 import type { Holding, HoldingGain } from "@lofit/domain";
-import { rankColor, signedPercent, signedWholeEuros } from "@lofit/view";
+import { rankColor, signedPercent, signedWholeMoney } from "@lofit/view";
 import { ChevronRight } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -49,7 +49,7 @@ function Allocation({ holdings }: { holdings: readonly Holding[] }) {
                         <Text style={styles.partName} numberOfLines={1}>
                             {share.label}
                         </Text>
-                        <Text style={styles.partValue}>{formatEuros(share.value)}</Text>
+                        <Text style={styles.partValue}>{formatMoney(share.value)}</Text>
                         <Text style={styles.partShare}>{Math.round(share.pct)}%</Text>
                     </View>
                 ))}
@@ -88,7 +88,7 @@ function GainBar({
                 />
             </View>
             <Text style={[styles.gainPct, up && styles.up]}>{signedPercent(row.gain.pct)}</Text>
-            <Text style={styles.gainAmount}>{signedWholeEuros(row.gain.amount)}</Text>
+            <Text style={styles.gainAmount}>{signedWholeMoney(row.gain.amount)}</Text>
         </View>
     );
 }
@@ -127,7 +127,7 @@ export function PortfolioChart({ holdings }: { holdings: readonly Holding[] }) {
                 <Text style={styles.name}>Portfolio</Text>
                 {gain && (
                     <Text style={[styles.gain, gain.favourable && styles.up]}>
-                        {signedWholeEuros(gain.amount)} · {signedPercent(gain.pct)}
+                        {signedWholeMoney(gain.amount)} · {signedPercent(gain.pct)}
                     </Text>
                 )}
                 <ChevronRight

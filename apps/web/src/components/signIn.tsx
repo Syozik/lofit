@@ -1,6 +1,8 @@
 import { signIn, signUp } from "@lofit/api";
 import { Eye, EyeOff } from "lucide-react";
+import type { Currency } from "@lofit/domain";
 import { useState } from "react";
+import { CurrencySelect } from "./currencySelect";
 
 const MIN_PASSWORD = 8;
 
@@ -9,6 +11,7 @@ export function SignIn() {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [currency, setCurrency] = useState<Currency>("EUR");
     const [isPasswordVisible, setPasswordVisible] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [pending, setPending] = useState(false);
@@ -26,7 +29,7 @@ export function SignIn() {
         setPending(true);
         setError(null);
         try {
-            if (joining) await signUp(name.trim(), email.trim(), password);
+            if (joining) await signUp(name.trim(), email.trim(), password, currency);
             else await signIn(email.trim(), password);
         } catch (failure) {
             setError(failure instanceof Error ? failure.message : "Something went wrong.");
@@ -97,6 +100,13 @@ export function SignIn() {
                         <span className="gate-hint">At least {MIN_PASSWORD} characters.</span>
                     )}
                 </label>
+
+                {joining && (
+                    <label className="field">
+                        <span>Currency</span>
+                        <CurrencySelect value={currency} onChange={setCurrency} />
+                    </label>
+                )}
 
                 {error && <span className="gate-error">{error}</span>}
 

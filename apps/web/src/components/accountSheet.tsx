@@ -1,5 +1,5 @@
 import { useAddAccount, useAddGroup, useGroups, useUpdateAccountBalance } from "@lofit/api";
-import { euros } from "@lofit/domain";
+import { currencySymbol, euros } from "@lofit/domain";
 import type { Account } from "@lofit/domain";
 import { parseAmount } from "@lofit/view";
 import { useState } from "react";
@@ -123,7 +123,7 @@ export function AccountSheet({ account, onClose, onSaved }: Props) {
                 </div>
             )}
             <div className="sheet-amount">
-                <span className="sheet-currency">€</span>
+                <span className="sheet-currency">{currencySymbol()}</span>
                 <input
                     autoComplete="off"
                     className="sheet-amount-input"

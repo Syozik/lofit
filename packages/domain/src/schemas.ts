@@ -25,6 +25,7 @@ export const newTransactionSchema = z
         toAccountId: z.uuid().optional(),
         amount: centsSchema,
         occurredAt: instantSchema,
+        currency: z.enum(CURRENCIES).optional(),
     })
     .superRefine((entry, ctx) => {
         if (new Set(entry.tagIds).size !== entry.tagIds.length) {
@@ -139,4 +140,8 @@ export const sellHoldingSchema = z.object({
 export const newGroupSchema = z.object({
     id: z.uuid().optional(),
     name: z.string().trim().min(1).max(40),
+});
+
+export const settingsSchema = z.object({
+    currency: z.enum(CURRENCIES),
 });

@@ -10,7 +10,7 @@ export interface PricePoint {
 export interface PriceHistory {
     currency: string;
     points: PricePoint[];
-    perEuroWhenBought: number;
+    perBaseWhenBought: number;
 }
 
 export type HistoryRange = "1d" | "1w" | "1m" | "6m" | "1y" | "5y" | "held" | "max" | "custom";
@@ -107,8 +107,8 @@ export function historyIn(
     return pointsWithin(points, (point) => point.day, rangeWindow(range, last.day, options));
 }
 
-export function unitCost(holding: Pick<Holding, "cost" | "quantity">, perEuro = 1): Cents {
-    return cents(Math.round((holding.cost / holding.quantity) * perEuro));
+export function unitCost(holding: Pick<Holding, "cost" | "quantity">, perBase = 1): Cents {
+    return cents(Math.round((holding.cost / holding.quantity) * perBase));
 }
 
 export interface ValuePoint {

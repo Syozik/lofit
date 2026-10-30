@@ -1,12 +1,15 @@
 import { signIn, signUp } from "@lofit/api";
+import { EURO } from "@lofit/domain";
+import type { Currency } from "@lofit/domain";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff } from "lucide-react-native";
 import { useState } from "react";
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../components/Button";
+import { CurrencyPicker } from "../components/CurrencyPicker";
 import { Field } from "../components/Field";
-import { setMode } from "../mode";
+import { localBackend, setMode } from "../mode";
 import { forgetCache } from "../queryClient";
 import type { Colors } from "../theme";
 import { fonts, radius, space, useStyles, useTheme } from "../theme";
@@ -17,6 +20,8 @@ export default function SignInScreen() {
     const { colors } = useTheme();
     const styles = useStyles(makeStyles);
     const [joining, setJoining] = useState(false);
+    const [offline, setOffline] = useState(false);
+    const [currency, setCurrency] = useState<Currency>(EURO);
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -35,7 +40,7 @@ export default function SignInScreen() {
         setPending(true);
         setError(null);
         try {
-            if (joining) await signUp(name.trim(), email.trim(), password);
+            if (joining) await signUp(name.trim(), email.trim(), password, currency);
             else await signIn(email.trim(), password);
         } catch (failure) {
             setError(failure instanceof Error ? failure.message : "Something went wrong.");
@@ -46,7 +51,26 @@ export default function SignInScreen() {
 
     async function enterGuest() {
         await forgetCache(client, "account");
+        await localBackend.configure({ currency });
         await setMode("guest");
+    }
+
+    if (offline) {
+        return (
+            <SafeAreaView style={styles.screen}>
+                <ScrollView contentContainerStyle={styles.center}>
+                    <View style={styles.card}>
+                        <View style={styles.head}>
+                            <Text style={styles.wordmark}>lofit</Text>
+                            <Text style={styles.note}>Your data stays on this phone.</Text>
+                        </View>
+                        <CurrencyPicker value={currency} onChange={setCurrency} />
+                        <Button label="Continue" onPress={() => void enterGuest()} />
+                        <Button variant="ghost" label="Back" onPress={() => setOffline(false)} />
+                    </View>
+                </ScrollView>
+            </SafeAreaView>
+        );
     }
 
     return (
@@ -114,6 +138,8 @@ export default function SignInScreen() {
                             }
                         />
 
+                        {joining && <CurrencyPicker value={currency} onChange={setCurrency} />}
+
                         {error && <Text style={styles.error}>{error}</Text>}
 
                         <Button
@@ -152,7 +178,7 @@ export default function SignInScreen() {
                                         disabled={pending}
                                         style={styles.choice}
                                         labelStyle={styles.choiceLabel}
-                                        onPress={() => void enterGuest()}
+                                        onPress={() => setOffline(true)}
                                     />
                                 </View>
                             </>

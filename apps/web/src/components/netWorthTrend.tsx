@@ -1,4 +1,4 @@
-import { formatEuros } from "@lofit/domain";
+import { formatMoney } from "@lofit/domain";
 import type { Cents } from "@lofit/domain";
 import type { NetWorthTrendState } from "@lofit/api";
 import { LineChart } from "./lineChart";
@@ -75,7 +75,7 @@ export function NetWorthTrend({ trend, parts, ranges = true }: Props) {
                             <span className="trend-dot" style={{ background: part.color }} />
                             <span className="trend-name">{part.label}</span>
                             <span className={`trend-value ${part.value < 0 ? "negative" : ""}`}>
-                                {formatEuros(part.value)}
+                                {formatMoney(part.value)}
                             </span>
                         </div>
                     ))}

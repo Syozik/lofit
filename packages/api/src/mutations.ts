@@ -41,7 +41,12 @@ function toTransaction(id: string, draft: NewTransaction): Transaction {
         occurredAt: draft.occurredAt,
     };
     if (draft.toAccountId) transaction.toAccountId = draft.toAccountId;
+    if (draft.currency) transaction.original = { amount: draft.amount, currency: draft.currency };
     return transaction;
+}
+
+function shifts(transaction: Transaction): readonly BalanceChange[] {
+    return transaction.original ? [] : balanceChanges(transaction);
 }
 
 function shiftBalances(client: QueryClient, changes: readonly BalanceChange[], direction: 1 | -1): void {
@@ -95,7 +100,7 @@ export function configureMutations(client: QueryClient): void {
             client.setQueryData<readonly Transaction[]>(["transactions"], (all) =>
                 all?.some((entry) => entry.id === draft.id) ? all : [transaction, ...(all ?? [])],
             );
-            shiftBalances(client, balanceChanges(transaction), 1);
+            shiftBalances(client, shifts(transaction), 1);
         },
         ["transactions", "accounts"],
     );
@@ -107,8 +112,8 @@ export function configureMutations(client: QueryClient): void {
             await hold("transactions", "accounts");
             const current = client.getQueryData<readonly Transaction[]>(["transactions"])?.find((entry) => entry.id === id);
             const next = toTransaction(id, draft);
-            if (current) shiftBalances(client, balanceChanges(current), -1);
-            shiftBalances(client, balanceChanges(next), 1);
+            if (current && !next.original) shiftBalances(client, balanceChanges(current), -1);
+            shiftBalances(client, shifts(next), 1);
             client.setQueryData<readonly Transaction[]>(["transactions"], (all) =>
                 all?.map((entry) => (entry.id === id ? next : entry)),
             );

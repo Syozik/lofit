@@ -5,6 +5,7 @@ packages:
 # is not needed; keeping it off leaves dependency scripts disabled.
 allowBuilds:
   esbuild: false
+  unrs-resolver: set this to true or false
 linkWorkspacePackages: true
 minimumReleaseAgeExclude:
   - '@turbo/darwin-64@2.10.8'

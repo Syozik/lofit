@@ -55,6 +55,7 @@ export const importsRoute = new Hono<AuthEnv>().post(
             image,
             mediaType,
             today: dayOf(new Date()),
+            currency: c.var.currency,
             accounts: accountRows,
             tags: tagRows,
         });

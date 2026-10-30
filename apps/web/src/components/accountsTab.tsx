@@ -12,7 +12,7 @@ import {
     ASSET_TYPE_LABELS,
     cents,
     forAccounts,
-    formatEuros,
+    formatMoney,
     holdingsFor,
     holdingValue,
     lastSyncedAt,
@@ -29,7 +29,7 @@ import {
     gainLabel,
     latestPricing,
     signedPercent,
-    signedWholeEuros,
+    signedWholeMoney,
 } from "@lofit/view";
 import { useState } from "react";
 import { useToast } from "../toast";
@@ -51,7 +51,7 @@ function GroupHead({ name, total }: GroupHeadProps) {
     return (
         <div className="acct-group-head">
             <span className={`kicker ${owesMoney(total) ? "" : "accent"}`}>{name}</span>
-            <span className="acct-group-total">{formatEuros(total)}</span>
+            <span className="acct-group-total">{formatMoney(total)}</span>
         </div>
     );
 }
@@ -66,12 +66,12 @@ function AccountSummary({ account, holdings }: { account: Account; holdings: rea
             </span>
             <span className="acct-figures">
                 <span className={`acct-balance ${worth < 0 ? "negative" : ""}`}>
-                    {formatEuros(worth)}
+                    {formatMoney(worth)}
                 </span>
                 {holdings.length > 0 ? (
                     <span className="acct-change">
                         {holdings.length} {holdings.length === 1 ? "position" : "positions"} · cash{" "}
-                        {formatEuros(account.balance)}
+                        {formatMoney(account.balance)}
                     </span>
                 ) : (
                     account.change && (
@@ -186,7 +186,7 @@ function HoldingRow({ holding, onOpen, onDelete }: HoldingRowProps) {
                     <span className="acct-sub">{ASSET_TYPE_LABELS[holding.type]}</span>
                 </span>
                 <span className="acct-figures">
-                    <span className="acct-balance">{formatEuros(holdingValue(holding))}</span>
+                    <span className="acct-balance">{formatMoney(holdingValue(holding))}</span>
                     <span className="acct-change">{formatUnits(holding)}</span>
                     {holding.cost > 0 && <GainLine holding={holding} />}
                 </span>
@@ -237,13 +237,13 @@ function brokerLines(account: Account, holdings: readonly Holding[]): readonly L
     const value = holdings.reduce((sum, holding) => sum + holdingValue(holding), 0);
     const gain = portfolioGain(holdings);
     return [
-        { label: "Positions", value: formatEuros(cents(value)) },
-        { label: "Cash", value: formatEuros(account.balance) },
+        { label: "Positions", value: formatMoney(cents(value)) },
+        { label: "Cash", value: formatMoney(account.balance) },
         ...(gain
             ? [
                   {
                       label: "Gain",
-                      value: `${signedWholeEuros(gain.amount)} · ${signedPercent(gain.pct)}`,
+                      value: `${signedWholeMoney(gain.amount)} · ${signedPercent(gain.pct)}`,
                   },
               ]
             : []),
@@ -293,7 +293,7 @@ function AccountPane({
                     <span
                         className={`accounts-total acct-pane-balance ${worth < 0 ? "negative" : ""}`}
                     >
-                        {formatEuros(worth)}
+                        {formatMoney(worth)}
                     </span>
                     <span className="acct-pane-meta">{meta.join(" · ")}</span>
                 </div>
@@ -414,7 +414,7 @@ export function AccountsTab() {
                     <div className="accounts-head">
                         {synced && <span className="kicker">Synced {formatSync(synced)}</span>}
                         <span className="accounts-total">
-                            {formatEuros(netWorth(accounts, holdings))}
+                            {formatMoney(netWorth(accounts, holdings))}
                         </span>
                     </div>
 

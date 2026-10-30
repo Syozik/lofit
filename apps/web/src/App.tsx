@@ -1,7 +1,9 @@
-import { signOut, useSession } from "@lofit/api";
+import { signOut, useDisplayCurrency, useSession } from "@lofit/api";
+import { isCurrency } from "@lofit/domain";
+import type { Currency } from "@lofit/domain";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { ChartPie, LogOut, Plus, Receipt, WalletCards } from "lucide-react";
+import { ChartPie, LogOut, Plus, Receipt, Settings, WalletCards } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import "./App.css";
 import { EntrySheet } from "./components/entrySheet";
@@ -11,6 +13,7 @@ import { AccountsTab } from "./components/accountsTab";
 import { SpendingTab } from "./components/spendingTab";
 import { TabButton } from "./components/tabButton";
 import { Indicator } from "./components/indicator";
+import { SettingsSheet } from "./components/settingsSheet";
 import { Sidebar } from "./components/sidebar";
 import { NavigationContext } from "./navigation";
 import type { TabName } from "./navigation";
@@ -33,10 +36,12 @@ const TABS: Record<TabName, Tab> = {
 
 const TOAST_MS = 1000;
 
-function AppShell() {
+function AppShell({ signedUpWith }: { signedUpWith: Currency }) {
     const queryClient = useQueryClient();
+    const currency = useDisplayCurrency(signedUpWith);
     const [currentTab, setCurrentTab] = useState<TabName>("netWorth");
     const [sheetOpen, setSheetOpen] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
     const [toast, setToast] = useState<{ message: string; action?: ToastAction } | null>(null);
     const ActiveTab = TABS[currentTab].Component;
     const desktop = useDesktop();
@@ -82,6 +87,7 @@ function AppShell() {
                             current={currentTab}
                             onSelect={setCurrentTab}
                             onAdd={() => setSheetOpen(true)}
+                            onSettings={() => setSettingsOpen(true)}
                             onSignOut={() => void leave()}
                         />
                     ) : (
@@ -91,6 +97,13 @@ function AppShell() {
                             <button
                                 className="btn btn-ghost btn-icon"
                                 style={{ marginLeft: "auto" }}
+                                aria-label="Settings"
+                                onClick={() => setSettingsOpen(true)}
+                            >
+                                <Settings size={16} strokeWidth={1.5} aria-hidden />
+                            </button>
+                            <button
+                                className="btn btn-ghost btn-icon"
                                 aria-label="Sign out"
                                 onClick={() => void leave()}
                             >
@@ -98,7 +111,7 @@ function AppShell() {
                             </button>
                         </div>
                     )}
-                    <ActiveTab />
+                    <ActiveTab key={currency} />
                     {!desktop && (
                         <div className="tabs">
                             {Object.entries(TABS).map(([name, tab]) => (
@@ -138,6 +151,7 @@ function AppShell() {
                     )}
 
                     {sheetOpen && <EntrySheet onClose={() => setSheetOpen(false)} onSaved={show} />}
+                    {settingsOpen && <SettingsSheet onClose={() => setSettingsOpen(false)} onSaved={show} />}
                 </main>
             </ToastContext.Provider>
         </NavigationContext.Provider>
@@ -150,7 +164,8 @@ function App() {
     if (isPending) return <main className="gate" />;
     if (!session) return <SignIn />;
 
-    return <AppShell />;
+    const currency = session.user.currency;
+    return <AppShell signedUpWith={isCurrency(currency) ? currency : "EUR"} />;
 }
 
 export default App;

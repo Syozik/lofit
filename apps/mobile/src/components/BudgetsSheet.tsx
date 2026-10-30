@@ -1,5 +1,5 @@
 import { useSetBudget } from "@lofit/api";
-import { cents, euros, formatAmount, sumCents, tagsFor } from "@lofit/domain";
+import { cents, currencySymbol, euros, formatAmount, sumCents, tagsFor, withSymbol } from "@lofit/domain";
 import type { Budget, Cents, Tag } from "@lofit/domain";
 import { parsePositive } from "@lofit/view";
 import { useState } from "react";
@@ -71,10 +71,10 @@ export function BudgetsSheet({ tags, budgets, spent, month, onClose }: Props) {
                                 <Text style={styles.name} numberOfLines={1}>
                                     {tag.name}
                                 </Text>
-                                <Text style={styles.spent}>€ {formatAmount(spent.get(tag.id) ?? cents(0))} spent</Text>
+                                <Text style={styles.spent}>{withSymbol(formatAmount(spent.get(tag.id) ?? cents(0)))} spent</Text>
                             </View>
                             <View style={styles.inputWrap}>
-                                <Text style={styles.currency}>€</Text>
+                                <Text style={styles.currency}>{currencySymbol()}</Text>
                                 <TextInput
                                     accessibilityLabel={`${tag.name} budget`}
                                     style={[fieldStyles.input, styles.input, draft?.valid === false && styles.invalid]}
@@ -92,7 +92,7 @@ export function BudgetsSheet({ tags, budgets, spent, month, onClose }: Props) {
                 })}
             </View>
 
-            <Text style={styles.total}>€ {formatAmount(total)} a month</Text>
+            <Text style={styles.total}>{withSymbol(formatAmount(total))} a month</Text>
 
             <SheetActions>
                 <Button variant="secondary" label="Cancel" onPress={onClose} style={{ flex: 1 }} />

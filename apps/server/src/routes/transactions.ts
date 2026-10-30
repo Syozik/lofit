@@ -1,5 +1,6 @@
 import { zValidator } from "@hono/zod-validator";
-import { balanceChanges, negateCents } from "@lofit/domain";
+import { balanceChanges, negateCents, toBase } from "@lofit/domain";
+import type { Cents } from "@lofit/domain";
 import { newTransactionSchema } from "@lofit/domain/schemas";
 import { z } from "zod";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
@@ -10,6 +11,22 @@ import { db } from "../db/client";
 import { toTransaction } from "../db/mappers";
 import { accounts, tags, transactions, transactionTags } from "../db/schema";
 import { invalidBody } from "../http";
+import { perBaseOn } from "../prices/history";
+
+type Entry = z.output<typeof newTransactionSchema>;
+
+async function inBase(entry: Entry, base: string): Promise<Entry & { original: { amount: Cents; currency: string } | null }> {
+    if (!entry.currency || entry.currency === base) return { ...entry, original: null };
+
+    const rate = await perBaseOn(entry.currency, base, entry.occurredAt.slice(0, 10));
+    if (!rate) throw new HTTPException(422, { message: `No exchange rate for ${entry.currency}` });
+
+    return {
+        ...entry,
+        amount: toBase(entry.amount, rate),
+        original: { amount: entry.amount, currency: entry.currency },
+    };
+}
 
 export const transactionsRoute = new Hono<AuthEnv>()
     .get("/", async (c) => {
@@ -42,7 +59,7 @@ export const transactionsRoute = new Hono<AuthEnv>()
             if (!result.success) return invalidBody(c, result.error.issues);
         }),
         async (c) => {
-            const entry = c.req.valid("json");
+            const entry = await inBase(c.req.valid("json"), c.var.currency);
             const userId = c.var.userId;
             const changes = balanceChanges(entry);
 
@@ -94,6 +111,8 @@ export const transactionsRoute = new Hono<AuthEnv>()
                         accountId: entry.accountId,
                         toAccountId: entry.toAccountId ?? null,
                         amount: entry.amount,
+                        originalAmount: entry.original?.amount ?? null,
+                        originalCurrency: entry.original?.currency ?? null,
                         occurredAt: new Date(entry.occurredAt),
                     })
                     .returning();
@@ -133,7 +152,7 @@ export const transactionsRoute = new Hono<AuthEnv>()
         }),
         async (c) => {
             const id = c.req.param("id");
-            const entry = c.req.valid("json");
+            const entry = await inBase(c.req.valid("json"), c.var.currency);
             const userId = c.var.userId;
             const wanted = balanceChanges(entry);
 
@@ -192,6 +211,8 @@ export const transactionsRoute = new Hono<AuthEnv>()
                         accountId: entry.accountId,
                         toAccountId: entry.toAccountId ?? null,
                         amount: entry.amount,
+                        originalAmount: entry.original?.amount ?? null,
+                        originalCurrency: entry.original?.currency ?? null,
                         occurredAt: new Date(entry.occurredAt),
                     })
                     .where(and(eq(transactions.id, id), eq(transactions.userId, userId)))

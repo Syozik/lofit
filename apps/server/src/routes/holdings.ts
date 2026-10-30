@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import { paidFor, sellUnits, toEuros } from "@lofit/domain";
+import { paidFor, sellUnits, toBase } from "@lofit/domain";
 import {
     holdingPatchSchema,
     newHoldingSchema,
@@ -14,7 +14,7 @@ import { db } from "../db/client";
 import { toHolding } from "../db/mappers";
 import { accounts, holdings } from "../db/schema";
 import { priceHistory } from "../prices/history";
-import { perEuro } from "../prices/rates";
+import { perBase } from "../prices/rates";
 import { invalidBody } from "../http";
 
 export const holdingsRoute = new Hono<AuthEnv>()
@@ -36,14 +36,14 @@ export const holdingsRoute = new Hono<AuthEnv>()
             const entry = c.req.valid("json");
             const userId = c.var.userId;
 
-            const rate = await perEuro(entry.currency);
+            const rate = await perBase(entry.currency, c.var.currency);
             if (!rate) {
                 throw new HTTPException(422, {
-                    message: `No euro rate for ${entry.currency}`,
+                    message: `No ${c.var.currency} rate for ${entry.currency}`,
                 });
             }
 
-            const price = toEuros(entry.price, rate);
+            const price = toBase(entry.price, rate);
             const cost = paidFor(entry.quantity, price);
 
             const row = await db.transaction(async (tx) => {
@@ -109,7 +109,7 @@ export const holdingsRoute = new Hono<AuthEnv>()
 
             if (!held) throw new HTTPException(404, { message: "No such holding" });
 
-            return c.json(held.quote ? await priceHistory(held.quote, held.heldSince) : null);
+            return c.json(held.quote ? await priceHistory(held.quote, held.heldSince, c.var.currency) : null);
         },
     )
     .patch(
@@ -158,14 +158,14 @@ export const holdingsRoute = new Hono<AuthEnv>()
                 if (!held) throw new HTTPException(404, { message: "No such holding" });
 
                 const sold = toHolding(held);
-                const rate = await perEuro(sold.currency);
+                const rate = await perBase(sold.currency, c.var.currency);
                 if (!rate) {
                     throw new HTTPException(422, {
-                        message: `No euro rate for ${sold.currency}`,
+                        message: `No ${c.var.currency} rate for ${sold.currency}`,
                     });
                 }
 
-                const result = sellUnits(sold, order.quantity, toEuros(order.price, rate));
+                const result = sellUnits(sold, order.quantity, toBase(order.price, rate));
 
                 if (result.left) {
                     await tx

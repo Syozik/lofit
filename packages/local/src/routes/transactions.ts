@@ -67,6 +67,9 @@ export function transactionsRoute(store: Store) {
             const parsed = await readJson(c, newTransactionSchema);
             if (!parsed.success) return invalidBody(c, parsed.error.issues);
             const entry = parsed.data;
+            if (entry.currency && entry.currency !== store.settings.currency) {
+                throw new HTTPException(422, { message: "Other currencies need an account" });
+            }
             const changes = balanceChanges(entry);
 
             if (entry.id) {
@@ -92,6 +95,9 @@ export function transactionsRoute(store: Store) {
             const parsed = await readJson(c, newTransactionSchema);
             if (!parsed.success) return invalidBody(c, parsed.error.issues);
             const entry = parsed.data;
+            if (entry.currency && entry.currency !== store.settings.currency) {
+                throw new HTTPException(422, { message: "Other currencies need an account" });
+            }
             const wanted = balanceChanges(entry);
 
             const index = data.transactions.findIndex((stored) => stored.id === id);

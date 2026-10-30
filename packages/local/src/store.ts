@@ -1,5 +1,5 @@
-import { DEFAULT_GROUP_NAMES, DEFAULT_TAGS, INVESTMENTS_GROUP } from "@lofit/domain";
-import type { Account, Budget, Group, Snapshot, Tag, Transaction } from "@lofit/domain";
+import { DEFAULT_GROUP_NAMES, DEFAULT_TAGS, EURO, INVESTMENTS_GROUP, isCurrency } from "@lofit/domain";
+import type { Account, Budget, Group, Settings, Snapshot, Tag, Transaction } from "@lofit/domain";
 import { newId } from "./ids";
 import { recordSnapshot } from "./snapshots";
 
@@ -34,8 +34,12 @@ const COLLECTIONS: readonly Collection[] = [
 
 const PREFIX = "lofit-local:";
 
+const SETTINGS = `${PREFIX}settings`;
+
 export type Store = {
     data: Ledger;
+    settings: Settings;
+    saveSettings(): Promise<void>;
     start(): Promise<void>;
     save(...touched: Collection[]): Promise<void>;
     erase(): Promise<void>;
@@ -61,6 +65,7 @@ export function today(): string {
 
 export function createStore(storage: KeyValueStorage): Store {
     const data = emptyLedger();
+    const settings: Settings = { currency: EURO };
     let started: Promise<void> | undefined;
     let writing: Promise<void> = Promise.resolve();
 
@@ -80,7 +85,14 @@ export function createStore(storage: KeyValueStorage): Store {
         );
     }
 
+    function saveSettings(): Promise<void> {
+        return enqueue(() => storage.setItem(SETTINGS, JSON.stringify(settings)));
+    }
+
     async function load(): Promise<void> {
+        const saved = JSON.parse((await storage.getItem(SETTINGS)) ?? "{}") as Partial<Settings>;
+        settings.currency = isCurrency(saved.currency) ? saved.currency : EURO;
+
         const stored = await Promise.all(COLLECTIONS.map((key) => storage.getItem(PREFIX + key)));
         if (stored[0] === null) {
             Object.assign(data, emptyLedger());
@@ -107,8 +119,11 @@ export function createStore(storage: KeyValueStorage): Store {
         await started?.catch(() => undefined);
         started = undefined;
         Object.assign(data, emptyLedger());
-        await enqueue(() => Promise.all(COLLECTIONS.map((key) => storage.removeItem(PREFIX + key))));
+        settings.currency = EURO;
+        await enqueue(() =>
+            Promise.all([...COLLECTIONS.map((key) => PREFIX + key), SETTINGS].map((key) => storage.removeItem(key))),
+        );
     }
 
-    return { data, start, save, erase };
+    return { data, settings, saveSettings, start, save, erase };
 }

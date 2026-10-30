@@ -1,13 +1,20 @@
+import type { Currency } from "@lofit/domain";
+import { inferAdditionalFields } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
-type AuthClient = ReturnType<typeof createAuthClient>;
+const fields = inferAdditionalFields({ user: { currency: { type: "string", required: false } } });
+
+type AuthClient = ReturnType<typeof createAuthClient<{ plugins: [typeof fields] }>>;
 
 type AuthPlugins = NonNullable<Parameters<typeof createAuthClient>[0]>["plugins"];
 
 let client: AuthClient | undefined;
 
 export function configureAuth(baseUrl: string, plugins: AuthPlugins = []): AuthClient {
-    client = createAuthClient({ baseURL: `${baseUrl}/api/auth`, plugins }) as unknown as AuthClient;
+    client = createAuthClient({
+        baseURL: `${baseUrl}/api/auth`,
+        plugins: [fields, ...(plugins ?? [])],
+    }) as unknown as AuthClient;
     return client;
 }
 
@@ -25,11 +32,21 @@ export async function signIn(email: string, password: string): Promise<void> {
     if (error) throw new Error(error.message ?? "Those details did not work.");
 }
 
-export async function signUp(name: string, email: string, password: string): Promise<void> {
-    const { error } = await auth().signUp.email({ name, email, password });
+export async function signUp(name: string, email: string, password: string, currency: Currency): Promise<void> {
+    const { error } = await auth().signUp.email({ name, email, password, currency });
     if (error) throw new Error(error.message ?? "That account could not be created.");
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const { error } = await auth().changePassword({ currentPassword, newPassword, revokeOtherSessions: true });
+    if (error) throw new Error(error.message ?? "The password could not be changed.");
 }
 
 export async function signOut(): Promise<void> {
     await auth().signOut();
+}
+
+export async function deleteUser(password: string): Promise<void> {
+    const { error } = await auth().deleteUser({ password });
+    if (error) throw new Error(error.message ?? "The account could not be deleted.");
 }

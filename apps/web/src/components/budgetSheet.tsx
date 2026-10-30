@@ -1,5 +1,5 @@
 import { useBudgets, useSetBudget, useTags, useTransactions } from "@lofit/api";
-import { cents, euros, formatAmount, spendByTag, sumCents, tagsFor } from "@lofit/domain";
+import { cents, currencySymbol, euros, formatAmount, spendByTag, sumCents, tagsFor, withSymbol } from "@lofit/domain";
 import type { Cents } from "@lofit/domain";
 import { parsePositive } from "@lofit/view";
 import { useState } from "react";
@@ -64,11 +64,11 @@ export function BudgetSheet({ period, onClose, onSaved }: Props) {
                             <span className="budget-row-label">
                                 <span className="budget-row-name">{tag.name}</span>
                                 <span className="budget-row-spent">
-                                    € {formatAmount(spent.get(tag.id) ?? cents(0))} spent
+                                    {withSymbol(formatAmount(spent.get(tag.id) ?? cents(0)))} spent
                                 </span>
                             </span>
                             <span className={`budget-input input ${bad ? "invalid" : ""}`}>
-                                <span className="budget-input-currency">€</span>
+                                <span className="budget-input-currency">{currencySymbol()}</span>
                                 <input
                                     autoComplete="off"
                                     inputMode="decimal"
@@ -90,7 +90,7 @@ export function BudgetSheet({ period, onClose, onSaved }: Props) {
             </div>
 
             <div className="sheet-actions budget-actions">
-                <span className="budget-total">€ {formatAmount(total)} a month</span>
+                <span className="budget-total">{withSymbol(formatAmount(total))} a month</span>
                 <button className="btn btn-secondary" onClick={onClose}>
                     Cancel
                 </button>

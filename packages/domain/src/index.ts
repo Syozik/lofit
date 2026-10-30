@@ -25,7 +25,7 @@ export { balanceChanges, isDay, isInstant, primaryTagId } from "./transaction";
 export type { NewTag, Tag, TagKind } from "./tag";
 export { DEFAULT_TAG_NAMES, DEFAULT_TAGS, defaultTags, sameTagName, TAG_KINDS, tagsFor } from "./tag";
 
-export type { Cents, Currency } from "./money";
+export type { Cents, Currency, Settings } from "./money";
 export {
     cents,
     euros,
@@ -34,10 +34,19 @@ export {
     negateCents,
     absCents,
     CURRENCIES,
+    CURRENCY_NAMES,
+    CURRENCY_SYMBOLS,
+    currencyLabel,
+    currencySymbol,
+    withSymbol,
+    displayCurrency,
     EURO,
     formatAmount,
-    formatEuros,
-    toEuros,
+    formatMoney,
+    isCurrency,
+    priceCurrencies,
+    setDisplayCurrency,
+    toBase,
 } from "./money";
 
 export type {

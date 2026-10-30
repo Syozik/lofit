@@ -1,4 +1,4 @@
-import { EURO, quoteKey, toEuros } from "@lofit/domain";
+import { EURO, quoteKey, toBase } from "@lofit/domain";
 import { fetchCoingeckoPrices } from "./coingecko";
 import { perEuro } from "./rates";
 import type { Quote, QuoteFetcher } from "./refresh";
@@ -31,7 +31,7 @@ export const fetchLiveQuotes: QuoteFetcher = async (refs) => {
         }
 
         quotes.set(quoteKey(ref), {
-            price: toEuros(quote.price, rate),
+            price: toBase(quote.price, rate),
             nativePrice: quote.price,
             currency: quote.currency,
             at,

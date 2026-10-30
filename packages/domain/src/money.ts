@@ -36,17 +36,77 @@ export function formatAmount(value: Cents): string {
     return amountFormat.format(Math.abs(value) / 100);
 }
 
-export function formatEuros(value: Cents): string {
-    return `${value < 0 ? "− € " : "€ "}${formatAmount(value)}`;
-}
-
 export const EURO = "EUR";
 
-export const CURRENCIES = [EURO, "USD"] as const;
+export const CURRENCIES = [EURO, "USD", "GBP", "CHF", "PLN", "CZK", "SEK", "NOK", "DKK"] as const;
 
 export type Currency = (typeof CURRENCIES)[number];
 
-export function toEuros(amount: Cents, perEuro: number): Cents {
-    if (perEuro <= 0) throw new RangeError(`A rate must be positive, got ${perEuro}`);
-    return cents(Math.round(amount / perEuro));
+export const CURRENCY_SYMBOLS: Record<Currency, string> = {
+    EUR: "€",
+    USD: "$",
+    GBP: "£",
+    CHF: "CHF",
+    PLN: "zł",
+    CZK: "Kč",
+    SEK: "kr",
+    NOK: "kr",
+    DKK: "kr",
+};
+
+export const CURRENCY_NAMES: Record<Currency, string> = {
+    EUR: "Euro",
+    USD: "US dollar",
+    GBP: "British pound",
+    CHF: "Swiss franc",
+    PLN: "Polish złoty",
+    CZK: "Czech koruna",
+    SEK: "Swedish krona",
+    NOK: "Norwegian krone",
+    DKK: "Danish krone",
+};
+
+export interface Settings {
+    currency: Currency;
+}
+
+export function isCurrency(value: unknown): value is Currency {
+    return typeof value === "string" && (CURRENCIES as readonly string[]).includes(value);
+}
+
+let displayed: Currency = EURO;
+
+export function setDisplayCurrency(currency: Currency): void {
+    displayed = currency;
+}
+
+export function displayCurrency(): Currency {
+    return displayed;
+}
+
+export function priceCurrencies(): Currency[] {
+    return [...new Set<Currency>([displayed, EURO, "USD"])];
+}
+
+export function currencySymbol(currency: Currency = displayed): string {
+    return CURRENCY_SYMBOLS[currency];
+}
+
+export function currencyLabel(currency: Currency): string {
+    const symbol = CURRENCY_SYMBOLS[currency];
+    return symbol === currency ? currency : `${symbol} ${currency}`;
+}
+
+export function withSymbol(amount: string, currency: Currency = displayed): string {
+    const symbol = CURRENCY_SYMBOLS[currency];
+    return /\p{L}$/u.test(symbol) ? `${symbol} ${amount}` : `${symbol}${amount}`;
+}
+
+export function formatMoney(value: Cents): string {
+    return `${value < 0 ? "−" : ""}${withSymbol(formatAmount(value))}`;
+}
+
+export function toBase(amount: Cents, perBase: number): Cents {
+    if (perBase <= 0) throw new RangeError(`A rate must be positive, got ${perBase}`);
+    return cents(Math.round(amount / perBase));
 }

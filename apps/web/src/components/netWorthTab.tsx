@@ -6,6 +6,7 @@ import {
     amountIn,
     byPosition,
     cents,
+    currencySymbol,
     formatAmount,
     itemsInScope,
     netWorthGroups,
@@ -19,7 +20,7 @@ import {
     groupColor,
     kickerFor,
     netWorthSlices,
-    shortEuros,
+    shortMoney,
     signedAmount,
     signedPercent,
 } from "@lofit/view";
@@ -129,7 +130,7 @@ function NetWorthPage({ accounts, holdings, snapshots, allGroups }: PageProps) {
             focused={focusedSlice}
             onFocus={setFocusedSlice}
             label={centreLabel(selected)}
-            value={shortEuros(centre)}
+            value={shortMoney(centre)}
             scoped={scope !== ALL_GROUPS}
         />
     );
@@ -163,7 +164,7 @@ function NetWorthPage({ accounts, holdings, snapshots, allGroups }: PageProps) {
                     </div>
                     <span className="kicker">{kicker}</span>
                     <div className="net-worth">
-                        <span className="net-worth-currency">{total < 0 ? "−€" : "€"}</span>
+                        <span className="net-worth-currency">{total < 0 ? `−${currencySymbol()}` : currencySymbol()}</span>
                         <span>{formatAmount(total)}</span>
                     </div>
                     {trend.delta && <DeltaLine delta={trend.delta} previous={trend.since} />}

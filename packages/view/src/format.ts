@@ -1,13 +1,13 @@
-import { formatAmount } from "@lofit/domain";
+import { formatAmount, withSymbol } from "@lofit/domain";
 import type { Cents } from "@lofit/domain";
 import { wholeNumber } from "./intl";
 
-export function shortEuros(value: Cents): string {
-    return `€ ${wholeNumber(Math.round(Math.abs(value) / 100))}`;
+export function shortMoney(value: Cents): string {
+    return withSymbol(wholeNumber(Math.round(Math.abs(value) / 100)));
 }
 
 export function signedAmount(value: Cents): string {
-    return `${value < 0 ? "−" : "+"} € ${formatAmount(value)}`;
+    return `${value < 0 ? "−" : "+"}${withSymbol(formatAmount(value))}`;
 }
 
 export function signedPercent(value: number): string {

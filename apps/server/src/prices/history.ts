@@ -70,7 +70,7 @@ async function topUp(ref: QuoteRef): Promise<void> {
     });
 }
 
-async function ensureRatesSince(currency: string, day: string): Promise<void> {
+export async function ensureRatesSince(currency: string, day: string): Promise<void> {
     if (currency === EURO || backfilled.has(currency) || !/^[A-Z]{3}$/.test(currency)) return;
 
     const [earliest] = await db
@@ -109,7 +109,7 @@ async function rateOn(currency: string, day: string): Promise<number | undefined
     return after?.perEuro;
 }
 
-export async function priceHistory(ref: QuoteRef, heldSince: string): Promise<PriceHistory | null> {
+export async function priceHistory(ref: QuoteRef, heldSince: string, base: string): Promise<PriceHistory | null> {
     const key = quoteKey(ref);
 
     let pending = inFlight.get(key);
@@ -128,9 +128,17 @@ export async function priceHistory(ref: QuoteRef, heldSince: string): Promise<Pr
         .where(eq(priceCloses.key, key))
         .orderBy(asc(priceCloses.day));
 
-    await ensureRatesSince(series.currency, heldSince);
-    const perEuro = await rateOn(series.currency, heldSince);
-    if (!perEuro) return null;
+    await Promise.all([ensureRatesSince(series.currency, heldSince), ensureRatesSince(base, heldSince)]);
+    const [from, to] = await Promise.all([rateOn(series.currency, heldSince), rateOn(base, heldSince)]);
+    if (!from || !to) return null;
 
-    return { currency: series.currency, points: closes, perEuroWhenBought: perEuro };
+    return { currency: series.currency, points: closes, perBaseWhenBought: from / to };
+}
+
+export async function perBaseOn(currency: string, base: string, day: string): Promise<number | undefined> {
+    if (currency === base) return 1;
+
+    await Promise.all([ensureRatesSince(currency, day), ensureRatesSince(base, day)]);
+    const [from, to] = await Promise.all([rateOn(currency, day), rateOn(base, day)]);
+    return from && to ? from / to : undefined;
 }

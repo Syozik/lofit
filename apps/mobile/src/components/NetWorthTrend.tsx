@@ -1,5 +1,5 @@
 import type { NetWorthTrendState } from "@lofit/api";
-import { formatEuros } from "@lofit/domain";
+import { formatMoney } from "@lofit/domain";
 import type { Cents } from "@lofit/domain";
 import { StyleSheet, Text, View } from "react-native";
 import type { Colors } from "../theme";
@@ -86,7 +86,7 @@ export function NetWorthTrend({ trend, parts }: Props) {
                                 {part.label}
                             </Text>
                             <Text style={[styles.partValue, part.value < 0 && styles.negative]}>
-                                {formatEuros(part.value)}
+                                {formatMoney(part.value)}
                             </Text>
                         </View>
                     ))}

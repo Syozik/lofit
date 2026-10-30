@@ -1,6 +1,6 @@
 import { signOut } from "@lofit/api";
 import { useMutationState, useQueryClient } from "@tanstack/react-query";
-import { LogOut } from "lucide-react-native";
+import { LogOut, Settings } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useOnline } from "../connectivity";
@@ -10,11 +10,32 @@ import { forgetSignIn } from "../signedIn";
 import type { Colors } from "../theme";
 import { fonts, useStyles, useTheme } from "../theme";
 import { EraseSheet } from "./EraseSheet";
+import { SettingsSheet } from "./SettingsSheet";
 import { useToast } from "./Toast";
 
 function syncLabel(online: boolean, waiting: number): string {
     if (!online) return waiting > 0 ? `${waiting} to sync` : "";
     return waiting > 0 ? `Syncing ${waiting}` : "";
+}
+
+function SettingsButton() {
+    const { colors } = useTheme();
+    const styles = useStyles(makeStyles);
+    const [open, setOpen] = useState(false);
+
+    return (
+        <>
+            <Pressable
+                accessibilityLabel="Settings"
+                hitSlop={10}
+                onPress={() => setOpen(true)}
+                style={styles.action}
+            >
+                <Settings size={16} strokeWidth={1.5} color={colors.quiet} />
+            </Pressable>
+            {open && <SettingsSheet onClose={() => setOpen(false)} />}
+        </>
+    );
 }
 
 function GuestHeader() {
@@ -29,11 +50,12 @@ function GuestHeader() {
                 accessibilityLabel="Stored on this phone"
                 style={[styles.indicator, { backgroundColor: colors.subtle }]}
             />
+            <SettingsButton />
             <Pressable
                 accessibilityLabel="Sign out"
                 hitSlop={10}
                 onPress={() => setLeaving(true)}
-                style={styles.action}
+                style={styles.signOut}
             >
                 <LogOut size={16} strokeWidth={1.5} color={colors.quiet} />
             </Pressable>
@@ -72,11 +94,12 @@ function AccountHeader() {
                 ]}
             />
             {label && <Text style={styles.status}>{label}</Text>}
+            <SettingsButton />
             <Pressable
                 accessibilityLabel="Sign out"
                 hitSlop={10}
                 onPress={() => void leave()}
-                style={styles.action}
+                style={styles.signOut}
             >
                 <LogOut size={16} strokeWidth={1.5} color={colors.quiet} />
             </Pressable>
@@ -95,4 +118,5 @@ const makeStyles = (colors: Colors) =>
         wordmark: { fontFamily: fonts.semibold, fontSize: 20, color: colors.text, letterSpacing: -0.4 },
         status: { marginLeft: 6, marginTop: 2, fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
         action: { marginLeft: "auto", padding: 6 },
+        signOut: { padding: 6 },
     });

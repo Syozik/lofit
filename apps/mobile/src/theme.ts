@@ -1,8 +1,44 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { ColorToken } from "@lofit/view";
-import { useMemo } from "react";
-import { useColorScheme } from "react-native";
+import { useMemo, useSyncExternalStore } from "react";
+import { Appearance, useColorScheme } from "react-native";
 
 export type Scheme = "light" | "dark";
+
+export type ThemePreference = "system" | Scheme;
+
+const THEME_KEY = "lofit-theme";
+
+let preference: ThemePreference = "system";
+const listeners = new Set<() => void>();
+
+function applyPreference(next: ThemePreference): void {
+    preference = next;
+    Appearance.setColorScheme(next === "system" ? "unspecified" : next);
+    listeners.forEach((listener) => listener());
+}
+
+void AsyncStorage.getItem(THEME_KEY)
+    .catch(() => null)
+    .then((stored) => {
+        if (stored === "light" || stored === "dark") applyPreference(stored);
+    });
+
+export async function setThemePreference(next: ThemePreference): Promise<void> {
+    applyPreference(next);
+    if (next === "system") await AsyncStorage.removeItem(THEME_KEY);
+    else await AsyncStorage.setItem(THEME_KEY, next);
+}
+
+export function useThemePreference(): ThemePreference {
+    return useSyncExternalStore(
+        (listener) => {
+            listeners.add(listener);
+            return () => listeners.delete(listener);
+        },
+        () => preference,
+    );
+}
 
 const tokens: Record<Scheme, Record<ColorToken, string>> = {
     light: {
@@ -42,6 +78,7 @@ export const lightColors = {
     accentSoft: "#dde8fe",
     accentInk: "#16233f",
     danger: "#d1453b",
+    warning: "#c27a12",
     divider: "rgba(34, 36, 44, 0.14)",
     hairline: "rgba(34, 36, 44, 0.07)",
     muted: "#7c8092",
@@ -72,6 +109,7 @@ export const darkColors: Colors = {
     accentSoft: "#223760",
     accentInk: "#dde8fe",
     danger: "#e5675d",
+    warning: "#e0a33e",
     divider: "rgba(232, 234, 243, 0.12)",
     hairline: "rgba(232, 234, 243, 0.06)",
     muted: "#8a8ea0",

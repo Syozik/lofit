@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addCents, cents, euros, formatAmount, formatEuros, sumCents } from "./index";
+import { addCents, cents, euros, formatAmount, formatMoney, sumCents } from "./index";
 
 describe("money", () => {
     it("rounds euros to whole cents so float noise never reaches a balance", () => {
@@ -21,7 +21,7 @@ describe("money", () => {
     it("formats en-US amounts, with a true minus sign for negatives", () => {
         expect(formatAmount(euros(4150))).toBe("4,150.00");
         expect(formatAmount(euros(-42.18))).toBe("42.18");
-        expect(formatEuros(euros(-1284.4))).toBe("− € 1,284.40");
-        expect(formatEuros(euros(0))).toBe("€ 0.00");
+        expect(formatMoney(euros(-1284.4))).toBe("− € 1,284.40");
+        expect(formatMoney(euros(0))).toBe("€ 0.00");
     });
 });

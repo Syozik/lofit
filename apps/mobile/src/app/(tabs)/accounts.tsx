@@ -9,7 +9,7 @@ import {
     addCents,
     ASSET_TYPE_LABELS,
     byPosition,
-    formatEuros,
+    formatMoney,
     holdingsFor,
     holdingValue,
     lastSyncedAt,
@@ -85,12 +85,12 @@ function AccountCard({
                 </View>
                 <View style={styles.figures}>
                     <Text style={[styles.balance, worth < 0 && styles.negative]}>
-                        {formatEuros(worth)}
+                        {formatMoney(worth)}
                     </Text>
                     {holdings.length > 0 ? (
                         <Text style={styles.change}>
                             {holdings.length} {holdings.length === 1 ? "position" : "positions"} ·
-                            cash {formatEuros(account.balance)}
+                            cash {formatMoney(account.balance)}
                         </Text>
                     ) : (
                         account.change && (
@@ -175,7 +175,7 @@ const HoldingRow = memo(function HoldingRow({
                 <Text style={styles.sub}>{ASSET_TYPE_LABELS[holding.type]}</Text>
             </View>
             <View style={styles.figures}>
-                <Text style={styles.balance}>{formatEuros(holdingValue(holding))}</Text>
+                <Text style={styles.balance}>{formatMoney(holdingValue(holding))}</Text>
                 <Text style={styles.change}>{formatUnits(holding)}</Text>
                 {gain && (
                     <Text style={[styles.change, gain.favourable && styles.up]}>
@@ -249,7 +249,7 @@ export default function AccountsScreen() {
         <Screen refreshing={refreshing} onRefresh={reload}>
             <View style={styles.head}>
                 {synced && <Text style={text.kicker}>Synced {formatSync(synced)}</Text>}
-                <Text style={styles.total}>{formatEuros(netWorth(accounts, holdings))}</Text>
+                <Text style={styles.total}>{formatMoney(netWorth(accounts, holdings))}</Text>
             </View>
 
             {byPosition(groupsQuery.data).map((group) => {
@@ -267,7 +267,7 @@ export default function AccountsScreen() {
                             <Text style={[text.kicker, !owesMoney(total) && styles.accent]}>
                                 {group.name}
                             </Text>
-                            <Text style={styles.groupTotal}>{formatEuros(total)}</Text>
+                            <Text style={styles.groupTotal}>{formatMoney(total)}</Text>
                         </View>
                         {held.length > 0 && (
                             <View style={styles.note}>

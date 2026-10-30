@@ -41,6 +41,7 @@ export const users = pgTable("users", {
     name: text("name").notNull(),
     emailVerified: boolean("email_verified").notNull().default(false),
     image: text("image"),
+    currency: text("currency").notNull().default("EUR"),
     createdAt: instant("created_at").notNull().defaultNow(),
     updatedAt: instant("updated_at").notNull().defaultNow(),
 });
@@ -206,6 +207,8 @@ export const transactions = pgTable(
         accountId: uuid("account_id").notNull(),
         toAccountId: uuid("to_account_id"),
         amount: money("amount").notNull(),
+        originalAmount: money("original_amount"),
+        originalCurrency: text("original_currency"),
         occurredAt: instant("occurred_at").notNull(),
         createdAt: instant("created_at").notNull().defaultNow(),
     },

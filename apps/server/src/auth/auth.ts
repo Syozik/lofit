@@ -1,6 +1,7 @@
-import { DEFAULT_GROUP_NAMES, DEFAULT_TAGS, INVESTMENTS_GROUP } from "@lofit/domain";
+import { CURRENCIES, DEFAULT_GROUP_NAMES, DEFAULT_TAGS, EURO, INVESTMENTS_GROUP } from "@lofit/domain";
 import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
+import { z } from "zod";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { bearer } from "better-auth/plugins/bearer";
 import { db } from "../db/client";
@@ -23,6 +24,18 @@ export const auth = betterAuth({
         },
     }),
     emailAndPassword: { enabled: true },
+    user: {
+        deleteUser: { enabled: true },
+        additionalFields: {
+            currency: {
+                type: "string",
+                required: false,
+                defaultValue: EURO,
+                input: true,
+                validator: { input: z.enum(CURRENCIES) },
+            },
+        },
+    },
     databaseHooks: {
         user: {
             create: {

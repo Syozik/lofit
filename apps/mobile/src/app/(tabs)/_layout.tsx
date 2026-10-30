@@ -1,3 +1,5 @@
+import { useDisplayCurrency, useSession } from "@lofit/api";
+import { isCurrency } from "@lofit/domain";
 import type { Transaction } from "@lofit/domain";
 import { Tabs } from "expo-router";
 import { ChartPie, Plus, Receipt, WalletCards } from "lucide-react-native";
@@ -7,6 +9,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { EntrySheet } from "../../components/EntrySheet";
 import { EntryContext } from "../../context/entry";
+import { useGuest } from "../../mode";
 import { BlurTargetsProvider, TAB_BAR_HEIGHT, TabBarBackground } from "../../tabBar";
 import type { Colors } from "../../theme";
 import { fonts, useStyles, useTheme } from "../../theme";
@@ -19,16 +22,24 @@ function icon(Icon: LucideIcon, colors: Colors) {
 
 type Entry = { entry?: Transaction | undefined } | null;
 
+function useSignedUpCurrency() {
+    const session = useSession();
+    const currency = useGuest() ? undefined : session.data?.user.currency;
+    return isCurrency(currency) ? currency : undefined;
+}
+
 export default function TabsLayout() {
     const { colors } = useTheme();
     const styles = useStyles(makeStyles);
     const insets = useSafeAreaInsets();
     const [entry, setEntry] = useState<Entry>(null);
+    const currency = useDisplayCurrency(useSignedUpCurrency());
 
     return (
         <EntryContext.Provider value={(transaction) => setEntry({ entry: transaction })}>
             <BlurTargetsProvider>
                 <Tabs
+                    key={currency}
                     screenOptions={{
                         headerShown: false,
                         sceneStyle: { backgroundColor: colors.bg },

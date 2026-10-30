@@ -1,6 +1,6 @@
 import { currencyFormat, wholeNumber } from "./intl";
 import { amountFor } from "./transaction";
-import { byRecency, holdingGain, periodOf } from "@lofit/domain";
+import { byRecency, holdingGain, periodOf, withSymbol } from "@lofit/domain";
 import type { Account, AccountChange, Holding, Transaction } from "@lofit/domain";
 
 const timeFormat = new Intl.DateTimeFormat("en-GB", {
@@ -37,7 +37,7 @@ export function formatSync(instant: string): string {
 
 export function accountChangeLabel(change: AccountChange): string {
     const rounded = wholeNumber(Math.round(Math.abs(change.amount) / 100));
-    return `${change.amount < 0 ? "−" : "+"}€${rounded} ${change.period}`;
+    return `${change.amount < 0 ? "−" : "+"}${withSymbol(rounded)} ${change.period}`;
 }
 
 export function detailLines(account: Account): readonly { label: string; value: string }[] {
@@ -60,15 +60,15 @@ export function formatUnits(holding: Holding): string {
     return `${format.format(holding.quantity)} × ${inCurrency(holding, holding.nativePrice)}`;
 }
 
-export function signedWholeEuros(amount: number): string {
-    return `${amount < 0 ? "−" : "+"}€${wholeNumber(Math.round(Math.abs(amount) / 100))}`;
+export function signedWholeMoney(amount: number): string {
+    return `${amount < 0 ? "−" : "+"}${withSymbol(wholeNumber(Math.round(Math.abs(amount) / 100)))}`;
 }
 
 export function gainLabel(holding: Holding): { text: string; favourable: boolean } {
     const gain = holdingGain(holding);
     const sign = gain.amount < 0 ? "−" : "+";
     return {
-        text: `${signedWholeEuros(gain.amount)} · ${sign}${Math.abs(gain.pct).toFixed(1)}%`,
+        text: `${signedWholeMoney(gain.amount)} · ${sign}${Math.abs(gain.pct).toFixed(1)}%`,
         favourable: gain.favourable,
     };
 }

@@ -22,7 +22,7 @@ For every entry:
 - amount: the absolute amount as a decimal number in the currency shown.
 - direction: "out" for money spent or sent, "in" for money received (salary, refunds, incoming transfers).
 - day: the booking day in YYYY-MM-DD. Resolve relative or partial dates ("Today", "Yesterday", "29 Jul") against the date the user gives and the statement period. Use null when no date is shown for that entry.
-- currency: the ISO 4217 code shown or implied; "EUR" when the input uses € or shows no currency.
+- currency: the ISO 4217 code shown or implied; the user's currency when the input shows no currency.
 - account: the exact name of the user's account this list or statement belongs to (match bank name, card, IBAN tail or account name), otherwise null.
 - ownAccount: when the money moved between two of the user's own accounts (a savings deposit, a card top-up, paying off the user's credit card, a transfer to or from the user's own IBAN), the exact name of the other account; otherwise null.
 - tag: the exact name of the user's tag that best fits the entry, otherwise null. Pick spending tags for money out and income tags for money in. Use null for moves between the user's own accounts.
@@ -54,6 +54,7 @@ type Context = {
     image: string;
     mediaType: MediaType;
     today: string;
+    currency: string;
     accounts: readonly OwnAccount[];
     tags: readonly (Named & { kind: TagKind })[];
 };
@@ -91,6 +92,7 @@ export async function extractDrafts({
     image,
     mediaType,
     today,
+    currency,
     accounts,
     tags,
 }: Context): Promise<ImportDraft[]> {
@@ -110,6 +112,7 @@ export async function extractDrafts({
                         type: "text",
                         text: [
                             `Today is ${today}.`,
+                            `My currency is ${currency}.`,
                             `My accounts: ${accounts.map(describe).join("; ") || "none"}.`,
                             `My spending tags: ${
                                 tagsFor(tags, "expense")
@@ -162,7 +165,7 @@ export async function extractDrafts({
             }
             const tag = (draft.kind === "income" ? incomeTag : spendingTag)(entry.tag);
             if (tag && !moved) draft.tagIds = [tag];
-            if (entry.currency.toUpperCase() !== "EUR") {
+            if (entry.currency.toUpperCase() !== currency) {
                 draft.currency = entry.currency.toUpperCase();
             }
             return draft;

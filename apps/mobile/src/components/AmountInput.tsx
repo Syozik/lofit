@@ -1,3 +1,4 @@
+import { currencySymbol } from "@lofit/domain";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 import type { Colors } from "../theme";
 import { fonts, useStyles, useTheme } from "../theme";
@@ -10,7 +11,7 @@ type Props = {
     prefix?: string;
 };
 
-export function AmountInput({ value, onChange, label, autoFocus = false, prefix = "€" }: Props) {
+export function AmountInput({ value, onChange, label, autoFocus = false, prefix = currencySymbol() }: Props) {
     const { colors } = useTheme();
     const styles = useStyles(makeStyles);
     return (

@@ -11,8 +11,8 @@ const scopeQuery = zValidator("query", z.object({ group: z.uuid().optional() }),
 
 export const portfolioRoute = new Hono<AuthEnv>()
     .get("/history", scopeQuery, async (c) =>
-        c.json(await portfolioHistory(c.var.userId, c.req.valid("query").group)),
+        c.json(await portfolioHistory(c.var.userId, c.var.currency, c.req.valid("query").group)),
     )
     .get("/intraday", scopeQuery, async (c) =>
-        c.json(await portfolioIntraday(c.var.userId, c.req.valid("query").group)),
+        c.json(await portfolioIntraday(c.var.userId, c.var.currency, c.req.valid("query").group)),
     );

@@ -1,5 +1,5 @@
 import { useDeleteHolding, useHoldingHistory, useSellHolding, useUpdateHolding } from "@lofit/api";
-import { euros, formatAmount, formatEuros, holdingValue, unitCost } from "@lofit/domain";
+import { euros, formatAmount, formatMoney, holdingValue, unitCost, withSymbol } from "@lofit/domain";
 import type { Holding } from "@lofit/domain";
 import { dayFormat, inCurrency, parsePositive } from "@lofit/view";
 import { useState } from "react";
@@ -93,7 +93,7 @@ export function HoldingSheet({ holding, accountName, onClose }: Props) {
     return (
         <Sheet
             title={holding.symbol}
-            note={`${holding.name} · ${accountName} · worth ${formatEuros(holdingValue(holding))} · since ${dayFormat.format(new Date(holding.heldSince))}`}
+            note={`${holding.name} · ${accountName} · worth ${formatMoney(holdingValue(holding))} · since ${dayFormat.format(new Date(holding.heldSince))}`}
             onClose={onClose}
         >
             {holding.quote &&
@@ -103,7 +103,7 @@ export function HoldingSheet({ holding, accountName, onClose }: Props) {
                         currency={history.data.currency}
                         cost={
                             holding.cost > 0
-                                ? unitCost(holding, history.data.perEuroWhenBought)
+                                ? unitCost(holding, history.data.perBaseWhenBought)
                                 : undefined
                         }
                         heldSince={holding.heldSince}
@@ -146,7 +146,7 @@ export function HoldingSheet({ holding, accountName, onClose }: Props) {
                     </View>
                     <Text style={styles.total}>
                         {proceeds > 0
-                            ? `€ ${formatAmount(euros(proceeds))} into ${accountName}`
+                            ? `${withSymbol(formatAmount(euros(proceeds)))} into ${accountName}`
                             : `Proceeds go into ${accountName}`}
                     </Text>
                     <SheetActions>

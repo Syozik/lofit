@@ -4,8 +4,8 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "../db/client";
 import { accounts, fxRates, holdings } from "../db/schema";
 import { fetchCoingeckoIntraday } from "./coingecko";
-import { priceHistory } from "./history";
-import { perEuro } from "./rates";
+import { ensureRatesSince, priceHistory } from "./history";
+import { perBase, perEuro } from "./rates";
 import type { Tick } from "./yahoo";
 import { fetchYahooIntraday } from "./yahoo";
 
@@ -64,8 +64,21 @@ function forwardFill<T extends { key: string | number; value: number }>(
     });
 }
 
-async function dailyUnitPrices(held: Held, days: readonly string[]): Promise<number[]> {
-    const history = held.quote ? await priceHistory(held.quote, held.heldSince) : null;
+async function dailyPerEuro(currency: string, days: readonly string[]): Promise<number[] | undefined> {
+    if (currency === EURO) return days.map(() => 1);
+
+    const rates = await db
+        .select({ key: fxRates.day, value: fxRates.perEuro })
+        .from(fxRates)
+        .where(eq(fxRates.currency, currency))
+        .orderBy(asc(fxRates.day));
+    if (rates.length === 0) return undefined;
+
+    return forwardFill(rates, days, 1);
+}
+
+async function dailyUnitPrices(held: Held, days: readonly string[], base: string): Promise<number[]> {
+    const history = held.quote ? await priceHistory(held.quote, held.heldSince, base) : null;
     if (!history || history.points.length === 0) return days.map(() => held.price);
 
     const closes = forwardFill(
@@ -73,27 +86,23 @@ async function dailyUnitPrices(held: Held, days: readonly string[]): Promise<num
         days,
         held.price,
     );
-    if (history.currency === EURO) return closes;
+    if (history.currency === base) return closes;
 
-    const rates = await db
-        .select({ key: fxRates.day, value: fxRates.perEuro })
-        .from(fxRates)
-        .where(eq(fxRates.currency, history.currency))
-        .orderBy(asc(fxRates.day));
-    if (rates.length === 0) return days.map(() => held.price);
+    const [from, to] = await Promise.all([dailyPerEuro(history.currency, days), dailyPerEuro(base, days)]);
+    if (!from || !to) return days.map(() => held.price);
 
-    const perEuro = forwardFill(rates, days, 1);
-    return closes.map((close, index) => close / (perEuro[index] ?? 1));
+    return closes.map((close, index) => (close / (from[index] ?? 1)) * (to[index] ?? 1));
 }
 
-export async function portfolioHistory(userId: string, groupId?: string): Promise<ValuePoint[]> {
+export async function portfolioHistory(userId: string, base: string, groupId?: string): Promise<ValuePoint[]> {
     const held = await heldIn(userId, groupId);
     if (held.length === 0) return [];
 
     const today = new Date().toISOString().slice(0, 10);
     const first = held.reduce((earliest, row) => (row.heldSince < earliest ? row.heldSince : earliest), today);
     const days = daysFrom(first, today);
-    const prices = await Promise.all(held.map((row) => dailyUnitPrices(row, days)));
+    await ensureRatesSince(base, first);
+    const prices = await Promise.all(held.map((row) => dailyUnitPrices(row, days, base)));
 
     return days.map((day, index) => {
         let value = 0;
@@ -131,9 +140,11 @@ async function ticksFor(ref: QuoteRef): Promise<Tick[]> {
     return ticks;
 }
 
-export async function portfolioIntraday(userId: string, groupId?: string): Promise<ValuePoint[]> {
+export async function portfolioIntraday(userId: string, base: string, groupId?: string): Promise<ValuePoint[]> {
     const held = await heldIn(userId, groupId);
     if (held.length === 0) return [];
+
+    const rate = (await perBase(EURO, base)) ?? 1;
 
     const end = Math.floor(Date.now() / STEP_MS) * STEP_MS;
     const stamps: number[] = [];
@@ -143,7 +154,7 @@ export async function portfolioIntraday(userId: string, groupId?: string): Promi
         held.map(async (row) => {
             const ticks = row.quote ? await ticksFor(row.quote) : [];
             return forwardFill(
-                ticks.map((tick) => ({ key: tick.at, value: tick.price })),
+                ticks.map((tick) => ({ key: tick.at, value: tick.price / rate })),
                 stamps,
                 row.price,
             );

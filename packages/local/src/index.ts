@@ -1,3 +1,4 @@
+import type { Settings } from "@lofit/domain";
 import { localApp } from "./app";
 import { createStore } from "./store";
 import type { KeyValueStorage } from "./store";
@@ -8,6 +9,7 @@ export type LocalBackend = {
     fetch: typeof fetch;
     start(): Promise<void>;
     erase(): Promise<void>;
+    configure(settings: Settings): Promise<void>;
 };
 
 export function createLocalBackend(storage: KeyValueStorage): LocalBackend {
@@ -21,5 +23,10 @@ export function createLocalBackend(storage: KeyValueStorage): LocalBackend {
         },
         start: store.start,
         erase: store.erase,
+        configure: async (settings) => {
+            await store.start();
+            Object.assign(store.settings, settings);
+            await store.saveSettings();
+        },
     };
 }

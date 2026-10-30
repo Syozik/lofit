@@ -1,5 +1,5 @@
 import { negateCents } from "./money";
-import type { Cents } from "./money";
+import type { Cents, Currency } from "./money";
 import type { TransactionKind } from "./types";
 
 export interface Transaction {
@@ -11,9 +11,10 @@ export interface Transaction {
     toAccountId?: string;
     amount: Cents;
     occurredAt: string;
+    original?: { amount: Cents; currency: Currency };
 }
 
-export type NewTransaction = Omit<Transaction, "id"> & { id?: string };
+export type NewTransaction = Omit<Transaction, "id" | "original"> & { id?: string; currency?: Currency };
 
 export function primaryTagId(transaction: Pick<Transaction, "tagIds">): string | undefined {
     return transaction.tagIds[0];

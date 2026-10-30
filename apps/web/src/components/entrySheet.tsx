@@ -12,8 +12,12 @@ import {
     ASSET_TYPE_LABELS,
     ASSET_TYPES,
     CURRENCIES,
+    currencyLabel,
+    currencySymbol,
+    displayCurrency,
     euros,
     investingGroups,
+    isCurrency,
     KIND_LABELS,
     tagsFor,
 } from "@lofit/domain";
@@ -43,7 +47,6 @@ const TRANSACTION_MODES: readonly EntryMode[] = ["expense", "income", "transfer"
 
 const MODE_LABELS: Record<EntryMode, string> = { ...KIND_LABELS, holding: "Holding" };
 
-const CURRENCY_SYMBOLS: Record<Currency, string> = { EUR: "€", USD: "$" };
 
 function money(currency: string, amount: number): string {
     return new Intl.NumberFormat("en-IE", { style: "currency", currency }).format(amount);
@@ -90,7 +93,8 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const updateEntry = useUpdateTransaction();
 
     const [mode, setMode] = useState<EntryMode>(entry?.kind ?? "expense");
-    const [amount, setAmount] = useState(entry ? (Math.abs(entry.amount) / 100).toFixed(2) : "");
+    const typed = entry?.original ?? entry;
+    const [amount, setAmount] = useState(typed ? (Math.abs(typed.amount) / 100).toFixed(2) : "");
     const [name, setName] = useState(entry?.name ?? "");
     const [tagIds, setTagIds] = useState<string[]>([...(entry?.tagIds ?? [])]);
     const [newTag, setNewTag] = useState<string | undefined>(undefined);
@@ -104,7 +108,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const [assetType, setAssetType] = useState<AssetType>("stock");
     const [custodianId, setCustodianId] = useState("");
     const [quantity, setQuantity] = useState("");
-    const [currency, setCurrency] = useState<Currency>("EUR");
+    const [currency, setCurrency] = useState<Currency>(entry?.original?.currency ?? displayCurrency);
     const [liveSymbol, setLiveSymbol] = useState("");
     const [ownTicker, setOwnTicker] = useState(false);
     const [screenshot, setScreenshot] = useState<File | null>(null);
@@ -160,6 +164,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
         setDay(next.day);
         setFromId(next.accountId ?? account);
         setToId(next.toAccountId ?? "");
+        setCurrency(isCurrency(next.currency) ? next.currency : displayCurrency());
         setNewTag(undefined);
         setRenaming(null);
     }, []);
@@ -199,11 +204,6 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     function close() {
         if (queue && queue.added > 0) onSaved(addedOf(queue));
         onClose();
-    }
-
-    function nextCurrency() {
-        const at = CURRENCIES.indexOf(currency);
-        setCurrency(CURRENCIES[(at + 1) % CURRENCIES.length]!);
     }
 
     function switchMode(next: EntryMode) {
@@ -295,6 +295,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
             amount: signed,
             occurredAt: toInstant(day),
             ...(mode === "transfer" ? { toAccountId: to } : {}),
+            ...(currency !== displayCurrency() ? { currency } : {}),
         };
 
         if (entry) {
@@ -408,17 +409,20 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
             </div>
 
             <div className="sheet-amount">
-                {isHolding ? (
-                    <button
-                        className="sheet-currency switchable"
-                        aria-label={`Priced in ${currency}, tap to change`}
-                        onClick={nextCurrency}
+                <label className="sheet-currency switchable">
+                    {currencySymbol(currency)}
+                    <select
+                        aria-label="Currency"
+                        value={currency}
+                        onChange={(event) => setCurrency(event.target.value as Currency)}
                     >
-                        {CURRENCY_SYMBOLS[currency]}
-                    </button>
-                ) : (
-                    <span className="sheet-currency">€</span>
-                )}
+                        {CURRENCIES.map((option) => (
+                            <option key={option} value={option}>
+                                {currencyLabel(option)}
+                            </option>
+                        ))}
+                    </select>
+                </label>
                 <input
                     autoComplete="off"
                     className="sheet-amount-input"
@@ -430,7 +434,13 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                 />
             </div>
 
-            {draft?.currency && (
+            {currency !== displayCurrency() && !isHolding && (
+                <span className="sheet-fx">
+                    Converted to {displayCurrency()} at the rate on {day}
+                </span>
+            )}
+
+            {draft?.currency && !isCurrency(draft.currency) && (
                 <span className="import-warning">
                     Shown in {draft.currency} on the {queue?.source} — check the amount
                 </span>
