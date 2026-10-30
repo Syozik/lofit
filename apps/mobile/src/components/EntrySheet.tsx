@@ -49,9 +49,10 @@ import { fonts, useStyles, useTheme } from "../theme";
 import { AmountInput } from "./AmountInput";
 import { Button } from "./Button";
 import { Chip, ChipRow, Segmented } from "./Choices";
-import { CurrencyList } from "./CurrencyPicker";
+import { CURRENCY_OPTIONS } from "./CurrencyPicker";
 import { Field, makeFieldStyles } from "./Field";
 import { pickDay } from "./RangePicker";
+import { Dropdown, Select } from "./Select";
 import { pickFile, ScreenshotImportView, skippedText } from "./ScreenshotImport";
 import { Sheet, SheetActions } from "./Sheet";
 import { useOnline } from "../connectivity";
@@ -86,21 +87,13 @@ function AccountPicker({
     value: string;
     onChange: (id: string) => void;
 }) {
-    const styles = useStyles(makeStyles);
     return (
-        <View style={styles.field}>
-            <Text style={styles.label}>{label}</Text>
-            <ChipRow scroll>
-                {accounts.map((account) => (
-                    <Chip
-                        key={account.id}
-                        label={account.name}
-                        selected={value === account.id}
-                        onPress={() => onChange(account.id)}
-                    />
-                ))}
-            </ChipRow>
-        </View>
+        <Select
+            label={label}
+            value={value}
+            options={accounts.map((account) => ({ value: account.id, label: account.name }))}
+            onChange={onChange}
+        />
     );
 }
 
@@ -179,7 +172,6 @@ export function EntrySheet({ entry, onClose }: Props) {
     const [picked, setCurrency] = useState<Currency | null>(entry?.original?.currency ?? null);
     const [repeats, setRepeats] = useState<Cadence | null>(null);
     const [received, setReceived] = useState(entry?.toAmount ? (entry.toAmount / 100).toFixed(2) : "");
-    const [choosing, setChoosing] = useState(false);
     const [liveSymbol, setLiveSymbol] = useState("");
     const [ownTicker, setOwnTicker] = useState(false);
 
@@ -487,14 +479,16 @@ export function EntrySheet({ entry, onClose }: Props) {
 
             <View style={styles.amountRow}>
                 {!guest && (
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={`In ${currency}, change currency`}
-                        onPress={() => setChoosing((shown) => !shown)}
-                        style={styles.currencySwitch}
-                    >
+                    <View style={styles.currencySwitch}>
                         <Text style={styles.currencyText}>{currencySymbol(currency)}</Text>
-                    </Pressable>
+                        <Dropdown
+                            value={currency}
+                            options={CURRENCY_OPTIONS}
+                            onChange={setCurrency}
+                            accessibilityLabel={`In ${currency}, change currency`}
+                            style={styles.hiddenPicker}
+                        />
+                    </View>
                 )}
                 <View style={styles.amountField}>
                     <AmountInput
@@ -506,16 +500,6 @@ export function EntrySheet({ entry, onClose }: Props) {
                     />
                 </View>
             </View>
-
-            {choosing && (
-                <CurrencyList
-                    value={currency}
-                    onPick={(picked) => {
-                        setCurrency(picked);
-                        setChoosing(false);
-                    }}
-                />
-            )}
 
             {currency !== booking && !isHolding && (
                 <Text style={styles.total}>
@@ -738,6 +722,7 @@ const makeStyles = (colors: Colors) =>
             borderWidth: 1,
             borderColor: colors.divider,
         },
+        hiddenPicker: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, opacity: 0 },
         currencyText: { fontFamily: fonts.medium, fontSize: 24, color: colors.accent },
         inlineInput: { minWidth: 120, minHeight: 32, paddingVertical: 4 },
         pair: { flexDirection: "row", gap: 10 },
