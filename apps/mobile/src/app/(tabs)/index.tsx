@@ -81,7 +81,7 @@ export default function NetWorthScreen() {
             </Screen>
         );
     }
-    if (accounts.isError || holdings.isError || snapshots.isError || groupRows.isError) {
+    if (!accounts.data || !holdings.data || !snapshots.data || !groupRows.data) {
         return (
             <Screen refreshing={refreshing} onRefresh={refresh}>
                 <Status text="Could not load accounts. Pull to retry." />

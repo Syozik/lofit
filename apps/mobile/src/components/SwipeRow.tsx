@@ -9,6 +9,8 @@ import { useStyles, useTheme } from "../theme";
 
 const ACTION_WIDTH = 64;
 
+const SWIPE_START = 28;
+
 type Props = {
     label: string;
     onEdit?: (() => void) | undefined;
@@ -36,6 +38,8 @@ export function SwipeRow({
         <ReanimatedSwipeable
             ref={swipe}
             friction={1.6}
+            dragOffsetFromLeft={SWIPE_START}
+            dragOffsetFromRight={-SWIPE_START}
             rightThreshold={ACTION_WIDTH / 2}
             overshootRight={false}
             renderRightActions={() => (

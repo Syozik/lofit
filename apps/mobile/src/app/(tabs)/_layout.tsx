@@ -42,6 +42,7 @@ export default function TabsLayout() {
                     key={currency}
                     screenOptions={{
                         headerShown: false,
+                        animation: "shift",
                         sceneStyle: { backgroundColor: colors.bg },
                         tabBarActiveTintColor: colors.accent,
                         tabBarInactiveTintColor: colors.muted,

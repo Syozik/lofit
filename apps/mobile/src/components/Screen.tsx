@@ -14,6 +14,7 @@ import { BlurSource, useTabBarSpace } from "../tabBar";
 import type { Colors } from "../theme";
 import { fonts, space, useStyles, useTheme } from "../theme";
 import { AppHeader } from "./AppHeader";
+import { TabSwipe } from "./TabSwipe";
 
 type Props = {
     children: ReactNode;
@@ -27,26 +28,28 @@ export function Screen({ children, refreshing = false, onRefresh }: Props) {
     const tabBar = useTabBarSpace();
 
     return (
-        <SafeAreaView style={styles.screen} edges={["top"]}>
-            <BlurSource>
-                <ScrollView
-                    contentContainerStyle={[styles.content, { paddingBottom: tabBar + 24 }]}
-                    refreshControl={
-                        onRefresh ? (
-                            <RefreshControl
-                                refreshing={refreshing}
-                                onRefresh={onRefresh}
-                                tintColor={colors.accent}
-                                colors={[colors.accent]}
-                            />
-                        ) : undefined
-                    }
-                >
-                    <AppHeader />
-                    {children}
-                </ScrollView>
-            </BlurSource>
-        </SafeAreaView>
+        <TabSwipe>
+            <SafeAreaView style={styles.screen} edges={["top"]}>
+                <BlurSource>
+                    <ScrollView
+                        contentContainerStyle={[styles.content, { paddingBottom: tabBar + 24 }]}
+                        refreshControl={
+                            onRefresh ? (
+                                <RefreshControl
+                                    refreshing={refreshing}
+                                    onRefresh={onRefresh}
+                                    tintColor={colors.accent}
+                                    colors={[colors.accent]}
+                                />
+                            ) : undefined
+                        }
+                    >
+                        <AppHeader />
+                        {children}
+                    </ScrollView>
+                </BlurSource>
+            </SafeAreaView>
+        </TabSwipe>
     );
 }
 
@@ -66,35 +69,37 @@ export function ListScreen<T>({ header, data, renderItem, keyExtractor, empty, r
     const tabBar = useTabBarSpace();
 
     return (
-        <SafeAreaView style={styles.screen} edges={["top"]}>
-            <BlurSource>
-                <FlatList
-                    data={data}
-                    renderItem={renderItem}
-                    keyExtractor={keyExtractor}
-                    ListHeaderComponent={
-                        <View style={styles.listHead}>
-                            <AppHeader />
-                            {header}
-                        </View>
-                    }
-                    ListEmptyComponent={empty ? <>{empty}</> : undefined}
-                    contentContainerStyle={[styles.list, { paddingBottom: tabBar + 24 }]}
-                    initialNumToRender={12}
-                    windowSize={7}
-                    refreshControl={
-                        onRefresh ? (
-                            <RefreshControl
-                                refreshing={refreshing}
-                                onRefresh={onRefresh}
-                                tintColor={colors.accent}
-                                colors={[colors.accent]}
-                            />
-                        ) : undefined
-                    }
-                />
-            </BlurSource>
-        </SafeAreaView>
+        <TabSwipe>
+            <SafeAreaView style={styles.screen} edges={["top"]}>
+                <BlurSource>
+                    <FlatList
+                        data={data}
+                        renderItem={renderItem}
+                        keyExtractor={keyExtractor}
+                        ListHeaderComponent={
+                            <View style={styles.listHead}>
+                                <AppHeader />
+                                {header}
+                            </View>
+                        }
+                        ListEmptyComponent={empty ? <>{empty}</> : undefined}
+                        contentContainerStyle={[styles.list, { paddingBottom: tabBar + 24 }]}
+                        initialNumToRender={12}
+                        windowSize={7}
+                        refreshControl={
+                            onRefresh ? (
+                                <RefreshControl
+                                    refreshing={refreshing}
+                                    onRefresh={onRefresh}
+                                    tintColor={colors.accent}
+                                    colors={[colors.accent]}
+                                />
+                            ) : undefined
+                        }
+                    />
+                </BlurSource>
+            </SafeAreaView>
+        </TabSwipe>
     );
 }
 

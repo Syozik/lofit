@@ -5,12 +5,13 @@ import { Geist_500Medium } from "@expo-google-fonts/geist/500Medium";
 import { Geist_600SemiBold } from "@expo-google-fonts/geist/600SemiBold";
 import { useFonts } from "expo-font";
 import { useSession } from "@lofit/api";
+import { useIsRestoring, useQueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import type { Theme } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -18,7 +19,8 @@ import { ToastProvider } from "../components/Toast";
 import { useMode } from "../mode";
 import type { Mode } from "../mode";
 import { CACHE_VERSION, createQueryClient, PERSIST_MAX_AGE_MS, persisterFor } from "../queryClient";
-import { useRememberedSignIn } from "../signedIn";
+import { markSignedOut, useSignedOut } from "../connectivity";
+import { claimCache, useRememberedSignIn } from "../signedIn";
 import type { Colors } from "../theme";
 import { useStyles, useTheme } from "../theme";
 
@@ -43,6 +45,42 @@ function AccountRoutes() {
     const session = useSession();
     const known = session.isPending ? null : session.error ? null : Boolean(session.data);
     const remembered = useRememberedSignIn(known);
+    const client = useQueryClient();
+    const restoring = useIsRestoring();
+    const userId = session.data?.user.id;
+
+    const [claimed, setClaimed] = useState<string | null>(null);
+    const signedOut = useSignedOut();
+    const refetchSession = session.refetch;
+
+    useEffect(() => {
+        if (known === false) markSignedOut();
+    }, [known]);
+
+    useEffect(() => {
+        if (signedOut) void refetchSession();
+    }, [signedOut, refetchSession]);
+
+    useEffect(() => {
+        if (!userId || restoring) return;
+        let current = true;
+        void claimCache(client, userId)
+            .catch(() => undefined)
+            .then(() => {
+                if (current) setClaimed(userId);
+            });
+        return () => {
+            current = false;
+        };
+    }, [client, userId, restoring]);
+
+    if (userId && claimed !== userId) {
+        return (
+            <View style={styles.splash}>
+                <ActivityIndicator color={colors.accent} />
+            </View>
+        );
+    }
 
     if (session.data || (remembered && (session.isPending || session.error))) return <AppStack open />;
 

@@ -2,7 +2,7 @@
   "expo": {
     "name": "lofit",
     "slug": "lofit",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -50,6 +50,13 @@
       "eas": {
         "projectId": "53a4bac4-e3af-42ac-84e4-8846449a61e3"
       }
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/53a4bac4-e3af-42ac-84e4-8846449a61e3",
+      "checkAutomatically": "NEVER"
     }
   }
 }

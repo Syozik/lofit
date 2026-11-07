@@ -224,7 +224,7 @@ export default function AccountsScreen() {
             </Screen>
         );
     }
-    if (accountsQuery.isError || holdingsQuery.isError || groupsQuery.isError) {
+    if (!accountsQuery.data || !holdingsQuery.data || !groupsQuery.data) {
         return (
             <Screen refreshing={refreshing} onRefresh={reload}>
                 <Status text="Could not load accounts. Pull to retry." />

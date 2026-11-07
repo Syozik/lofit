@@ -2,7 +2,7 @@ import { signOut } from "@lofit/api";
 import { useMutationState, useQueryClient } from "@tanstack/react-query";
 import { LogOut, Settings } from "lucide-react-native";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useOnline } from "../connectivity";
 import { useGuest } from "../mode";
 import { forgetCache } from "../queryClient";
@@ -73,11 +73,26 @@ function AccountHeader() {
     const show = useToast();
     const label = syncLabel(online, waiting);
 
-    async function leave() {
+    function leave() {
         if (!online) {
             show("Signing out needs a connection");
             return;
         }
+        if (waiting === 0) {
+            void signOutNow();
+            return;
+        }
+        Alert.alert(
+            "Changes still syncing",
+            `${waiting} ${waiting === 1 ? "change hasn't" : "changes haven't"} reached the server yet. Signing out now discards ${waiting === 1 ? "it" : "them"}.`,
+            [
+                { text: "Wait", style: "cancel" },
+                { text: "Sign out anyway", style: "destructive", onPress: () => void signOutNow() },
+            ],
+        );
+    }
+
+    async function signOutNow() {
         await signOut();
         await forgetSignIn();
         await forgetCache(client, "account");
@@ -98,7 +113,7 @@ function AccountHeader() {
             <Pressable
                 accessibilityLabel="Sign out"
                 hitSlop={10}
-                onPress={() => void leave()}
+                onPress={leave}
                 style={styles.signOut}
             >
                 <LogOut size={16} strokeWidth={1.5} color={colors.quiet} />

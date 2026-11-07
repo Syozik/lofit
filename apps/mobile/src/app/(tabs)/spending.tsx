@@ -70,7 +70,7 @@ export default function SpendingScreen() {
             </Screen>
         );
     }
-    if (transactions.isError || budgets.isError || accounts.isError || tags.isError) {
+    if (!transactions.data || !budgets.data || !accounts.data || !tags.data) {
         return (
             <Screen refreshing={refreshing} onRefresh={reload}>
                 <Status text="Could not load spending. Pull to retry." />

@@ -3,7 +3,7 @@ import { configureApi, configureAuth, configureIds } from "@lofit/api";
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import { API_URL } from "./config";
-import { markServerDown } from "./connectivity";
+import { markServerDown, markSignedOut } from "./connectivity";
 
 type CookieSource = { getCookie: () => Promise<string> };
 
@@ -20,6 +20,7 @@ export function connectAccount(): void {
             return cookie ? { cookie } : {};
         },
         onUnreachable: markServerDown,
+        onSignedOut: markSignedOut,
     });
 }
 

@@ -1,7 +1,7 @@
 import { useDeleteHolding, useHoldingHistory, useSellHolding, useUpdateHolding } from "@lofit/api";
 import { euros, formatAmount, formatMoney, holdingValue, unitCost, withSymbol } from "@lofit/domain";
 import type { Holding } from "@lofit/domain";
-import { dayFormat, inCurrency, parsePositive } from "@lofit/view";
+import { dayFormat, followsSymbol, inCurrency, parsePositive, quoteFor, quoteTicker } from "@lofit/view";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { Colors } from "../theme";
@@ -46,6 +46,10 @@ export function HoldingSheet({ holding, accountName, onClose }: Props) {
     const [units, setUnits] = useState("");
     const [price, setPrice] = useState((holding.nativePrice / 100).toFixed(2));
     const [since, setSince] = useState(holding.heldSince);
+    const [symbol, setSymbol] = useState(holding.symbol);
+    const [name, setName] = useState(holding.name);
+    const [ticker, setTicker] = useState(quoteTicker(holding.quote));
+    const [ownTicker, setOwnTicker] = useState(!followsSymbol(holding));
 
     const pending = update.isPending || sell.isPending || remove.isPending;
     const held = parsePositive(quantity);
@@ -53,16 +57,28 @@ export function HoldingSheet({ holding, accountName, onClose }: Props) {
     const sold = parsePositive(units);
     const at = parsePositive(price);
     const proceeds = sold && at ? sold * at : 0;
+    const shown = symbol.trim().toUpperCase();
+    const liveTicker = ownTicker ? ticker : shown;
+    const ready = !!held && cost !== undefined && !!since && !!shown;
 
     function save() {
-        if (!held || cost === undefined || !since || pending) return;
+        if (!ready || pending) return;
         update.mutate(
-            { id: holding.id, quantity: held, cost: euros(cost), heldSince: since },
+            {
+                id: holding.id,
+                quantity: held,
+                cost: euros(cost),
+                heldSince: since,
+                symbol: shown,
+                name: name.trim() || shown,
+                quote: quoteFor(holding.type, liveTicker),
+            },
             {
                 onSuccess: () => {
-                    show(`Updated ${holding.symbol}`);
+                    show(`Updated ${shown}`);
                     onClose();
                 },
+                onError: (error) => show(error.message),
             },
         );
     }
@@ -169,6 +185,33 @@ export function HoldingSheet({ holding, accountName, onClose }: Props) {
                     <View style={styles.pair}>
                         <View style={styles.half}>
                             <Field
+                                label="Symbol"
+                                autoCapitalize="characters"
+                                autoCorrect={false}
+                                value={symbol}
+                                onChangeText={setSymbol}
+                            />
+                        </View>
+                        <View style={styles.half}>
+                            <Field
+                                label="Live price symbol"
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                placeholder={holding.type === "crypto" ? "bitcoin" : "GOOGL"}
+                                value={liveTicker}
+                                onChangeText={(next) => {
+                                    setOwnTicker(true);
+                                    setTicker(next);
+                                }}
+                            />
+                        </View>
+                    </View>
+
+                    <Field label="Name" value={name} onChangeText={setName} />
+
+                    <View style={styles.pair}>
+                        <View style={styles.half}>
+                            <Field
                                 label="Units held"
                                 keyboardType="decimal-pad"
                                 value={quantity}
@@ -209,7 +252,7 @@ export function HoldingSheet({ holding, accountName, onClose }: Props) {
                         />
                         <Button
                             label={online ? (update.isPending ? "Saving…" : "Save") : "Needs a connection"}
-                            disabled={!held || cost === undefined || !since || pending || !online}
+                            disabled={!ready || pending || !online}
                             onPress={save}
                             style={{ flex: 2 }}
                         />

@@ -31,6 +31,7 @@ import {
 import type {
     Account,
     AssetType,
+    BuyBasis,
     Cadence,
     Currency,
     ImportDraft,
@@ -40,9 +41,10 @@ import type {
     Transaction,
     TransactionKind,
 } from "@lofit/domain";
-import { currencyFormat, dayFormat, parsePositive, tagsFromHistory, tagUsage, topTags } from "@lofit/view";
-import { ImagePlus, TriangleAlert } from "lucide-react-native";
+import { currencyFormat, dayFormat, entryName, parsePositive, tagsFromHistory, tagUsage, topTags } from "@lofit/view";
+import { Check, ImagePlus, TriangleAlert } from "lucide-react-native";
 import { useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import type { Colors } from "../theme";
 import { fonts, useStyles, useTheme } from "../theme";
@@ -76,24 +78,76 @@ const DOUBLE_TAP_MS = 350;
 
 const TAGS_SHOWN = 5;
 
+const PAID_ELSEWHERE = "elsewhere";
+
 function AccountPicker({
     label,
     accounts,
     value,
     onChange,
+    extra = [],
 }: {
     label: string;
     accounts: readonly Account[];
     value: string;
     onChange: (id: string) => void;
+    extra?: readonly { value: string; label: string }[];
 }) {
     return (
         <Select
             label={label}
             value={value}
-            options={accounts.map((account) => ({ value: account.id, label: account.name }))}
+            options={[...accounts.map((account) => ({ value: account.id, label: account.name })), ...extra]}
             onChange={onChange}
         />
+    );
+}
+
+function RepeatsField({
+    on,
+    onToggle,
+    cadence,
+    onCadence,
+    children,
+}: {
+    on: boolean;
+    onToggle: () => void;
+    cadence: Cadence;
+    onCadence: (cadence: Cadence) => void;
+    children?: ReactNode;
+}) {
+    const { colors } = useTheme();
+    const styles = useStyles(makeStyles);
+    return (
+        <View style={styles.field}>
+            <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: on }}
+                onPress={onToggle}
+                hitSlop={6}
+                style={styles.checkRow}
+            >
+                <View style={[styles.checkbox, on && styles.checkboxOn]}>
+                    {on && <Check size={14} strokeWidth={2.5} color={colors.bg} />}
+                </View>
+                <Text style={styles.checkLabel}>Repeat</Text>
+            </Pressable>
+            {on && (
+                <>
+                    <ChipRow scroll>
+                        {CADENCES.map((option) => (
+                            <Chip
+                                key={option}
+                                label={CADENCE_LABELS[option]}
+                                selected={cadence === option}
+                                onPress={() => onCadence(option)}
+                            />
+                        ))}
+                    </ChipRow>
+                    {children}
+                </>
+            )}
+        </View>
     );
 }
 
@@ -168,9 +222,12 @@ export function EntrySheet({ entry, onClose }: Props) {
     const [symbol, setSymbol] = useState("");
     const [assetType, setAssetType] = useState<AssetType>("stock");
     const [custodianId, setCustodianId] = useState("");
+    const [payerId, setPayerId] = useState("");
+    const [basis, setBasis] = useState<BuyBasis>("amount");
     const [quantity, setQuantity] = useState("");
     const [picked, setCurrency] = useState<Currency | null>(entry?.original?.currency ?? null);
-    const [repeats, setRepeats] = useState<Cadence | null>(null);
+    const [repeating, setRepeating] = useState(false);
+    const [cadence, setCadence] = useState<Cadence>("monthly");
     const [received, setReceived] = useState(entry?.toAmount ? (entry.toAmount / 100).toFixed(2) : "");
     const [liveSymbol, setLiveSymbol] = useState("");
     const [ownTicker, setOwnTicker] = useState(false);
@@ -187,6 +244,8 @@ export function EntrySheet({ entry, onClose }: Props) {
 
     const from = fromId || allAccounts[0]?.id || "";
     const heldAt = custodianId || brokerages[0]?.id || "";
+    const paidFrom = payerId === PAID_ELSEWHERE ? null : payerId || heldAt;
+    const repeats = repeating ? cadence : null;
     const to = toId || allAccounts.find((account) => account.id !== from)?.id || "";
 
     const accountOf = (id: string) => allAccounts.find((account) => account.id === id);
@@ -215,7 +274,7 @@ export function EntrySheet({ entry, onClose }: Props) {
 
     const blocked = isHolding
         ? !value || !units || !symbol.trim() || !heldAt || !day
-        : !value || !name.trim() || !from || (mode === "transfer" && (!to || to === from));
+        : !value || !from || (mode === "transfer" && (!to || to === from));
 
     const pending = (!queue && addEntry.isPending) || addPosition.isPending || updateEntry.isPending;
     const needsConnection = isHolding && !online;
@@ -286,6 +345,8 @@ export function EntrySheet({ entry, onClose }: Props) {
             ...(quote ? { quote } : {}),
             heldSince: day,
             pricedAt: new Date().toISOString(),
+            fromAccountId: paidFrom,
+            ...(repeats ? { repeats: { cadence: repeats, basis } } : {}),
         };
 
         addPosition.mutate(holding, {
@@ -298,8 +359,10 @@ export function EntrySheet({ entry, onClose }: Props) {
 
     function saveTransaction(input: number) {
         const signed = mode === "income" ? euros(input) : euros(-input);
+        const firstTag = (tags ?? []).find((tag) => tag.id === chosenIds[0])?.name;
+        const title = entryName(name, mode as TransactionKind, firstTag, accountOf(from)?.name, accountOf(to)?.name);
         const transaction: NewTransaction = {
-            name: name.trim(),
+            name: title,
             kind: mode as TransactionKind,
             tagIds: chosenIds,
             accountId: from,
@@ -312,7 +375,7 @@ export function EntrySheet({ entry, onClose }: Props) {
 
         if (entry) {
             updateEntry.mutate({ id: entry.id, draft: transaction });
-            show(`Updated ${name.trim()}`);
+            show(`Updated ${title}`);
         } else if (queue) {
             addEntry.mutate(transaction);
             advance(queue, queue.saved + 1);
@@ -336,7 +399,7 @@ export function EntrySheet({ entry, onClose }: Props) {
                     { onError: (error) => show(`Couldn't set up the repeat: ${error.message}`) },
                 );
             }
-            show(`Saved ${name.trim()}`);
+            show(`Saved ${title}`);
         }
         onClose();
     }
@@ -629,52 +692,91 @@ export function EntrySheet({ entry, onClose }: Props) {
                                 : "NASDAQ and NYSE need no suffix · European listings do, e.g. VWRL.AS"
                         }
                     />
-                    <AccountPicker label="Held at" accounts={brokerages} value={heldAt} onChange={setCustodianId} />
+                    <View style={styles.pair}>
+                        <View style={styles.half}>
+                            <AccountPicker label="Held at" accounts={brokerages} value={heldAt} onChange={setCustodianId} />
+                        </View>
+                        <View style={styles.half}>
+                            <AccountPicker
+                                label="Paid from"
+                                accounts={allAccounts}
+                                value={paidFrom ?? PAID_ELSEWHERE}
+                                onChange={setPayerId}
+                                extra={[{ value: PAID_ELSEWHERE, label: "Other" }]}
+                            />
+                        </View>
+                    </View>
+                    {paidFrom === null && (
+                        <Text style={styles.total}>Paid outside your accounts, nothing is deducted.</Text>
+                    )}
                     <DateField label="Bought on" day={day} onChange={setDay} max={today()} />
                     {value && units ? (
                         <Text style={styles.total}>
                             Position value {currencyFormat(currency).format(value * units)}
                         </Text>
                     ) : null}
+                    <RepeatsField on={repeating} onToggle={() => setRepeating(!repeating)} cadence={cadence} onCadence={setCadence}>
+                        {repeats && (
+                            <>
+                                <Segmented
+                                    options={[
+                                        { value: "amount", label: "Same amount" },
+                                        { value: "units", label: "Same units" },
+                                    ]}
+                                    value={basis}
+                                    onChange={setBasis}
+                                />
+                                <Text style={styles.total}>
+                                    Buys {basis === "units" ? `${units ?? 0} units` : "this amount"} again from{" "}
+                                    {following(day, repeats)} at that day's price. Manage it in Settings.
+                                </Text>
+                            </>
+                        )}
+                    </RepeatsField>
                 </>
             ) : (
                 <>
-                    <Field label="Description" placeholder="Albert Heijn" value={name} onChangeText={describe} />
-                    <AccountPicker
-                        label={mode === "transfer" ? "From" : "Account"}
-                        accounts={allAccounts}
-                        value={from}
-                        onChange={setFromId}
+                    <Field
+                        label="Description"
+                        placeholder="Optional, e.g. Albert Heijn"
+                        value={name}
+                        onChangeText={describe}
                     />
-                    {mode === "transfer" && (
-                        <AccountPicker
-                            label="To"
-                            accounts={allAccounts.filter((account) => account.id !== from)}
-                            value={to}
-                            onChange={setToId}
-                        />
-                    )}
-                    <DateField label="Date" day={day} onChange={setDay} />
-                    {!editing && !queue && (
-                        <View style={styles.field}>
-                            <Text style={styles.label}>Repeats</Text>
-                            <ChipRow scroll>
-                                <Chip label="Once" selected={repeats === null} onPress={() => setRepeats(null)} />
-                                {CADENCES.map((cadence) => (
-                                    <Chip
-                                        key={cadence}
-                                        label={CADENCE_LABELS[cadence]}
-                                        selected={repeats === cadence}
-                                        onPress={() => setRepeats(cadence)}
+                    {mode === "transfer" ? (
+                        <>
+                            <View style={styles.pair}>
+                                <View style={styles.half}>
+                                    <AccountPicker label="From" accounts={allAccounts} value={from} onChange={setFromId} />
+                                </View>
+                                <View style={styles.half}>
+                                    <AccountPicker
+                                        label="To"
+                                        accounts={allAccounts.filter((account) => account.id !== from)}
+                                        value={to}
+                                        onChange={setToId}
                                     />
-                                ))}
-                            </ChipRow>
+                                </View>
+                            </View>
+                            <DateField label="Date" day={day} onChange={setDay} />
+                        </>
+                    ) : (
+                        <View style={styles.pair}>
+                            <View style={styles.half}>
+                                <AccountPicker label="Account" accounts={allAccounts} value={from} onChange={setFromId} />
+                            </View>
+                            <View style={styles.half}>
+                                <DateField label="Date" day={day} onChange={setDay} />
+                            </View>
+                        </View>
+                    )}
+                    {!editing && !queue && (
+                        <RepeatsField on={repeating} onToggle={() => setRepeating(!repeating)} cadence={cadence} onCadence={setCadence}>
                             {repeats && (
                                 <Text style={styles.total}>
                                     Logged automatically from {following(day, repeats)}. Manage it in Settings.
                                 </Text>
                             )}
-                        </View>
+                        </RepeatsField>
                     )}
                 </>
             )}
@@ -730,4 +832,16 @@ const makeStyles = (colors: Colors) =>
         warning: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: -8 },
         warningText: { flexShrink: 1, fontFamily: fonts.medium, fontSize: 12, color: colors.danger },
         total: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, fontVariant: ["tabular-nums"] },
+        checkRow: { flexDirection: "row", alignItems: "center", gap: 10, alignSelf: "flex-start", paddingVertical: 4 },
+        checkbox: {
+            width: 20,
+            height: 20,
+            borderRadius: 5,
+            borderWidth: 1.5,
+            borderColor: colors.quiet,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        checkboxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+        checkLabel: { fontFamily: fonts.regular, fontSize: 14, color: colors.text },
     });

@@ -1,12 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { configureMutations, isUnreachable } from "@lofit/api";
+import { configureMutations, isSignedOut, isUnreachable } from "@lofit/api";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { markServerDown, startConnectivity } from "./connectivity";
 import type { Mode } from "./mode";
 import { reportSyncIssue } from "./syncIssues";
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
 export const CACHE_VERSION = "1";
 
@@ -20,9 +20,9 @@ export function createQueryClient(mode: Mode): QueryClient {
     const client = new QueryClient({
         defaultOptions: {
             queries: {
-                gcTime: WEEK_MS,
+                gcTime: YEAR_MS,
                 staleTime: 30_000,
-                retry: (failures, error) => !isUnreachable(error) && failures < 2,
+                retry: (failures, error) => !isUnreachable(error) && !isSignedOut(error) && failures < 2,
             },
         },
         queryCache: new QueryCache({
@@ -38,7 +38,7 @@ export function createQueryClient(mode: Mode): QueryClient {
         }),
     });
 
-    configureMutations(client);
+    configureMutations(client, { holdWhileSignedOut: mode === "account" });
     return client;
 }
 
@@ -56,4 +56,4 @@ export async function forgetCache(client: QueryClient, mode: Mode): Promise<void
     await persisters[mode].removeClient();
 }
 
-export const PERSIST_MAX_AGE_MS = WEEK_MS;
+export const PERSIST_MAX_AGE_MS = YEAR_MS;

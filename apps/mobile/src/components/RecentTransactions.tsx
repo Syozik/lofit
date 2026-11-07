@@ -28,7 +28,7 @@ export function RecentTransactions({ accounts, scope }: Props) {
     const openEntry = useOpenEntry();
 
     if (transactions.isPending) return null;
-    if (transactions.isError) return <Text style={text.muted}>Could not load activity</Text>;
+    if (!transactions.data) return <Text style={text.muted}>Could not load activity</Text>;
 
     const accountNames = new Map(accounts.map((account) => [account.id, account.name]));
     const tagNames = new Map((tags.data ?? []).map((tag) => [tag.id, tag.name]));
