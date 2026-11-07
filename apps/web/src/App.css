@@ -3025,26 +3025,47 @@
     gap: 10px;
 }
 
+.settings-recurring-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--color-surface);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
 .settings-recurring-item {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 8px 10px;
-    border: 1px solid var(--color-divider);
-    border-radius: var(--radius-md);
+    gap: 2px;
+    padding: 10px 12px 4px;
 }
 
-.settings-recurring-item.paused {
-    opacity: 0.6;
+.settings-recurring-item + .settings-recurring-item {
+    border-top: 1px solid var(--color-hairline, var(--color-divider));
+}
+
+.settings-recurring-item.paused .settings-row {
+    opacity: 0.55;
+}
+
+.settings-recurring-name {
+    font-weight: 500;
 }
 
 .settings-recurring-amount {
     font-size: 13px;
+    font-weight: 500;
     font-variant-numeric: tabular-nums;
+}
+
+.settings-recurring-amount.gain {
+    color: var(--color-gain, var(--color-accent));
 }
 
 .settings-recurring-actions {
     display: flex;
+    justify-content: flex-end;
     align-items: center;
     gap: 6px;
 }

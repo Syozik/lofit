@@ -30,6 +30,7 @@ import {
 } from "@lofit/domain";
 import type {
     AssetType,
+    BuyBasis,
     Cadence,
     Currency,
     ImportDraft,
@@ -40,7 +41,7 @@ import type {
     Transaction,
     TransactionKind,
 } from "@lofit/domain";
-import { parsePositive, tagsFromHistory, tagUsage, topTags } from "@lofit/view";
+import { entryName, parsePositive, tagsFromHistory, tagUsage, topTags } from "@lofit/view";
 import { ImagePlus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useToast } from "../toast";
@@ -91,6 +92,8 @@ const DOUBLE_TAP_MS = 350;
 
 const TAGS_SHOWN = 5;
 
+const PAID_ELSEWHERE = "elsewhere";
+
 export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const { data: accounts } = useAccounts();
     const { data: history } = useTransactions();
@@ -121,6 +124,8 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
     const [symbol, setSymbol] = useState("");
     const [assetType, setAssetType] = useState<AssetType>("stock");
     const [custodianId, setCustodianId] = useState("");
+    const [payerId, setPayerId] = useState("");
+    const [basis, setBasis] = useState<BuyBasis>("amount");
     const [quantity, setQuantity] = useState("");
     const [picked, setCurrency] = useState<Currency | null>(entry?.original?.currency ?? null);
     const [repeats, setRepeats] = useState<Cadence | "">("");
@@ -154,6 +159,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
 
     const from = fromId || accounts?.[0]?.id || "";
     const heldAt = custodianId || brokerages[0]?.id || "";
+    const paidFrom = payerId === PAID_ELSEWHERE ? null : payerId || heldAt;
     const to = toId || accounts?.find((account) => account.id !== from)?.id || "";
 
     const accountOf = (id: string) => accounts?.find((account) => account.id === id);
@@ -171,7 +177,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
 
     const blocked = isHolding
         ? !value || !units || !symbol.trim() || !heldAt || !day
-        : !value || !name.trim() || !from || (mode === "transfer" && (!to || to === from));
+        : !value || !from || (mode === "transfer" && (!to || to === from));
 
     const pending = addEntry.isPending || addPosition.isPending || updateEntry.isPending;
 
@@ -312,6 +318,8 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
             ...(quote ? { quote } : {}),
             heldSince: day,
             pricedAt: new Date().toISOString(),
+            fromAccountId: paidFrom,
+            ...(repeats ? { repeats: { cadence: repeats, basis } } : {}),
         };
 
         addPosition.mutate(holding, {
@@ -324,8 +332,11 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
 
     function saveTransaction(input: number) {
         const signed = mode === "income" ? euros(input) : euros(-input);
+        const firstTag = (tags ?? []).find((tag) => tag.id === chosenIds[0])?.name;
+        const nameOf = (id: string) => accounts?.find((account) => account.id === id)?.name;
+        const title = entryName(name, mode as TransactionKind, firstTag, nameOf(from), nameOf(to));
         const transaction: NewTransaction = {
-            name: name.trim(),
+            name: title,
             kind: mode as TransactionKind,
             tagIds: chosenIds,
             accountId: from,
@@ -341,7 +352,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                 { id: entry.id, draft: transaction },
                 {
                     onSuccess: () => {
-                        onSaved(`Updated ${name.trim()}`);
+                        onSaved(`Updated ${title}`);
                         onClose();
                     },
                 },
@@ -369,7 +380,7 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                     advance(queue.added + 1);
                     return;
                 }
-                onSaved(`Saved ${name.trim()}`);
+                onSaved(`Saved ${title}`);
                 onClose();
             },
         });
@@ -661,32 +672,94 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                             </span>
                         </label>
 
-                        <label className="field">
-                            <span>Held at</span>
-                            <select
-                                className="input"
-                                value={heldAt}
-                                onChange={(event) => setCustodianId(event.target.value)}
-                            >
-                                {brokerages.map((account) => (
-                                    <option key={account.id} value={account.id}>
-                                        {account.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
+                        <div className="sheet-pair">
+                            <label className="field">
+                                <span>Held at</span>
+                                <select
+                                    className="input"
+                                    value={heldAt}
+                                    onChange={(event) => setCustodianId(event.target.value)}
+                                >
+                                    {brokerages.map((account) => (
+                                        <option key={account.id} value={account.id}>
+                                            {account.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
 
-                        <label className="field">
-                            <span>Bought on</span>
-                            <input
-                                autoComplete="off"
-                                className="input"
-                                type="date"
-                                max={today()}
-                                value={day}
-                                onChange={(event) => setDay(event.target.value)}
-                            />
-                        </label>
+                            <label className="field">
+                                <span>Paid from</span>
+                                <select
+                                    className="input"
+                                    value={paidFrom ?? PAID_ELSEWHERE}
+                                    onChange={(event) => setPayerId(event.target.value)}
+                                >
+                                    {accounts?.map((account) => (
+                                        <option key={account.id} value={account.id}>
+                                            {account.name}
+                                        </option>
+                                    ))}
+                                    <option value={PAID_ELSEWHERE}>Other</option>
+                                </select>
+                            </label>
+                        </div>
+                        {paidFrom === null && (
+                            <span className="gate-hint">Paid outside your accounts, nothing is deducted.</span>
+                        )}
+
+                        <div className="sheet-when">
+                            <label className="field">
+                                <span>Bought on</span>
+                                <input
+                                    autoComplete="off"
+                                    className="input"
+                                    type="date"
+                                    max={today()}
+                                    value={day}
+                                    onChange={(event) => setDay(event.target.value)}
+                                />
+                            </label>
+                            <label className="field">
+                                <span>Repeats</span>
+                                <select
+                                    className="input"
+                                    value={repeats}
+                                    onChange={(event) => setRepeats(event.target.value as Cadence | "")}
+                                >
+                                    <option value="">Doesn't repeat</option>
+                                    {CADENCES.map((cadence) => (
+                                        <option key={cadence} value={cadence}>
+                                            {CADENCE_LABELS[cadence]}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        </div>
+
+                        {repeats && (
+                            <>
+                                <label className="field">
+                                    <span>Each time buy</span>
+                                    <select
+                                        className="input"
+                                        value={basis}
+                                        onChange={(event) => setBasis(event.target.value as BuyBasis)}
+                                    >
+                                        <option value="amount">
+                                            The same amount{value && units ? ` · ${money(currency, value * units)}` : ""}
+                                        </option>
+                                        <option value="units">
+                                            The same units{units ? ` · ${units}` : ""}
+                                        </option>
+                                    </select>
+                                </label>
+                                <span className="gate-hint">
+                                    Bought automatically from {following(day, repeats)} at that day's price. Manage it in
+                                    Settings.
+                                </span>
+                            </>
+                        )}
 
                         {value && units && (
                             <span className="sheet-total">
@@ -701,45 +774,47 @@ export function EntrySheet({ entry, onClose, onSaved }: Props) {
                             <input
                                 autoComplete="off"
                                 className="input"
-                                placeholder="Albert Heijn"
+                                placeholder="Optional, e.g. Albert Heijn"
                                 value={name}
                                 onChange={(event) => describe(event.target.value)}
                             />
                         </label>
 
-                        <label className="field">
-                            <span>{mode === "transfer" ? "From" : "Account"}</span>
-                            <select
-                                className="input"
-                                value={from}
-                                onChange={(event) => setFromId(event.target.value)}
-                            >
-                                {accounts?.map((account) => (
-                                    <option key={account.id} value={account.id}>
-                                        {account.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-
-                        {mode === "transfer" && (
+                        <div className="sheet-pair">
                             <label className="field">
-                                <span>To</span>
+                                <span>{mode === "transfer" ? "From" : "Account"}</span>
                                 <select
                                     className="input"
-                                    value={to}
-                                    onChange={(event) => setToId(event.target.value)}
+                                    value={from}
+                                    onChange={(event) => setFromId(event.target.value)}
                                 >
-                                    {accounts
-                                        ?.filter((account) => account.id !== from)
-                                        .map((account) => (
-                                            <option key={account.id} value={account.id}>
-                                                {account.name}
-                                            </option>
-                                        ))}
+                                    {accounts?.map((account) => (
+                                        <option key={account.id} value={account.id}>
+                                            {account.name}
+                                        </option>
+                                    ))}
                                 </select>
                             </label>
-                        )}
+
+                            {mode === "transfer" && (
+                                <label className="field">
+                                    <span>To</span>
+                                    <select
+                                        className="input"
+                                        value={to}
+                                        onChange={(event) => setToId(event.target.value)}
+                                    >
+                                        {accounts
+                                            ?.filter((account) => account.id !== from)
+                                            .map((account) => (
+                                                <option key={account.id} value={account.id}>
+                                                    {account.name}
+                                                </option>
+                                            ))}
+                                    </select>
+                                </label>
+                            )}
+                        </div>
 
                         <div className="sheet-when">
                             <label className="field">

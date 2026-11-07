@@ -3,12 +3,15 @@ import {
     deleteUser,
     useDisplayCurrency,
     useRecurring,
+    useRecurringBuys,
     useRemoveRecurring,
+    useRemoveRecurringBuy,
     useUpdateRecurring,
+    useUpdateRecurringBuy,
     useUpdateSettings,
 } from "@lofit/api";
 import { cadenceLabel, euros, formatAmount, withSymbol } from "@lofit/domain";
-import type { Recurring } from "@lofit/domain";
+import type { Recurring, RecurringBuy } from "@lofit/domain";
 import { dayFormat, parsePositive } from "@lofit/view";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -129,13 +132,13 @@ function RecurringItem({ item }: { item: Recurring }) {
         <div className={`settings-recurring-item ${item.paused ? "paused" : ""}`}>
             <div className="settings-row">
                 <div className="settings-row-text">
-                    <span>{item.name}</span>
+                    <span className="settings-recurring-name">{item.name}</span>
                     <span className="gate-hint">
                         {cadenceLabel(item)} ·{" "}
                         {item.paused ? "paused" : `next ${dayFormat.format(new Date(`${item.nextDue}T00:00:00Z`))}`}
                     </span>
                 </div>
-                <span className="settings-recurring-amount">
+                <span className={`settings-recurring-amount ${item.amount > 0 ? "gain" : ""}`}>
                     {item.amount > 0 ? "+" : "−"}
                     {withSymbol(formatAmount(item.amount), item.currency)}
                 </span>
@@ -191,23 +194,113 @@ function RecurringItem({ item }: { item: Recurring }) {
     );
 }
 
+function units(quantity: number): string {
+    return `${quantity} ${quantity === 1 ? "unit" : "units"}`;
+}
+
+function RecurringBuyItem({ item }: { item: RecurringBuy }) {
+    const update = useUpdateRecurringBuy();
+    const remove = useRemoveRecurringBuy();
+    const [size, setSize] = useState<string | null>(null);
+    const typed = size === null ? undefined : parsePositive(size);
+    const byAmount = item.amount !== undefined;
+
+    function saveSize() {
+        if (!typed) return;
+        const patch = byAmount ? { amount: euros(typed) } : { quantity: typed };
+        update.mutate({ id: item.id, patch }, { onSuccess: () => setSize(null) });
+    }
+
+    return (
+        <div className={`settings-recurring-item ${item.paused ? "paused" : ""}`}>
+            <div className="settings-row">
+                <div className="settings-row-text">
+                    <span className="settings-recurring-name">Buy {item.symbol}</span>
+                    <span className="gate-hint">
+                        {cadenceLabel(item)} ·{" "}
+                        {item.paused ? "paused" : `next ${dayFormat.format(new Date(`${item.nextDue}T00:00:00Z`))}`}
+                    </span>
+                </div>
+                <span className="settings-recurring-amount">
+                    {byAmount ? withSymbol(formatAmount(item.amount!), item.currency) : units(item.quantity ?? 0)}
+                </span>
+            </div>
+            {size === null ? (
+                <div className="settings-recurring-actions">
+                    <button
+                        className="btn btn-ghost"
+                        onClick={() => setSize(byAmount ? (item.amount! / 100).toFixed(2) : String(item.quantity ?? ""))}
+                    >
+                        {byAmount ? "Edit amount" : "Edit units"}
+                    </button>
+                    <button
+                        className="btn btn-ghost"
+                        disabled={update.isPending}
+                        onClick={() => update.mutate({ id: item.id, patch: { paused: !item.paused } })}
+                    >
+                        {item.paused ? "Resume" : "Pause"}
+                    </button>
+                    <button
+                        className="btn btn-ghost settings-recurring-delete"
+                        disabled={remove.isPending}
+                        onClick={() => remove.mutate(item.id)}
+                    >
+                        Delete
+                    </button>
+                </div>
+            ) : (
+                <form
+                    className="settings-recurring-actions"
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        saveSize();
+                    }}
+                >
+                    <input
+                        className="input"
+                        inputMode="decimal"
+                        autoFocus
+                        aria-label={`${byAmount ? "Amount" : "Units"} for ${item.symbol}`}
+                        value={size}
+                        onChange={(event) => setSize(event.target.value)}
+                    />
+                    <button className="btn btn-secondary" type="button" onClick={() => setSize(null)}>
+                        Cancel
+                    </button>
+                    <button className="btn btn-primary" type="submit" disabled={!typed || update.isPending}>
+                        Save
+                    </button>
+                </form>
+            )}
+            {(update.error ?? remove.error) && (
+                <span className="gate-error">{(update.error ?? remove.error)?.message}</span>
+            )}
+        </div>
+    );
+}
+
 function RecurringList() {
     const recurring = useRecurring();
     const items = recurring.data ?? [];
+    const buys = useRecurringBuys().data ?? [];
+    if (items.length === 0 && buys.length === 0) return null;
 
     return (
         <div className="settings-password settings-recurring">
             <div className="settings-row-text">
                 <span>Recurring</span>
                 <span className="gate-hint">
-                    {items.length === 0
-                        ? "Pick “Repeats” when logging an entry and it logs itself from then on."
-                        : "These log themselves on their due date."}
+                    These log themselves on their due date.
                 </span>
             </div>
-            {items.map((item) => (
-                <RecurringItem key={item.id} item={item} />
-            ))}
+            <div className="settings-recurring-card">
+                {items.map((item) => (
+                    <RecurringItem key={item.id} item={item} />
+                ))}
+                {buys.map((item) => (
+                    <RecurringBuyItem key={item.id} item={item} />
+                ))}
+            </div>
         </div>
     );
 }
