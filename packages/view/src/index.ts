@@ -17,7 +17,7 @@ export {
 export type { SpendSlices } from "./spending";
 export { spendSlices, UNTAGGED_KEY } from "./spending";
 export type { MetaParts } from "./transaction";
-export { amountFor, metaParts, monogram, transactionMeta } from "./transaction";
+export { amountFor, entryName, metaParts, monogram, transactionMeta } from "./transaction";
 export type { FilterOption, SpendFilter } from "./filter";
 export { filterOptions, filterTransactions, isFiltered, litSlices, matchedKeys, NO_FILTER, toggled, toggledAll } from "./filter";
 export type { LinePoint, LineScale } from "./chart";
@@ -51,3 +51,4 @@ export { currencyFormat, numberFormat, wholeNumber } from "./intl";
 export type { UpcomingSpend } from "./upcoming";
 export { upcomingSpend } from "./upcoming";
 export { tagsFromHistory, tagUsage, topTags } from "./tags";
+export { followsSymbol, quoteFor, quoteTicker } from "./quote";

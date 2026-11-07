@@ -21,7 +21,7 @@ function baseUrl(): string {
     return `http://localhost:${port}`;
 }
 
-const APP_ORIGINS = ["lofit://", "exp://"];
+const APP_ORIGINS = production ? ["lofit://"] : ["lofit://", "exp://"];
 
 function origins(): string[] {
     const configured = process.env.TRUSTED_ORIGINS;
@@ -41,7 +41,7 @@ export const env = {
     trustedOrigins: origins(),
     devUserEmail: process.env.DEV_USER_EMAIL ?? "dev@lofit.local",
     devUserPassword: process.env.DEV_USER_PASSWORD ?? "lofit-dev-password",
-    clientIpHeader: process.env.CLIENT_IP_HEADER ?? "cf-connecting-ip",
+    clientIpHeader: production ? required("CLIENT_IP_HEADER").toLowerCase() : (process.env.CLIENT_IP_HEADER ?? "cf-connecting-ip"),
     anthropicApiKey: process.env.ANTHROPIC_API_KEY,
     priceRefreshMinutes: Number(process.env.PRICE_REFRESH_MINUTES ?? 60),
     webRoot: process.env.WEB_ROOT,

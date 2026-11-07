@@ -1,5 +1,10 @@
+import type { NewRecurring, Recurring } from "@lofit/domain";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { addRecurring, fetchRecurring, removeRecurring, updateRecurring } from "./recurring";
+import type { MutateOptions } from "@tanstack/react-query";
+import { newId } from "./ids";
+import { MUTATIONS } from "./mutations";
+import type { RecurringDraft } from "./mutations";
+import { fetchRecurring, removeRecurring, updateRecurring } from "./recurring";
 
 const TOUCHED = ["recurring", "transactions", "accounts", "snapshots"];
 
@@ -13,8 +18,13 @@ export function useRecurring() {
 }
 
 export function useAddRecurring() {
-    const refresh = useRefresh();
-    return useMutation({ mutationFn: addRecurring, onSuccess: refresh });
+    const mutation = useMutation<Recurring, Error, RecurringDraft>({ mutationKey: MUTATIONS.addRecurring });
+
+    return {
+        ...mutation,
+        mutate: (draft: NewRecurring, options?: MutateOptions<Recurring, Error, RecurringDraft>) =>
+            mutation.mutate({ ...draft, id: draft.id ?? newId() }, options),
+    };
 }
 
 export function useUpdateRecurring() {

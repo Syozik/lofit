@@ -8,6 +8,9 @@ import { db } from "../db/client";
 import { accounts, tags, transactions } from "../db/schema";
 import { invalidBody } from "../http";
 import { extractDrafts } from "../imports/extract";
+import { spend } from "../quota";
+
+const IMPORTS_PER_DAY = 20;
 
 function dayOf(instant: Date): string {
     return instant.toISOString().slice(0, 10);
@@ -34,6 +37,7 @@ export const importsRoute = new Hono<AuthEnv>().post(
     async (c) => {
         const { image, mediaType } = c.req.valid("json");
         const userId = c.var.userId;
+        spend(`import:${userId}`, IMPORTS_PER_DAY, 86_400_000, "That's today's import limit. Try again tomorrow.");
 
         const [accountRows, tagRows, existing] = await Promise.all([
             db

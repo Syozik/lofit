@@ -7,7 +7,7 @@ import { recurringRoute } from "./routes/recurring";
 import { settingsRoute } from "./routes/settings";
 import { tagsRoute } from "./routes/tags";
 import { transactionsRoute } from "./routes/transactions";
-import { holdingsRoute, importsRoute, portfolioRoute, pricesRoute } from "./routes/unsupported";
+import { holdingsRoute, importsRoute, portfolioRoute, pricesRoute, recurringBuysRoute } from "./routes/unsupported";
 import type { Store } from "./store";
 
 export function localApp(store: Store) {
@@ -24,6 +24,7 @@ export function localApp(store: Store) {
         .route("/snapshots", new Hono().get("/", (c) => c.json(store.data.snapshots)))
         .route("/settings", settingsRoute(store))
         .route("/recurring", recurringRoute(store))
+        .route("/recurring-buys", recurringBuysRoute)
         .route("/prices", pricesRoute)
         .route("/imports", importsRoute);
 

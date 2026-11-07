@@ -6,12 +6,23 @@ import type {
     Group,
     Holding,
     Recurring,
+    RecurringBuy,
     Snapshot,
     Tag,
     Transaction,
 } from "@lofit/domain";
 import type { Fx } from "../prices/fx";
-import type { accounts, budgets, groups, holdings, recurring, snapshots, tags, transactions } from "./schema";
+import type {
+    accounts,
+    budgets,
+    groups,
+    holdings,
+    recurring,
+    recurringBuys,
+    snapshots,
+    tags,
+    transactions,
+} from "./schema";
 
 export type View = { fx: Fx; currency: string };
 
@@ -135,6 +146,28 @@ export function toRecurring(row: typeof recurring.$inferSelect, view?: View): Re
 
     if (row.toAccountId) item.toAccountId = row.toAccountId;
     if (row.toAmount !== null) item.toAmount = row.toAmount;
+
+    return item;
+}
+
+export function toRecurringBuy(row: typeof recurringBuys.$inferSelect): RecurringBuy {
+    const item: RecurringBuy = {
+        id: row.id,
+        symbol: row.symbol,
+        name: row.name,
+        type: row.type,
+        accountId: row.accountId,
+        fromAccountId: row.fromAccountId,
+        currency: row.currency as Currency,
+        cadence: row.cadence,
+        anchor: row.anchor,
+        nextDue: row.nextDue,
+        paused: row.paused,
+    };
+
+    if (row.quote) item.quote = row.quote;
+    if (row.amount !== null) item.amount = row.amount;
+    if (row.quantity !== null) item.quantity = row.quantity;
 
     return item;
 }

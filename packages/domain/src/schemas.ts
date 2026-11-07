@@ -4,9 +4,11 @@ import { isDay, isInstant } from "./transaction";
 import { CURRENCIES } from "./money";
 import { ASSET_TYPES, TRANSACTION_KINDS } from "./types";
 import { TAG_KINDS } from "./tag";
-import { CADENCES } from "./recurring";
+import { BUY_BASES, CADENCES } from "./recurring";
 
-const centsSchema = z.int().transform((value) => value as Cents);
+const MAX_CENTS = 1e13;
+
+const centsSchema = z.int().min(-MAX_CENTS).max(MAX_CENTS).transform((value) => value as Cents);
 
 const MAX_TAGS = 10;
 
@@ -15,6 +17,17 @@ const instantSchema = z
     .refine(isInstant, "Expected a UTC ISO-8601 instant, like 2026-07-29T17:42:00Z");
 
 const daySchema = z.string().refine(isDay, "Expected a calendar day, like 2026-07-29");
+
+const MAX_BACKFILL_DAYS = 400;
+
+function backfillStart(): string {
+    return new Date(Date.now() - MAX_BACKFILL_DAYS * 86_400_000).toISOString().slice(0, 10);
+}
+
+const repeatStartSchema = daySchema.refine(
+    (day) => day >= backfillStart(),
+    "A repeat can start at most about a year back",
+);
 
 export const newTransactionSchema = z
     .object({
@@ -76,22 +89,32 @@ const quoteSchema = z.discriminatedUnion("source", [
     }),
 ]);
 
+const holdingSymbolSchema = z
+    .string()
+    .trim()
+    .min(1)
+    .max(20)
+    .transform((symbol) => symbol.toUpperCase());
+
+const holdingNameSchema = z.string().trim().min(1).max(200);
+
 export const newHoldingSchema = z.object({
-    symbol: z
-        .string()
-        .trim()
-        .min(1)
-        .max(20)
-        .transform((symbol) => symbol.toUpperCase()),
-    name: z.string().trim().min(1).max(200),
+    symbol: holdingSymbolSchema,
+    name: holdingNameSchema,
     type: z.enum(ASSET_TYPES),
     accountId: z.uuid(),
-    quantity: z.number().positive(),
+    quantity: z.number().positive().max(1e12),
     price: centsSchema.refine((price) => price > 0, "Price must be positive"),
     currency: z.enum(CURRENCIES).default("EUR"),
     pricedAt: instantSchema.optional(),
     heldSince: daySchema.optional(),
     quote: quoteSchema.optional(),
+    fromAccountId: z.uuid().nullable().optional(),
+    repeats: z.object({ cadence: z.enum(CADENCES), basis: z.enum(BUY_BASES) }).optional(),
+}).superRefine((holding, ctx) => {
+    if (holding.repeats && holding.heldSince && holding.heldSince < backfillStart()) {
+        ctx.addIssue({ code: "custom", path: ["heldSince"], message: "A repeat can start at most about a year back" });
+    }
 });
 
 export const newTagSchema = z.object({
@@ -133,13 +156,16 @@ export const accountBalanceSchema = z.object({
 });
 
 export const holdingPatchSchema = z.object({
-    quantity: z.number().positive(),
+    quantity: z.number().positive().max(1e12),
     cost: centsSchema.refine((cost) => cost >= 0, "Cost cannot be negative"),
     heldSince: daySchema.optional(),
+    symbol: holdingSymbolSchema.optional(),
+    name: holdingNameSchema.optional(),
+    quote: quoteSchema.nullable().optional(),
 });
 
 export const sellHoldingSchema = z.object({
-    quantity: z.number().positive(),
+    quantity: z.number().positive().max(1e12),
     price: centsSchema.refine((price) => price > 0, "Price must be positive"),
 });
 
@@ -164,7 +190,7 @@ export const newRecurringSchema = z
         toAmount: centsSchema.optional(),
         currency: z.enum(CURRENCIES),
         cadence: z.enum(CADENCES),
-        anchor: daySchema,
+        anchor: repeatStartSchema,
     })
     .superRefine((entry, ctx) => {
         if (entry.kind === "transfer" ? !entry.toAccountId : entry.toAccountId) {
@@ -177,12 +203,21 @@ export const newRecurringSchema = z
         if (!signOk) {
             ctx.addIssue({ code: "custom", path: ["amount"], message: "Income is positive; expenses and transfers are negative" });
         }
+        if (entry.toAmount !== undefined && (!entry.toAccountId || entry.toAmount <= 0)) {
+            ctx.addIssue({ code: "custom", path: ["toAmount"], message: "Only transfers receive a positive amount" });
+        }
     });
 
 export const recurringPatchSchema = z.object({
     name: z.string().trim().min(1).max(200).optional(),
     amount: centsSchema.optional(),
     cadence: z.enum(CADENCES).optional(),
-    nextDue: daySchema.optional(),
+    nextDue: repeatStartSchema.optional(),
+    paused: z.boolean().optional(),
+});
+
+export const recurringBuyPatchSchema = z.object({
+    amount: centsSchema.refine((amount) => amount > 0, "Amount must be positive").optional(),
+    quantity: z.number().positive().max(1e12).optional(),
     paused: z.boolean().optional(),
 });

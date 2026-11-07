@@ -1,7 +1,7 @@
 export type { ApiOptions } from "./client";
-export { ApiError, configureApi, isUnreachable } from "./client";
+export { ApiError, configureApi, isSignedOut, isUnreachable } from "./client";
 export { configureIds, newId } from "./ids";
-export type { AccountDraft, BalanceUpdate, NamedDraft, TagDraft, TransactionDraft, TransactionUpdate } from "./mutations";
+export type { AccountDraft, BalanceUpdate, MutationOptions, NamedDraft, RecurringDraft, TagDraft, TransactionDraft, TransactionUpdate } from "./mutations";
 export { configureMutations, MUTATIONS } from "./mutations";
 export { changePassword, configureAuth, deleteUser, signIn, signOut, signUp, useSession } from "./auth";
 export { fetchSettings, updateSettings } from "./settings";
@@ -57,3 +57,4 @@ export { usePortfolioHistory } from "./usePortfolioHistory";
 export type { NetWorthTrendState, TrendPoint, TrendSelection } from "./useNetWorthTrend";
 export { INITIAL_TREND, useNetWorthTrend } from "./useNetWorthTrend";
 export { useAddRecurring, useRecurring, useRemoveRecurring, useUpdateRecurring } from "./useRecurring";
+export { useRecurringBuys, useRemoveRecurringBuy, useUpdateRecurringBuy } from "./useRecurringBuys";

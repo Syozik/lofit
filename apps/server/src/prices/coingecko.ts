@@ -11,7 +11,7 @@ export async function fetchCoingeckoPrices(
     if (ids.length === 0) return prices;
 
     const query = `ids=${encodeURIComponent(ids.join(","))}&vs_currencies=eur`;
-    const response = await fetch(`${API}/simple/price?${query}`, { headers: { accept: "application/json" } });
+    const response = await fetch(`${API}/simple/price?${query}`, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(15_000) });
     if (!response.ok) return prices;
 
     const body = (await response.json()) as Record<string, { eur?: number }>;
@@ -25,7 +25,7 @@ export async function fetchCoingeckoPrices(
 export async function fetchCoingeckoHistory(id: string): Promise<Close[] | undefined> {
     const response = await fetch(
         `${API}/coins/${encodeURIComponent(id)}/market_chart?vs_currency=eur&days=365&interval=daily`,
-        { headers: { accept: "application/json" } },
+        { headers: { accept: "application/json" }, signal: AbortSignal.timeout(15_000) },
     );
     if (!response.ok) return undefined;
 
@@ -41,7 +41,7 @@ export async function fetchCoingeckoHistory(id: string): Promise<Close[] | undef
 export async function fetchCoingeckoIntraday(id: string): Promise<Tick[] | undefined> {
     const response = await fetch(
         `${API}/coins/${encodeURIComponent(id)}/market_chart?vs_currency=eur&days=1`,
-        { headers: { accept: "application/json" } },
+        { headers: { accept: "application/json" }, signal: AbortSignal.timeout(15_000) },
     );
     if (!response.ok) return undefined;
 

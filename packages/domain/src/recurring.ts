@@ -1,5 +1,6 @@
 import type { Cents, Currency } from "./money";
-import type { TransactionKind } from "./types";
+import type { QuoteRef } from "./quote";
+import type { AssetType, TransactionKind } from "./types";
 
 export const CADENCES = ["weekly", "monthly", "yearly"] as const;
 export type Cadence = (typeof CADENCES)[number];
@@ -31,6 +32,28 @@ export type NewRecurring = Omit<Recurring, "id" | "nextDue" | "paused" | "shown"
 
 export type RecurringPatch = Partial<Pick<Recurring, "name" | "amount" | "cadence" | "nextDue" | "paused">>;
 
+export const BUY_BASES = ["amount", "units"] as const;
+export type BuyBasis = (typeof BUY_BASES)[number];
+
+export interface RecurringBuy {
+    id: string;
+    symbol: string;
+    name: string;
+    type: AssetType;
+    quote?: QuoteRef;
+    accountId: string;
+    fromAccountId: string | null;
+    amount?: Cents;
+    quantity?: number;
+    currency: Currency;
+    cadence: Cadence;
+    anchor: string;
+    nextDue: string;
+    paused: boolean;
+}
+
+export type RecurringBuyPatch = Partial<Pick<RecurringBuy, "amount" | "quantity" | "paused">>;
+
 function parts(day: string): [number, number, number] {
     const [year, month, date] = day.split("-").map(Number);
     return [year!, month!, date!];
@@ -59,9 +82,19 @@ export function following(day: string, cadence: Cadence, anchor: string = day): 
     return format(year + 1, anchorMonth, Math.min(anchorDate, daysIn(year + 1, anchorMonth)));
 }
 
-export function dueDays(recurring: Pick<Recurring, "nextDue" | "cadence" | "anchor">, through: string): string[] {
+export const MAX_DUE_DAYS = 120;
+
+export function dueDays(
+    recurring: Pick<Recurring, "nextDue" | "cadence" | "anchor">,
+    through: string,
+    limit = MAX_DUE_DAYS,
+): string[] {
     const days: string[] = [];
-    for (let day = recurring.nextDue; day <= through; day = following(day, recurring.cadence, recurring.anchor)) {
+    for (
+        let day = recurring.nextDue;
+        day <= through && days.length < limit;
+        day = following(day, recurring.cadence, recurring.anchor)
+    ) {
         days.push(day);
     }
     return days;

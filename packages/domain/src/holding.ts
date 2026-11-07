@@ -1,6 +1,7 @@
 import { addCents, cents } from "./money";
 import type { Cents, Currency } from "./money";
 import type { QuoteRef } from "./quote";
+import type { BuyBasis, Cadence } from "./recurring";
 import type { Delta } from "./snapshot";
 import type { AssetType } from "./types";
 
@@ -22,6 +23,8 @@ export interface Holding {
 
 export type NewHolding = Omit<Holding, "id" | "cost" | "heldSince" | "nativePrice"> & {
     heldSince?: string;
+    fromAccountId?: string | null;
+    repeats?: { cadence: Cadence; basis: BuyBasis };
 };
 
 export function holdingValue(holding: Pick<Holding, "quantity" | "price">): Cents {

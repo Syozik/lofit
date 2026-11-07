@@ -6,7 +6,7 @@ export interface EcbRates {
 }
 
 export async function fetchEcbRates(): Promise<EcbRates | undefined> {
-    const response = await fetch(ENDPOINT, { headers: { accept: "application/xml" } });
+    const response = await fetch(ENDPOINT, { headers: { accept: "application/xml" }, signal: AbortSignal.timeout(15_000) });
     if (!response.ok) return undefined;
 
     const xml = await response.text();
@@ -25,7 +25,7 @@ export async function fetchEcbRates(): Promise<EcbRates | undefined> {
 const HISTORY = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.xml";
 
 export async function fetchEcbHistory(currency: string): Promise<{ day: string; perEuro: number }[]> {
-    const response = await fetch(HISTORY, { headers: { accept: "application/xml" } });
+    const response = await fetch(HISTORY, { headers: { accept: "application/xml" }, signal: AbortSignal.timeout(15_000) });
     if (!response.ok) return [];
 
     const xml = await response.text();

@@ -6,6 +6,7 @@ let client: ReturnType<typeof hc<AppType>> | undefined;
 export type ApiOptions = {
     headers?: () => Promise<Record<string, string>>;
     onUnreachable?: () => void;
+    onSignedOut?: () => void;
     fetch?: typeof fetch;
 };
 
@@ -16,11 +17,12 @@ function gatewayFailure(response: { status: number; headers: Headers }): boolean
 }
 
 export function configureApi(baseUrl: string, options: ApiOptions = {}): void {
-    const { headers, onUnreachable, fetch: local } = options;
+    const { headers, onUnreachable, onSignedOut, fetch: local } = options;
     const watched: typeof fetch = async (input, init) => {
         try {
             const response = await fetch(input, init);
             if (gatewayFailure(response)) onUnreachable?.();
+            if (response.status === 401) onSignedOut?.();
             return response;
         } catch (error) {
             onUnreachable?.();
@@ -30,7 +32,7 @@ export function configureApi(baseUrl: string, options: ApiOptions = {}): void {
 
     client = hc<AppType>(baseUrl, {
         ...(headers ? { headers, init: { credentials: "omit" } } : {}),
-        ...(local ? { fetch: local } : onUnreachable ? { fetch: watched } : {}),
+        ...(local ? { fetch: local } : onUnreachable || onSignedOut ? { fetch: watched } : {}),
     });
 }
 
@@ -69,6 +71,10 @@ export async function apiError(response: { status: number; headers: Headers; tex
     } catch {
     }
     return new ApiError(response.status, message, gatewayFailure(response));
+}
+
+export function isSignedOut(error: unknown): boolean {
+    return error instanceof ApiError && error.status === 401;
 }
 
 export function isUnreachable(error: unknown): boolean {

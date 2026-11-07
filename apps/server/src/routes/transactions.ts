@@ -91,7 +91,8 @@ export const transactionsRoute = new Hono<AuthEnv>()
                     .select()
                     .from(transactions)
                     .where(and(eq(transactions.id, id), eq(transactions.userId, userId)))
-                    .limit(1);
+                    .limit(1)
+                    .for("update");
 
                 if (!current) throw new HTTPException(404, { message: "No such transaction" });
 

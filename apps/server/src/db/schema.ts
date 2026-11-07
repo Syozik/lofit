@@ -267,6 +267,44 @@ export const recurring = pgTable(
     ],
 );
 
+export const recurringBuys = pgTable(
+    "recurring_buys",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        userId: owner(),
+        symbol: text("symbol").notNull(),
+        name: text("name").notNull(),
+        type: assetType("type").notNull(),
+        quote: jsonb("quote").$type<QuoteRef>(),
+        accountId: uuid("account_id").notNull(),
+        fromAccountId: uuid("from_account_id"),
+        amount: money("amount"),
+        quantity: numeric("quantity", { precision: 28, scale: 10, mode: "number" }),
+        currency: text("currency").notNull(),
+        price: money("price").notNull(),
+        priceCurrency: text("price_currency").notNull(),
+        cadence: text("cadence").$type<Cadence>().notNull(),
+        anchor: date("anchor", { mode: "string" }).notNull(),
+        nextDue: date("next_due", { mode: "string" }).notNull(),
+        paused: boolean("paused").notNull().default(false),
+        createdAt: instant("created_at").notNull().defaultNow(),
+    },
+    (t) => [
+        foreignKey({
+            name: "recurring_buys_account_fk",
+            columns: [t.accountId, t.userId],
+            foreignColumns: [accounts.id, accounts.userId],
+        }).onDelete("cascade"),
+        foreignKey({
+            name: "recurring_buys_from_account_fk",
+            columns: [t.fromAccountId, t.userId],
+            foreignColumns: [accounts.id, accounts.userId],
+        }).onDelete("cascade"),
+        check("recurring_buys_one_basis", sql`(${t.amount} is null) <> (${t.quantity} is null)`),
+        index("recurring_buys_due_idx").on(t.nextDue),
+    ],
+);
+
 export const transactionTags = pgTable(
     "transaction_tags",
     {

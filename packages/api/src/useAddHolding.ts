@@ -10,6 +10,9 @@ export function useAddHolding() {
             await Promise.all([
                 client.invalidateQueries({ queryKey: ["holdings"] }),
                 client.invalidateQueries({ queryKey: ["portfolio"] }),
+                client.invalidateQueries({ queryKey: ["accounts"] }),
+                client.invalidateQueries({ queryKey: ["snapshots"] }),
+                client.invalidateQueries({ queryKey: ["recurring-buys"] }),
             ]);
         },
     });

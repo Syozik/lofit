@@ -66,3 +66,16 @@ export function amountFor(transaction: Transaction, viewedFrom?: string): number
 export function monogram(transaction: Pick<Transaction, "name">): string {
     return transaction.name.trim().charAt(0).toUpperCase();
 }
+
+export function entryName(
+    typed: string,
+    kind: Transaction["kind"],
+    firstTag: string | undefined,
+    from: string | undefined,
+    to: string | undefined,
+): string {
+    const name = typed.trim();
+    if (name) return name;
+    if (kind === "transfer") return from && to ? `${from} → ${to}` : KIND_LABELS.transfer;
+    return firstTag ?? KIND_LABELS[kind];
+}

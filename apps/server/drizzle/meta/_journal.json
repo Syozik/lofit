@@ -148,6 +148,20 @@
       "when": 1793363633154,
       "tag": "0020_recurring",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793521143680,
+      "tag": "0021_recurring_buys",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1794086267179,
+      "tag": "0022_buys_paid_elsewhere",
+      "breakpoints": true
     }
   ]
 }

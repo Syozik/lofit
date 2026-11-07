@@ -18,9 +18,13 @@ export interface Close {
     close: Cents;
 }
 
+const ALIASES: Record<string, string> = { XAG: "SI=F", XAU: "GC=F" };
+
 async function fetchChart(symbol: string, query: string) {
-    const response = await fetch(`${ENDPOINT}/${encodeURIComponent(symbol)}?${query}`, {
+    const ticker = ALIASES[symbol] ?? symbol;
+    const response = await fetch(`${ENDPOINT}/${encodeURIComponent(ticker)}?${query}`, {
         headers: { accept: "application/json", "user-agent": "lofit/0.1" },
+        signal: AbortSignal.timeout(15_000),
     });
     if (!response.ok) return undefined;
 

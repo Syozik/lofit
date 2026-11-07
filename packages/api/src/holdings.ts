@@ -1,4 +1,4 @@
-import type { Holding, NewHolding, PriceHistory } from "@lofit/domain";
+import type { Holding, NewHolding, PriceHistory, QuoteRef } from "@lofit/domain";
 import { api, apiError, fromJson } from "./client";
 
 export async function fetchHoldings(): Promise<readonly Holding[]> {
@@ -18,11 +18,12 @@ export async function updateHolding(update: {
     quantity: number;
     cost: number;
     heldSince?: string;
+    symbol?: string;
+    name?: string;
+    quote?: QuoteRef | null;
 }): Promise<Holding> {
-    const response = await api().holdings[":id"].$patch({
-        param: { id: update.id },
-        json: { quantity: update.quantity, cost: update.cost, heldSince: update.heldSince },
-    });
+    const { id, ...json } = update;
+    const response = await api().holdings[":id"].$patch({ param: { id }, json });
     if (!response.ok) throw await apiError(response);
     return fromJson(await response.json());
 }

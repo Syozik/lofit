@@ -1,11 +1,12 @@
 import { balanceChanges, displayCurrency, negateCents } from "@lofit/domain";
-import type { Account, BalanceChange, Budget, Group, TagKind, NewAccount, NewTransaction, Tag, Transaction } from "@lofit/domain";
+import type { Account, BalanceChange, Budget, Group, TagKind, NewAccount, NewRecurring, NewTransaction, Recurring, Tag, Transaction } from "@lofit/domain";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { addAccount, updateAccountBalance } from "./accounts";
 import { setBudget } from "./budgets";
 import type { BudgetChange } from "./budgets";
-import { ApiError, isUnreachable } from "./client";
+import { ApiError, isSignedOut, isUnreachable } from "./client";
 import { addGroup } from "./groups";
+import { addRecurring } from "./recurring";
 import { addTag, renameTag } from "./tags";
 import { addTransaction, deleteTransaction, updateTransaction } from "./transactions";
 
@@ -19,9 +20,11 @@ export const MUTATIONS = {
     renameTag: ["tags", "rename"],
     addGroup: ["groups", "add"],
     setBudget: ["budgets", "set"],
+    addRecurring: ["recurring", "add"],
 } as const;
 
 export type TransactionDraft = NewTransaction & { id: string };
+export type RecurringDraft = NewRecurring & { id: string };
 export type TransactionUpdate = { id: string; draft: NewTransaction };
 export type BalanceUpdate = { id: string; balance: number };
 export type AccountDraft = NewAccount & { id: string };
@@ -77,8 +80,11 @@ function nextPosition(items: readonly { position: number }[] | undefined): numbe
     return (items ?? []).reduce((max, item) => Math.max(max, item.position + 1), 0);
 }
 
-export function configureMutations(client: QueryClient): void {
-    const retry = (_count: number, error: Error) => isUnreachable(error);
+export type MutationOptions = { holdWhileSignedOut?: boolean };
+
+export function configureMutations(client: QueryClient, options: MutationOptions = {}): void {
+    const retry = (_count: number, error: Error) =>
+        isUnreachable(error) || (options.holdWhileSignedOut === true && isSignedOut(error));
 
     const hold = async (...keys: string[]) => {
         await Promise.all(keys.map((key) => client.cancelQueries({ queryKey: [key] })));
@@ -238,5 +244,12 @@ export function configureMutations(client: QueryClient): void {
             });
         },
         ["budgets"],
+    );
+
+    register<RecurringDraft, Recurring>(
+        MUTATIONS.addRecurring,
+        addRecurring,
+        () => hold("recurring"),
+        ["recurring", "transactions", "accounts", "snapshots"],
     );
 }

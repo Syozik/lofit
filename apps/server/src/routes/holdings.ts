@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import { cents, paidFor, sellUnits, toBase } from "@lofit/domain";
+import { cents, following, sellUnits, toBase } from "@lofit/domain";
 import type { Cents } from "@lofit/domain";
 import {
     holdingPatchSchema,
@@ -7,14 +7,17 @@ import {
     sellHoldingSchema,
 } from "@lofit/domain/schemas";
 import { z } from "zod";
-import { and, desc, eq, getTableColumns, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import type { AuthEnv } from "../auth/session";
 import { db } from "../db/client";
 import { toHolding } from "../db/mappers";
 import { viewFor } from "../db/view";
-import { accounts, holdings } from "../db/schema";
+import { accounts, holdings, recurringBuys } from "../db/schema";
+import { priced, settle } from "../holdings";
+import { currenciesOf } from "../ledger";
+import { logDue } from "../recurring";
 import { priceHistory } from "../prices/history";
 import { perBase } from "../prices/rates";
 import { invalidBody } from "../http";
@@ -39,61 +42,37 @@ export const holdingsRoute = new Hono<AuthEnv>()
             const entry = c.req.valid("json");
             const userId = c.var.userId;
 
-            const [account] = await db
-                .select({ id: accounts.id, currency: accounts.currency })
-                .from(accounts)
-                .where(and(eq(accounts.id, entry.accountId), eq(accounts.userId, userId)))
-                .limit(1);
-
-            if (!account) throw new HTTPException(422, { message: "Unknown account" });
-
-            const rate = await perBase(entry.currency, account.currency);
-            if (!rate) {
-                throw new HTTPException(422, {
-                    message: `No ${account.currency} rate for ${entry.currency}`,
-                });
-            }
-
-            const price = toBase(entry.price, rate);
-            const cost = paidFor(entry.quantity, price);
+            const fromAccountId = entry.fromAccountId === undefined ? entry.accountId : entry.fromAccountId;
+            const owned = await currenciesOf(userId);
+            const buy = await priced({ ...entry, fromAccountId }, owned);
 
             const row = await db.transaction(async (tx) => {
-                const [upserted] = await tx
-                    .insert(holdings)
-                    .values({
+                const settled = await settle(tx, userId, buy);
+                if (entry.repeats) {
+                    const anchor = entry.heldSince ?? new Date().toISOString().slice(0, 10);
+                    const units = entry.repeats.basis === "units";
+                    await tx.insert(recurringBuys).values({
                         userId,
                         symbol: entry.symbol,
                         name: entry.name,
                         type: entry.type,
-                        accountId: entry.accountId,
-                        quantity: entry.quantity,
-                        price,
-                        nativePrice: entry.price,
-                        currency: entry.currency,
-                        cost,
-                        costCurrency: account.currency,
-                        ...(entry.heldSince ? { heldSince: entry.heldSince } : {}),
-                        pricedAt: entry.pricedAt ? new Date(entry.pricedAt) : null,
                         quote: entry.quote ?? null,
-                    })
-                    .onConflictDoUpdate({
-                        target: [holdings.userId, holdings.symbol, holdings.accountId],
-                        set: {
-                            quantity: sql`${holdings.quantity} + excluded.quantity`,
-                            price: sql`excluded.price`,
-                            nativePrice: sql`excluded.native_price`,
-                            currency: sql`excluded.currency`,
-                            quote: sql`coalesce(excluded.quote, ${holdings.quote})`,
-                            cost: sql`${holdings.cost} + excluded.cost`,
-                            heldSince: sql`least(${holdings.heldSince}, excluded.held_since)`,
-                            pricedAt: sql`excluded.priced_at`,
-                        },
-                    })
-                    .returning({ ...getTableColumns(holdings), created: sql<boolean>`xmax = 0` });
-
-                if (!upserted) throw new Error("Upserting a holding returned no row.");
-                return upserted;
+                        accountId: entry.accountId,
+                        fromAccountId,
+                        amount: units ? null : buy.paid,
+                        quantity: units ? entry.quantity : null,
+                        currency: owned.get(fromAccountId ?? entry.accountId)!,
+                        price: entry.price,
+                        priceCurrency: entry.currency,
+                        cadence: entry.repeats.cadence,
+                        anchor,
+                        nextDue: following(anchor, entry.repeats.cadence),
+                    });
+                }
+                return settled;
             });
+
+            if (entry.repeats) await logDue(userId);
 
             const { created, ...holding } = row;
             return c.json(toHolding(holding, await viewFor(userId, c.var.currency)), created ? 201 : 200);
@@ -129,24 +108,59 @@ export const holdingsRoute = new Hono<AuthEnv>()
             const patch = c.req.valid("json");
             const userId = c.var.userId;
 
-            const [current] = await db
-                .select({ costCurrency: holdings.costCurrency })
-                .from(holdings)
-                .where(and(eq(holdings.id, id), eq(holdings.userId, userId)))
-                .limit(1);
-
-            if (!current) throw new HTTPException(404, { message: "No such holding" });
-
             const view = await viewFor(userId, c.var.currency);
-            const cost = view.fx.convert(patch.cost, c.var.currency, current.costCurrency);
 
-            const [row] = await db
-                .update(holdings)
-                .set({ quantity: patch.quantity, cost, heldSince: patch.heldSince })
-                .where(and(eq(holdings.id, id), eq(holdings.userId, userId)))
-                .returning();
+            const row = await db.transaction(async (tx) => {
+                const [current] = await tx
+                    .select()
+                    .from(holdings)
+                    .where(and(eq(holdings.id, id), eq(holdings.userId, userId)))
+                    .limit(1)
+                    .for("update");
 
-            if (!row) throw new HTTPException(404, { message: "No such holding" });
+                if (!current) throw new HTTPException(404, { message: "No such holding" });
+
+                const symbol = patch.symbol ?? current.symbol;
+                if (symbol !== current.symbol) {
+                    const [taken] = await tx
+                        .select({ id: holdings.id })
+                        .from(holdings)
+                        .where(and(eq(holdings.userId, userId), eq(holdings.accountId, current.accountId), eq(holdings.symbol, symbol)))
+                        .limit(1);
+                    if (taken) throw new HTTPException(409, { message: `You already hold ${symbol} in this account` });
+                }
+
+                const renamed = {
+                    symbol,
+                    name: patch.name ?? current.name,
+                    quote: patch.quote === undefined ? current.quote : patch.quote,
+                };
+
+                const [updated] = await tx
+                    .update(holdings)
+                    .set({
+                        ...renamed,
+                        quantity: patch.quantity,
+                        cost: view.fx.convert(patch.cost, c.var.currency, current.costCurrency),
+                        heldSince: patch.heldSince,
+                    })
+                    .where(and(eq(holdings.id, id), eq(holdings.userId, userId)))
+                    .returning();
+                if (!updated) throw new Error("Updating a holding returned no row.");
+
+                await tx
+                    .update(recurringBuys)
+                    .set(renamed)
+                    .where(
+                        and(
+                            eq(recurringBuys.userId, userId),
+                            eq(recurringBuys.accountId, current.accountId),
+                            eq(recurringBuys.symbol, current.symbol),
+                        ),
+                    );
+
+                return updated;
+            });
 
             return c.json(toHolding(row, view));
         },
@@ -169,7 +183,8 @@ export const holdingsRoute = new Hono<AuthEnv>()
                     .select()
                     .from(holdings)
                     .where(and(eq(holdings.id, id), eq(holdings.userId, userId)))
-                    .limit(1);
+                    .limit(1)
+                    .for("update");
 
                 if (!held) throw new HTTPException(404, { message: "No such holding" });
 

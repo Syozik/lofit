@@ -8,6 +8,10 @@ export const holdingsRoute = new Hono()
     .get("/", (c) => c.json([]))
     .all("*", needsAccount("Investments need an account"));
 
+export const recurringBuysRoute = new Hono()
+    .get("/", (c) => c.json([]))
+    .all("*", needsAccount("Investments need an account"));
+
 export const portfolioRoute = new Hono()
     .get("/history", (c) => {
         const parsed = scopeQuery.safeParse(c.req.query());

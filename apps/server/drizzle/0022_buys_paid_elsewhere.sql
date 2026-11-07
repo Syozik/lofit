@@ -1,0 +1,1 @@
+ALTER TABLE "recurring_buys" ALTER COLUMN "from_account_id" DROP NOT NULL;

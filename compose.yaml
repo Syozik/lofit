@@ -20,6 +20,7 @@ services:
       BASE_URL: ${BASE_URL:?set BASE_URL to the URL the app is served from}
       PRICE_REFRESH_MINUTES: ${PRICE_REFRESH_MINUTES:-60}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CLIENT_IP_HEADER: ${CLIENT_IP_HEADER:?set CLIENT_IP_HEADER to the header your proxy overwrites with the caller IP, e.g. cf-connecting-ip behind Cloudflare}
     command: sh -c "node dist/migrate.js && node dist/server.js"
     depends_on:
       db:

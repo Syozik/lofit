@@ -22,8 +22,17 @@ export type { HoldingGain, Share } from "./portfolio";
 export { allocation, gainsBySymbol, portfolioGain } from "./portfolio";
 export type { BalanceChange, NewTransaction, Transaction } from "./transaction";
 export { balanceChanges, isDay, isInstant, primaryTagId } from "./transaction";
-export type { Cadence, NewRecurring, Recurring, RecurringPatch, Upcoming } from "./recurring";
-export { CADENCE_LABELS, CADENCES, cadenceLabel, dueDays, following, upcomingIn } from "./recurring";
+export type {
+    BuyBasis,
+    Cadence,
+    NewRecurring,
+    Recurring,
+    RecurringBuy,
+    RecurringBuyPatch,
+    RecurringPatch,
+    Upcoming,
+} from "./recurring";
+export { BUY_BASES, CADENCE_LABELS, CADENCES, cadenceLabel, dueDays, following, upcomingIn } from "./recurring";
 export type { NewTag, Tag, TagKind } from "./tag";
 export { DEFAULT_TAG_NAMES, DEFAULT_TAGS, defaultTags, sameTagName, TAG_KINDS, tagsFor } from "./tag";
 

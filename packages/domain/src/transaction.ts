@@ -30,7 +30,7 @@ export function isDay(value: string): boolean {
 const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 
 export function isInstant(value: string): boolean {
-    return INSTANT.test(value);
+    return INSTANT.test(value) && !Number.isNaN(Date.parse(value));
 }
 
 export interface BalanceChange {
