@@ -1,6 +1,15 @@
+import { useTrades } from "@lofit/api";
 import { allocation, formatMoney, gainsBySymbol, portfolioGain } from "@lofit/domain";
 import type { Holding, HoldingGain } from "@lofit/domain";
-import { rankColor, signedPercent, signedWholeMoney } from "@lofit/view";
+import {
+    dayFormat,
+    rankColor,
+    signedPercent,
+    signedWholeMoney,
+    tradeGainLabel,
+    tradeNote,
+    tradeUnits,
+} from "@lofit/view";
 import { ChevronRight } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -8,11 +17,12 @@ import type { Colors } from "../theme";
 import { fonts, radius, space, useStyles, useTheme } from "../theme";
 import { Segmented } from "./Choices";
 
-type Mode = "allocation" | "gains";
+type Mode = "allocation" | "gains" | "buys";
 
 const MODES = [
     { value: "allocation", label: "Allocation" },
     { value: "gains", label: "Gains" },
+    { value: "buys", label: "Buys" },
 ] as const;
 
 function Allocation({ holdings }: { holdings: readonly Holding[] }) {
@@ -110,6 +120,46 @@ function Gains({ holdings }: { holdings: readonly Holding[] }) {
     );
 }
 
+function Buys({ holdings }: { holdings: readonly Holding[] }) {
+    const styles = useStyles(makeStyles);
+    const trades = useTrades();
+    const held = new Map(holdings.map((holding) => [holding.id, holding]));
+    const rows = (trades.data ?? []).flatMap((trade) => {
+        const holding = held.get(trade.holdingId);
+        return trade.side === "buy" && holding ? [{ trade, holding }] : [];
+    });
+
+    if (rows.length === 0) {
+        return <Text style={styles.empty}>{trades.isPending ? "Loading buys…" : "No buys recorded yet"}</Text>;
+    }
+
+    return (
+        <View style={styles.parts}>
+            {rows.map(({ trade, holding }) => {
+                const gain = tradeGainLabel(trade, holding);
+
+                return (
+                    <View key={trade.id} style={styles.gainRow}>
+                        <Text style={styles.gainName} numberOfLines={1}>
+                            {holding.symbol}
+                        </Text>
+                        <View style={styles.buyMain}>
+                            <Text style={styles.partValue}>{tradeUnits(trade, holding.type)}</Text>
+                            <Text style={styles.gain}>
+                                {dayFormat.format(new Date(trade.day))} · {tradeNote(trade)}
+                            </Text>
+                        </View>
+                        <View style={styles.buyFigures}>
+                            <Text style={styles.partValue}>{formatMoney(trade.cost)}</Text>
+                            <Text style={[styles.gain, gain.favourable && styles.up]}>{gain.text}</Text>
+                        </View>
+                    </View>
+                );
+            })}
+        </View>
+    );
+}
+
 export function PortfolioChart({ holdings }: { holdings: readonly Holding[] }) {
     const { colors } = useTheme();
     const styles = useStyles(makeStyles);
@@ -142,8 +192,10 @@ export function PortfolioChart({ holdings }: { holdings: readonly Holding[] }) {
                     <Segmented options={MODES} value={mode} onChange={setMode} />
                     {mode === "allocation" ? (
                         <Allocation holdings={holdings} />
-                    ) : (
+                    ) : mode === "gains" ? (
                         <Gains holdings={holdings} />
+                    ) : (
+                        <Buys holdings={holdings} />
                     )}
                 </View>
             )}
@@ -229,5 +281,7 @@ const makeStyles = (colors: Colors) =>
             color: colors.text,
             fontVariant: ["tabular-nums"],
         },
+        buyMain: { flex: 1, gap: 2 },
+        buyFigures: { alignItems: "flex-end", gap: 2 },
         empty: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
     });

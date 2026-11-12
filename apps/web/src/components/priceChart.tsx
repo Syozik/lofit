@@ -17,9 +17,10 @@ type Props = {
     currency: string;
     cost: Cents | undefined;
     heldSince: string;
+    buys?: readonly string[];
 };
 
-export function PriceChart({ points: history, currency, cost, heldSince }: Props) {
+export function PriceChart({ points: history, currency, cost, heldSince, buys = [] }: Props) {
     const priceFormat = currencyFormat(currency);
     const formatPrice = (price: Cents) => priceFormat.format(price / 100);
 
@@ -37,6 +38,10 @@ export function PriceChart({ points: history, currency, cost, heldSince }: Props
     const last = points[points.length - 1];
 
     const boughtAt = points.findIndex((point) => point.day >= heldSince);
+    const dots = buys.flatMap((day) => {
+        const close = first && day >= first.day ? points.find((point) => point.day >= day) : undefined;
+        return close ? [{ t: Date.parse(close.day), value: close.price }] : [];
+    });
     const focus = hover === null ? undefined : points[hover];
     const shown = focus ?? last;
 
@@ -58,6 +63,7 @@ export function PriceChart({ points: history, currency, cost, heldSince }: Props
                         onHover={setHover}
                         {...(cost !== undefined ? { level: { value: cost, label: `Your cost ${formatPrice(cost)}` } } : {})}
                         {...(boughtAt > 0 ? { marker: Date.parse(heldSince) } : {})}
+                        dots={dots}
                         currency={currency}
                     />
                 </>

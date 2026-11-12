@@ -1,15 +1,16 @@
+import { useTrades } from "@lofit/api";
 import { allocation, formatMoney, gainsBySymbol, portfolioGain, withSymbol } from "@lofit/domain";
 import type { Cents, Delta, Holding, HoldingGain } from "@lofit/domain";
 import { useState } from "react";
-import { rankColor } from "@lofit/view";
+import { dayFormat, rankColor, tradeGainLabel, tradeNote, tradeUnits } from "@lofit/view";
 import { cssColor } from "../helpers/palette";
 import { useDesktop } from "../useDesktop";
 
-type Mode = "allocation" | "gains";
+type Mode = "allocation" | "gains" | "buys";
 
-const MODES: readonly Mode[] = ["allocation", "gains"];
+const MODES: readonly Mode[] = ["allocation", "gains", "buys"];
 
-const MODE_LABELS: Record<Mode, string> = { allocation: "Allocation", gains: "Gains" };
+const MODE_LABELS: Record<Mode, string> = { allocation: "Allocation", gains: "Gains", buys: "Buys" };
 
 function signedEuros(amount: Cents): string {
     return `${amount < 0 ? "−" : "+"}${withSymbol(Math.round(Math.abs(amount) / 100).toLocaleString("en-US"))}`;
@@ -91,6 +92,43 @@ function Gains({ holdings }: { holdings: readonly Holding[] }) {
     );
 }
 
+function Buys({ holdings }: { holdings: readonly Holding[] }) {
+    const trades = useTrades();
+    const held = new Map(holdings.map((holding) => [holding.id, holding]));
+    const rows = (trades.data ?? []).flatMap((trade) => {
+        const holding = held.get(trade.holdingId);
+        return trade.side === "buy" && holding ? [{ trade, holding }] : [];
+    });
+
+    if (rows.length === 0) {
+        return <span className="portfolio-empty">{trades.isPending ? "Loading buys…" : "No buys recorded yet"}</span>;
+    }
+
+    return (
+        <ul className="trade-rows">
+            {rows.map(({ trade, holding }) => {
+                const gain = tradeGainLabel(trade, holding);
+
+                return (
+                    <li key={trade.id} className="trade-row trade-static">
+                        <span className="trade-symbol">{holding.symbol}</span>
+                        <span className="trade-main">
+                            <span>{tradeUnits(trade, holding.type)}</span>
+                            <span className="trade-note">
+                                {dayFormat.format(new Date(trade.day))} · {tradeNote(trade)}
+                            </span>
+                        </span>
+                        <span className="trade-figures">
+                            <span>{formatMoney(trade.cost)}</span>
+                            <span className={`acct-change ${gain.favourable ? "up" : ""}`}>{gain.text}</span>
+                        </span>
+                    </li>
+                );
+            })}
+        </ul>
+    );
+}
+
 type ModeSwitchProps = {
     mode: Mode;
     className?: string;
@@ -123,8 +161,10 @@ export function PortfolioChart({ holdings }: { holdings: readonly Holding[] }) {
     const chart =
         mode === "allocation" ? (
             <Allocation holdings={holdings} />
-        ) : (
+        ) : mode === "gains" ? (
             <Gains holdings={holdings} />
+        ) : (
+            <Buys holdings={holdings} />
         );
 
     if (desktop) {

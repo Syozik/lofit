@@ -64,6 +64,12 @@ const makeStyles = (colors: Colors) =>
         field: { gap: 5 },
         label: { fontFamily: fonts.regular, fontSize: 12, color: colors.quiet },
         hint: { fontFamily: fonts.regular, fontSize: 11.5, lineHeight: 16, color: colors.muted },
-        box: { ...makeFieldStyles(colors).input, paddingHorizontal: 0, justifyContent: "center", overflow: "hidden" },
+        box: {
+            ...makeFieldStyles(colors).input,
+            height: makeFieldStyles(colors).input.minHeight,
+            paddingHorizontal: 0,
+            justifyContent: "center",
+            overflow: "hidden",
+        },
         picker: { marginHorizontal: -4 },
     });

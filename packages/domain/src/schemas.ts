@@ -164,6 +164,12 @@ export const holdingPatchSchema = z.object({
     quote: quoteSchema.nullable().optional(),
 });
 
+export const tradePatchSchema = z.object({
+    quantity: z.number().positive().max(1e12),
+    price: centsSchema.refine((price) => price > 0, "Price must be positive"),
+    day: daySchema,
+});
+
 export const sellHoldingSchema = z.object({
     quantity: z.number().positive().max(1e12),
     price: centsSchema.refine((price) => price > 0, "Price must be positive"),

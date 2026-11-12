@@ -1,11 +1,37 @@
-import { useDeleteHolding, useHoldingHistory, useSellHolding, useUpdateHolding } from "@lofit/api";
+import {
+    useDeleteHolding,
+    useDeleteTrade,
+    useHoldingHistory,
+    useHoldingTrades,
+    useSellHolding,
+    useUpdateHolding,
+    useUpdateTrade,
+} from "@lofit/api";
 import { euros, formatAmount, formatMoney, holdingValue, unitCost, withSymbol } from "@lofit/domain";
-import type { Holding } from "@lofit/domain";
-import { dayFormat, followsSymbol, inCurrency, parsePositive, quoteFor, quoteTicker } from "@lofit/view";
+import type { Holding, Trade } from "@lofit/domain";
+import {
+    dayFormat,
+    followsSymbol,
+    inCurrency,
+    parsePositive,
+    quoteFor,
+    quoteTicker,
+    tradeGainLabel,
+    tradeNote,
+    tradeUnits,
+} from "@lofit/view";
 import { useState } from "react";
 import { useDesktop } from "../useDesktop";
 import { PriceChart } from "./priceChart";
 import { Sheet } from "./sheet";
+
+type Mode = "correct" | "sell" | "history";
+
+const MODES: readonly { value: Mode; label: string }[] = [
+    { value: "correct", label: "Correct" },
+    { value: "sell", label: "Sell" },
+    { value: "history", label: "History" },
+];
 
 type Props = {
     holding: Holding;
@@ -19,9 +45,12 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
     const sell = useSellHolding();
     const remove = useDeleteHolding();
     const history = useHoldingHistory(holding.id);
+    const trades = useHoldingTrades(holding.id);
+    const undo = useDeleteTrade();
+    const change = useUpdateTrade();
     const desktop = useDesktop();
 
-    const [selling, setSelling] = useState(false);
+    const [mode, setMode] = useState<Mode>("correct");
     const [quantity, setQuantity] = useState(String(holding.quantity));
     const [paid, setPaid] = useState((holding.cost / 100).toFixed(2));
     const [units, setUnits] = useState("");
@@ -31,8 +60,13 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
     const [name, setName] = useState(holding.name);
     const [ticker, setTicker] = useState(quoteTicker(holding.quote));
     const [ownTicker, setOwnTicker] = useState(!followsSymbol(holding));
+    const [editing, setEditing] = useState<Trade | null>(null);
+    const [boughtUnits, setBoughtUnits] = useState("");
+    const [boughtPrice, setBoughtPrice] = useState("");
+    const [boughtDay, setBoughtDay] = useState("");
 
-    const pending = update.isPending || sell.isPending || remove.isPending;
+    const buys = (trades.data ?? []).filter((trade) => trade.side === "buy").map((trade) => trade.day);
+    const pending = update.isPending || sell.isPending || remove.isPending || undo.isPending || change.isPending;
 
     const held = parsePositive(quantity);
     const cost = parsePositive(paid);
@@ -81,6 +115,48 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
         );
     }
 
+    const removable = (trade: Trade) =>
+        trade.side === "buy" && trade.source !== "opening" && trade.quantity < holding.quantity;
+
+    function edit(trade: Trade) {
+        setEditing(trade);
+        setBoughtUnits(String(trade.quantity));
+        setBoughtPrice((trade.price / 100).toFixed(2));
+        setBoughtDay(trade.day);
+    }
+
+    function saveBuy() {
+        const bought = parsePositive(boughtUnits);
+        const each = parsePositive(boughtPrice);
+        if (!editing || !bought || !each || !boughtDay || pending) return;
+
+        change.mutate(
+            { id: holding.id, tradeId: editing.id, quantity: bought, price: euros(each), day: boughtDay },
+            {
+                onSuccess: () => {
+                    onDone(`Updated a buy of ${holding.symbol}`);
+                    onClose();
+                },
+                onError: (error) => onDone(error.message),
+            },
+        );
+    }
+
+    function undoBuy(trade: Trade) {
+        if (pending) return;
+
+        undo.mutate(
+            { id: holding.id, tradeId: trade.id },
+            {
+                onSuccess: () => {
+                    onDone(`Removed a buy of ${holding.symbol}`);
+                    onClose();
+                },
+                onError: (error) => onDone(error.message),
+            },
+        );
+    }
+
     function drop() {
         if (pending) return;
 
@@ -115,6 +191,7 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
                                 : undefined
                         }
                         heldSince={holding.heldSince}
+                        buys={buys}
                     />
                 ) : (
                     <div className="price-chart price-pending">
@@ -123,28 +200,119 @@ export function HoldingSheet({ holding, accountName, onClose, onDone }: Props) {
                 ))}
 
             <div className="seg sheet-kinds">
-                <label className="seg-opt">
-                    <input
-                        type="radio"
-                        name="holding-mode"
-                        checked={!selling}
-                        onChange={() => setSelling(false)}
-                    />
-                    Correct
-                </label>
-                <label className="seg-opt">
-                    <input
-                        type="radio"
-                        name="holding-mode"
-                        checked={selling}
-                        onChange={() => setSelling(true)}
-                    />
-                    Sell
-                </label>
+                {MODES.map((option) => (
+                    <label className="seg-opt" key={option.value}>
+                        <input
+                            type="radio"
+                            name="holding-mode"
+                            checked={mode === option.value}
+                            onChange={() => setMode(option.value)}
+                        />
+                        {option.label}
+                    </label>
+                ))}
             </div>
 
             <div className="sheet-fields">
-                {selling ? (
+                {mode === "history" ? (
+                    editing ? (
+                        <>
+                            <div className="sheet-pair">
+                                <label className="field">
+                                    <span>Units bought</span>
+                                    <input
+                                        autoComplete="off"
+                                        className="input"
+                                        inputMode="decimal"
+                                        autoFocus
+                                        value={boughtUnits}
+                                        onChange={(event) => setBoughtUnits(event.target.value)}
+                                    />
+                                </label>
+                                <label className="field">
+                                    <span>Price each, {editing.currency}</span>
+                                    <input
+                                        autoComplete="off"
+                                        className="input"
+                                        inputMode="decimal"
+                                        value={boughtPrice}
+                                        onChange={(event) => setBoughtPrice(event.target.value)}
+                                    />
+                                </label>
+                            </div>
+
+                            <label className="field">
+                                <span>Bought on</span>
+                                <input
+                                    autoComplete="off"
+                                    className="input"
+                                    type="date"
+                                    value={boughtDay}
+                                    onChange={(event) => setBoughtDay(event.target.value)}
+                                />
+                            </label>
+
+                            <div className="sheet-actions">
+                                {removable(editing) && (
+                                    <button
+                                        className="btn btn-secondary sheet-remove"
+                                        disabled={pending}
+                                        onClick={() => undoBuy(editing)}
+                                    >
+                                        Remove
+                                    </button>
+                                )}
+                                <button className="btn btn-secondary" onClick={() => setEditing(null)}>
+                                    Back
+                                </button>
+                                <button
+                                    className="btn btn-primary sheet-save"
+                                    disabled={
+                                        !parsePositive(boughtUnits) || !parsePositive(boughtPrice) || !boughtDay || pending
+                                    }
+                                    onClick={saveBuy}
+                                >
+                                    {change.isPending ? "Saving…" : "Save"}
+                                </button>
+                            </div>
+                        </>
+                    ) : trades.data && trades.data.length > 0 ? (
+                        <ul className="trade-rows">
+                            {trades.data.map((trade) => {
+                                const gain = trade.side === "buy" ? tradeGainLabel(trade, holding) : undefined;
+
+                                return (
+                                    <li key={trade.id}>
+                                        <button
+                                            className="trade-row"
+                                            disabled={trade.side === "sell"}
+                                            onClick={() => edit(trade)}
+                                        >
+                                            <span className="trade-main">
+                                                <span>{tradeUnits(trade, holding.type)}</span>
+                                                <span className="trade-note">
+                                                    {dayFormat.format(new Date(trade.day))} · {tradeNote(trade)}
+                                                </span>
+                                            </span>
+                                            <span className="trade-figures">
+                                                <span>{formatMoney(trade.cost)}</span>
+                                                {gain && (
+                                                    <span className={`acct-change ${gain.favourable ? "up" : ""}`}>
+                                                        {gain.text}
+                                                    </span>
+                                                )}
+                                            </span>
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    ) : (
+                        <span className="sheet-total">
+                            {trades.isPending ? "Loading buys…" : "No buys recorded yet"}
+                        </span>
+                    )
+                ) : mode === "sell" ? (
                     <>
                         <div className="sheet-pair">
                             <label className="field">

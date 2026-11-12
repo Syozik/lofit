@@ -1,21 +1,22 @@
 import { zValidator } from "@hono/zod-validator";
-import { cents, following, sellUnits, toBase } from "@lofit/domain";
+import { cents, following, paidFor, sellUnits, toBase } from "@lofit/domain";
 import type { Cents } from "@lofit/domain";
 import {
     holdingPatchSchema,
     newHoldingSchema,
     sellHoldingSchema,
+    tradePatchSchema,
 } from "@lofit/domain/schemas";
 import { z } from "zod";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import type { AuthEnv } from "../auth/session";
 import { db } from "../db/client";
-import { toHolding } from "../db/mappers";
+import { toHolding, toTrade } from "../db/mappers";
 import { viewFor } from "../db/view";
-import { accounts, holdings, recurringBuys } from "../db/schema";
-import { priced, settle } from "../holdings";
+import { accounts, holdingTrades, holdings, recurringBuys } from "../db/schema";
+import { priced, rate, settle } from "../holdings";
 import { currenciesOf } from "../ledger";
 import { logDue } from "../recurring";
 import { priceHistory } from "../prices/history";
@@ -78,6 +79,16 @@ export const holdingsRoute = new Hono<AuthEnv>()
             return c.json(toHolding(holding, await viewFor(userId, c.var.currency)), created ? 201 : 200);
         },
     )
+    .get("/trades", async (c) => {
+        const rows = await db
+            .select()
+            .from(holdingTrades)
+            .where(eq(holdingTrades.userId, c.var.userId))
+            .orderBy(desc(holdingTrades.day), desc(holdingTrades.createdAt));
+
+        const view = await viewFor(c.var.userId, c.var.currency);
+        return c.json(rows.map((row) => toTrade(row, view)));
+    })
     .get(
         "/:id/history",
         zValidator("param", z.object({ id: z.uuid() }), (result) => {
@@ -93,6 +104,144 @@ export const holdingsRoute = new Hono<AuthEnv>()
             if (!held) throw new HTTPException(404, { message: "No such holding" });
 
             return c.json(held.quote ? await priceHistory(held.quote, held.heldSince, c.var.currency) : null);
+        },
+    )
+    .get(
+        "/:id/trades",
+        zValidator("param", z.object({ id: z.uuid() }), (result) => {
+            if (!result.success) throw new HTTPException(404, { message: "No such holding" });
+        }),
+        async (c) => {
+            const rows = await db
+                .select()
+                .from(holdingTrades)
+                .where(and(eq(holdingTrades.holdingId, c.req.param("id")), eq(holdingTrades.userId, c.var.userId)))
+                .orderBy(desc(holdingTrades.day), desc(holdingTrades.createdAt));
+
+            const view = await viewFor(c.var.userId, c.var.currency);
+            return c.json(rows.map((row) => toTrade(row, view)));
+        },
+    )
+    .patch(
+        "/:id/trades/:tradeId",
+        zValidator("param", z.object({ id: z.uuid(), tradeId: z.uuid() }), (result) => {
+            if (!result.success) throw new HTTPException(404, { message: "No such buy" });
+        }),
+        zValidator("json", tradePatchSchema, (result, c) => {
+            if (!result.success) return invalidBody(c, result.error.issues);
+        }),
+        async (c) => {
+            const { id, tradeId } = c.req.valid("param");
+            const patch = c.req.valid("json");
+            const userId = c.var.userId;
+
+            const bought = and(
+                eq(holdingTrades.id, tradeId),
+                eq(holdingTrades.holdingId, id),
+                eq(holdingTrades.userId, userId),
+                eq(holdingTrades.side, "buy"),
+            );
+
+            const [found] = await db.select().from(holdingTrades).where(bought).limit(1);
+            if (!found) throw new HTTPException(404, { message: "No such buy" });
+
+            const perUnit =
+                patch.price === found.price && patch.day === found.day
+                    ? undefined
+                    : toBase(patch.price, await rate(found.currency, found.costCurrency, patch.day));
+
+            const row = await db.transaction(async (tx) => {
+                const [held] = await tx
+                    .select()
+                    .from(holdings)
+                    .where(and(eq(holdings.id, id), eq(holdings.userId, userId)))
+                    .limit(1)
+                    .for("update");
+                const [trade] = await tx.select().from(holdingTrades).where(bought).limit(1);
+
+                if (!held || !trade) throw new HTTPException(404, { message: "No such buy" });
+
+                const more = patch.quantity - trade.quantity;
+                if (held.quantity + more <= 0) {
+                    throw new HTTPException(409, { message: "You have already sold more than that would leave" });
+                }
+
+                const cost =
+                    perUnit === undefined
+                        ? cents(Math.round((trade.cost * patch.quantity) / trade.quantity))
+                        : paidFor(patch.quantity, perUnit);
+
+                await tx
+                    .update(holdingTrades)
+                    .set({ quantity: patch.quantity, price: patch.price, day: patch.day, cost })
+                    .where(eq(holdingTrades.id, tradeId));
+
+                const [updated] = await tx
+                    .update(holdings)
+                    .set({
+                        quantity: sql`${holdings.quantity} + ${more}`,
+                        cost: sql`greatest(${holdings.cost} + ${cost - trade.cost}, 0)`,
+                        heldSince: sql`least(${holdings.heldSince}, ${patch.day}::date)`,
+                    })
+                    .where(eq(holdings.id, id))
+                    .returning();
+                if (!updated) throw new Error("Updating a holding returned no row.");
+
+                return updated;
+            });
+
+            return c.json(toHolding(row, await viewFor(userId, c.var.currency)));
+        },
+    )
+    .delete(
+        "/:id/trades/:tradeId",
+        zValidator("param", z.object({ id: z.uuid(), tradeId: z.uuid() }), (result) => {
+            if (!result.success) throw new HTTPException(404, { message: "No such buy" });
+        }),
+        async (c) => {
+            const { id, tradeId } = c.req.valid("param");
+            const userId = c.var.userId;
+
+            const row = await db.transaction(async (tx) => {
+                const [held] = await tx
+                    .select()
+                    .from(holdings)
+                    .where(and(eq(holdings.id, id), eq(holdings.userId, userId)))
+                    .limit(1)
+                    .for("update");
+
+                const [gone] = await tx
+                    .delete(holdingTrades)
+                    .where(
+                        and(
+                            eq(holdingTrades.id, tradeId),
+                            eq(holdingTrades.holdingId, id),
+                            eq(holdingTrades.userId, userId),
+                            eq(holdingTrades.side, "buy"),
+                            ne(holdingTrades.source, "opening"),
+                        ),
+                    )
+                    .returning();
+
+                if (!held || !gone) throw new HTTPException(404, { message: "No such buy" });
+                if (gone.quantity >= held.quantity) {
+                    throw new HTTPException(409, { message: "That is all you hold, remove the holding instead" });
+                }
+
+                const [updated] = await tx
+                    .update(holdings)
+                    .set({
+                        quantity: sql`${holdings.quantity} - ${gone.quantity}`,
+                        cost: sql`greatest(${holdings.cost} - ${gone.cost}, 0)`,
+                    })
+                    .where(eq(holdings.id, id))
+                    .returning();
+                if (!updated) throw new Error("Updating a holding returned no row.");
+
+                return updated;
+            });
+
+            return c.json(toHolding(row, await viewFor(userId, c.var.currency)));
         },
     )
     .patch(
@@ -203,6 +352,16 @@ export const holdingsRoute = new Hono<AuthEnv>()
                         .update(holdings)
                         .set({ quantity: result.left.quantity, cost: result.left.cost })
                         .where(eq(holdings.id, id));
+                    await tx.insert(holdingTrades).values({
+                        userId,
+                        holdingId: id,
+                        side: "sell",
+                        quantity: result.sold,
+                        price: order.price,
+                        currency: sold.currency,
+                        cost: result.proceeds,
+                        costCurrency: held.costCurrency,
+                    });
                 } else {
                     await tx.delete(holdings).where(eq(holdings.id, id));
                 }

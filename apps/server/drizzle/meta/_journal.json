@@ -162,6 +162,13 @@
       "when": 1794086267179,
       "tag": "0022_buys_paid_elsewhere",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794403306253,
+      "tag": "0023_holding_trades",
+      "breakpoints": true
     }
   ]
 }

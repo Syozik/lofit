@@ -1,8 +1,8 @@
 import { paidFor, toBase } from "@lofit/domain";
-import type { AssetType, Cents, QuoteRef } from "@lofit/domain";
+import type { AssetType, Cents, QuoteRef, TradeSource } from "@lofit/domain";
 import { and, eq, getTableColumns, sql } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
-import { accounts, holdings } from "./db/schema";
+import { accounts, holdingTrades, holdings } from "./db/schema";
 import type { Tx } from "./ledger";
 import { perBaseOn } from "./prices/history";
 import { perBase } from "./prices/rates";
@@ -23,7 +23,7 @@ export type Buy = {
 
 export type PricedBuy = Buy & { heldIn: string; basePrice: Cents; cost: Cents; paid: Cents };
 
-async function rate(currency: string, base: string, day: string | undefined): Promise<number> {
+export async function rate(currency: string, base: string, day: string | undefined): Promise<number> {
     const found = day ? await perBaseOn(currency, base, day) : await perBase(currency, base);
     if (!found) throw new HTTPException(422, { message: `No ${base} rate for ${currency}` });
     return found;
@@ -41,7 +41,8 @@ export async function priced(buy: Buy, owned: Map<string, string>, day?: string)
     return { ...buy, heldIn, basePrice, cost, paid };
 }
 
-export async function settle(tx: Tx, userId: string, buy: PricedBuy, keepPrice = false) {
+export async function settle(tx: Tx, userId: string, buy: PricedBuy, source: TradeSource = "manual") {
+    const keepPrice = source === "recurring";
     const [upserted] = await tx
         .insert(holdings)
         .values({
@@ -80,6 +81,19 @@ export async function settle(tx: Tx, userId: string, buy: PricedBuy, keepPrice =
         .returning({ ...getTableColumns(holdings), created: sql<boolean>`xmax = 0` });
 
     if (!upserted) throw new Error("Upserting a holding returned no row.");
+
+    await tx.insert(holdingTrades).values({
+        userId,
+        holdingId: upserted.id,
+        side: "buy",
+        source,
+        quantity: buy.quantity,
+        price: buy.price,
+        currency: buy.currency,
+        cost: buy.cost,
+        costCurrency: buy.heldIn,
+        ...(buy.heldSince ? { day: buy.heldSince } : {}),
+    });
 
     if (buy.fromAccountId === null) return upserted;
 

@@ -2,7 +2,7 @@ export type { Group, NewGroup, Scope } from "./group";
 export { ALL_GROUPS, byPosition, DEFAULT_GROUP_NAMES, INVESTMENTS_GROUP, investingGroups, sameGroupName } from "./group";
 export type { Account, NewAccount } from "./account";
 export { restated, sinceLabel, withBalance } from "./account";
-export type { Holding, NewHolding } from "./holding";
+export type { Holding, NewHolding, Trade } from "./holding";
 export type { QuoteRef, QuoteSource } from "./quote";
 export { QUOTE_SOURCES, quoteKey } from "./quote";
 export type { Sale } from "./holding";
@@ -69,6 +69,8 @@ export type {
     ImportDraft,
     ScreenshotImport,
     Provenance,
+    TradeSide,
+    TradeSource,
     TransactionKind,
 } from "./types";
 export {
@@ -77,6 +79,8 @@ export {
     ASSET_TYPES,
     KIND_LABELS,
     PROVENANCES,
+    TRADE_SIDES,
+    TRADE_SOURCES,
     TRANSACTION_KINDS,
 } from "./types";
 

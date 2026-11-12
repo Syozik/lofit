@@ -23,6 +23,7 @@ type Props = {
     guide?: readonly LinePoint[];
     level?: { value: number; label: string };
     marker?: number;
+    dots?: readonly LinePoint[];
     currency?: string;
     grid?: boolean;
 };
@@ -34,6 +35,7 @@ export function LineChart({
     guide,
     level,
     marker,
+    dots,
     currency = displayCurrency(),
     grid = false,
 }: Props) {
@@ -127,6 +129,16 @@ export function LineChart({
                     >
                         {formatTick(tick)}
                     </span>
+                ))}
+                {dots?.map((dot, index) => (
+                    <span
+                        key={index}
+                        className="price-buy"
+                        style={{
+                            left: `${(x(dot.t) / WIDTH) * 100}%`,
+                            top: `${(y(dot.value) / HEIGHT) * 100}%`,
+                        }}
+                    />
                 ))}
                 {focus && (
                     <span

@@ -120,7 +120,7 @@ async function logBuy(row: BuyRow, through: string): Promise<number> {
             .where(and(eq(recurringBuys.id, row.id), eq(recurringBuys.nextDue, row.nextDue)))
             .returning({ id: recurringBuys.id });
         if (moved.length === 0) return false;
-        for (const buy of buys) await settle(tx, row.userId, buy, true);
+        for (const buy of buys) await settle(tx, row.userId, buy, "recurring");
         return true;
     });
 

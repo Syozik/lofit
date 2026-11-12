@@ -3,7 +3,7 @@ import type { Cents, Currency } from "./money";
 import type { QuoteRef } from "./quote";
 import type { BuyBasis, Cadence } from "./recurring";
 import type { Delta } from "./snapshot";
-import type { AssetType } from "./types";
+import type { AssetType, TradeSide, TradeSource } from "./types";
 
 export interface Holding {
     id: string;
@@ -43,6 +43,18 @@ export function holdingGain(holding: Pick<Holding, "quantity" | "price" | "cost"
         pct: holding.cost === 0 ? 0 : Math.round((amount / Math.abs(holding.cost)) * 10000) / 100,
         favourable: amount >= 0,
     };
+}
+
+export interface Trade {
+    id: string;
+    holdingId: string;
+    side: TradeSide;
+    source: TradeSource;
+    day: string;
+    quantity: number;
+    price: Cents;
+    currency: Currency;
+    cost: Cents;
 }
 
 export function addUnits(

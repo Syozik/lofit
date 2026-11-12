@@ -9,6 +9,7 @@ import type {
     RecurringBuy,
     Snapshot,
     Tag,
+    Trade,
     Transaction,
 } from "@lofit/domain";
 import type { Fx } from "../prices/fx";
@@ -16,6 +17,7 @@ import type {
     accounts,
     budgets,
     groups,
+    holdingTrades,
     holdings,
     recurring,
     recurringBuys,
@@ -71,6 +73,20 @@ export function toHolding(row: typeof holdings.$inferSelect, view?: View): Holdi
     if (row.quote) holding.quote = row.quote;
 
     return holding;
+}
+
+export function toTrade(row: typeof holdingTrades.$inferSelect, view?: View): Trade {
+    return {
+        id: row.id,
+        holdingId: row.holdingId,
+        side: row.side,
+        source: row.source,
+        day: row.day,
+        quantity: row.quantity,
+        price: row.price,
+        currency: row.currency as Currency,
+        cost: shown(view, row.cost, row.costCurrency),
+    };
 }
 
 export function toTag(row: typeof tags.$inferSelect): Tag {

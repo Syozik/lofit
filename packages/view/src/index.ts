@@ -46,6 +46,9 @@ export {
     parseAmount,
     parsePositive,
     signedWholeMoney,
+    tradeGainLabel,
+    tradeNote,
+    tradeUnits,
 } from "./accounts";
 export { currencyFormat, numberFormat, wholeNumber } from "./intl";
 export type { UpcomingSpend } from "./upcoming";

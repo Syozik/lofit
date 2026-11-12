@@ -2,6 +2,8 @@ import {
     ASSET_TYPES,
     PROVENANCES,
     TAG_KINDS,
+    TRADE_SIDES,
+    TRADE_SOURCES,
     TRANSACTION_KINDS,
 } from "@lofit/domain";
 import type { AccountChange, AccountDetail, Cadence, Cents, QuoteRef } from "@lofit/domain";
@@ -30,6 +32,8 @@ export const provenance = pgEnum("provenance", PROVENANCES);
 export const assetType = pgEnum("asset_type", ASSET_TYPES);
 export const transactionKind = pgEnum("transaction_kind", TRANSACTION_KINDS);
 export const tagKind = pgEnum("tag_kind", TAG_KINDS);
+export const tradeSide = pgEnum("trade_side", TRADE_SIDES);
+export const tradeSource = pgEnum("trade_source", TRADE_SOURCES);
 
 const money = (name: string) => bigint(name, { mode: "number" }).$type<Cents>();
 
@@ -180,6 +184,30 @@ export const holdings = pgTable(
             foreignColumns: [accounts.id, accounts.userId],
         }),
         check("holdings_quantity_positive", sql`${t.quantity} > 0`),
+    ],
+);
+
+export const holdingTrades = pgTable(
+    "holding_trades",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        userId: owner(),
+        holdingId: uuid("holding_id")
+            .notNull()
+            .references(() => holdings.id, { onDelete: "cascade" }),
+        side: tradeSide("side").notNull(),
+        source: tradeSource("source").notNull().default("manual"),
+        day: date("day", { mode: "string" }).notNull().defaultNow(),
+        quantity: numeric("quantity", { precision: 28, scale: 10, mode: "number" }).notNull(),
+        price: money("price").notNull(),
+        currency: text("currency").notNull(),
+        cost: money("cost").notNull(),
+        costCurrency: text("cost_currency").notNull(),
+        createdAt: instant("created_at").notNull().defaultNow(),
+    },
+    (t) => [
+        index("holding_trades_holding_idx").on(t.holdingId, t.day.desc()),
+        check("holding_trades_quantity_positive", sql`${t.quantity} > 0`),
     ],
 );
 

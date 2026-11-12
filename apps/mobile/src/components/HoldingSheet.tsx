@@ -1,7 +1,25 @@
-import { useDeleteHolding, useHoldingHistory, useSellHolding, useUpdateHolding } from "@lofit/api";
+import {
+    useDeleteHolding,
+    useDeleteTrade,
+    useHoldingHistory,
+    useHoldingTrades,
+    useSellHolding,
+    useUpdateHolding,
+    useUpdateTrade,
+} from "@lofit/api";
 import { euros, formatAmount, formatMoney, holdingValue, unitCost, withSymbol } from "@lofit/domain";
-import type { Holding } from "@lofit/domain";
-import { dayFormat, followsSymbol, inCurrency, parsePositive, quoteFor, quoteTicker } from "@lofit/view";
+import type { Holding, Trade } from "@lofit/domain";
+import {
+    dayFormat,
+    followsSymbol,
+    inCurrency,
+    parsePositive,
+    quoteFor,
+    quoteTicker,
+    tradeGainLabel,
+    tradeNote,
+    tradeUnits,
+} from "@lofit/view";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { Colors } from "../theme";
@@ -15,11 +33,12 @@ import { Sheet, SheetActions } from "./Sheet";
 import { useOnline } from "../connectivity";
 import { useToast } from "./Toast";
 
-type Mode = "correct" | "sell";
+type Mode = "correct" | "sell" | "history";
 
 const MODES = [
     { value: "correct", label: "Correct" },
     { value: "sell", label: "Sell" },
+    { value: "history", label: "History" },
 ] as const;
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -37,6 +56,9 @@ export function HoldingSheet({ holding, accountName, onClose }: Props) {
     const sell = useSellHolding();
     const remove = useDeleteHolding();
     const history = useHoldingHistory(holding.id);
+    const trades = useHoldingTrades(holding.id);
+    const undo = useDeleteTrade();
+    const change = useUpdateTrade();
     const show = useToast();
     const online = useOnline();
 
@@ -50,8 +72,13 @@ export function HoldingSheet({ holding, accountName, onClose }: Props) {
     const [name, setName] = useState(holding.name);
     const [ticker, setTicker] = useState(quoteTicker(holding.quote));
     const [ownTicker, setOwnTicker] = useState(!followsSymbol(holding));
+    const [editing, setEditing] = useState<Trade | null>(null);
+    const [boughtUnits, setBoughtUnits] = useState("");
+    const [boughtPrice, setBoughtPrice] = useState("");
+    const [boughtDay, setBoughtDay] = useState("");
 
-    const pending = update.isPending || sell.isPending || remove.isPending;
+    const buys = (trades.data ?? []).filter((trade) => trade.side === "buy").map((trade) => trade.day);
+    const pending = update.isPending || sell.isPending || remove.isPending || undo.isPending || change.isPending;
     const held = parsePositive(quantity);
     const cost = parsePositive(paid);
     const sold = parsePositive(units);
@@ -96,6 +123,47 @@ export function HoldingSheet({ holding, accountName, onClose }: Props) {
         );
     }
 
+    const removable = (trade: Trade) =>
+        trade.side === "buy" && trade.source !== "opening" && trade.quantity < holding.quantity;
+
+    function edit(trade: Trade) {
+        setEditing(trade);
+        setBoughtUnits(String(trade.quantity));
+        setBoughtPrice((trade.price / 100).toFixed(2));
+        setBoughtDay(trade.day);
+    }
+
+    function saveBuy() {
+        const bought = parsePositive(boughtUnits);
+        const each = parsePositive(boughtPrice);
+        if (!editing || !bought || !each || !boughtDay || pending) return;
+
+        change.mutate(
+            { id: holding.id, tradeId: editing.id, quantity: bought, price: euros(each), day: boughtDay },
+            {
+                onSuccess: () => {
+                    show(`Updated a buy of ${holding.symbol}`);
+                    onClose();
+                },
+                onError: (error) => show(error.message),
+            },
+        );
+    }
+
+    function undoBuy(trade: Trade) {
+        if (pending) return;
+        undo.mutate(
+            { id: holding.id, tradeId: trade.id },
+            {
+                onSuccess: () => {
+                    show(`Removed a buy of ${holding.symbol}`);
+                    onClose();
+                },
+                onError: (error) => show(error.message),
+            },
+        );
+    }
+
     function drop() {
         if (pending) return;
         remove.mutate(holding.id, {
@@ -123,6 +191,7 @@ export function HoldingSheet({ holding, accountName, onClose }: Props) {
                                 : undefined
                         }
                         heldSince={holding.heldSince}
+                        buys={buys}
                     />
                 ) : (
                     <View style={styles.pending}>
@@ -138,7 +207,104 @@ export function HoldingSheet({ holding, accountName, onClose }: Props) {
 
             <Segmented options={MODES} value={mode} onChange={setMode} />
 
-            {mode === "sell" ? (
+            {mode === "history" ? (
+                editing ? (
+                    <>
+                        <View style={styles.pair}>
+                            <View style={styles.half}>
+                                <Field
+                                    label="Units bought"
+                                    keyboardType="decimal-pad"
+                                    value={boughtUnits}
+                                    onChangeText={setBoughtUnits}
+                                />
+                            </View>
+                            <View style={styles.half}>
+                                <Field
+                                    label={`Price each, ${editing.currency}`}
+                                    keyboardType="decimal-pad"
+                                    value={boughtPrice}
+                                    onChangeText={setBoughtPrice}
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.field}>
+                            <Text style={styles.label}>Bought on</Text>
+                            <Pressable
+                                style={[fieldStyles.input, styles.dateInput]}
+                                onPress={() => pickDay(boughtDay, setBoughtDay, { max: today() })}
+                            >
+                                <Text style={styles.dateText}>{dayFormat.format(new Date(boughtDay))}</Text>
+                            </Pressable>
+                        </View>
+
+                        <SheetActions>
+                            {removable(editing) && (
+                                <Button
+                                    variant="danger"
+                                    label="Remove"
+                                    disabled={!online || pending}
+                                    onPress={() => undoBuy(editing)}
+                                    style={{ flex: 1 }}
+                                />
+                            )}
+                            <Button
+                                variant="secondary"
+                                label="Back"
+                                onPress={() => setEditing(null)}
+                                style={{ flex: 1 }}
+                            />
+                            <Button
+                                label={online ? (change.isPending ? "Saving…" : "Save") : "Needs a connection"}
+                                disabled={
+                                    !parsePositive(boughtUnits) || !parsePositive(boughtPrice) || pending || !online
+                                }
+                                onPress={saveBuy}
+                                style={{ flex: 2 }}
+                            />
+                        </SheetActions>
+                    </>
+                ) : trades.data && trades.data.length > 0 ? (
+                    <View>
+                        {trades.data.map((trade) => {
+                            const gain = trade.side === "buy" ? tradeGainLabel(trade, holding) : undefined;
+
+                            return (
+                                <Pressable
+                                    style={styles.trade}
+                                    key={trade.id}
+                                    disabled={trade.side === "sell"}
+                                    onPress={() => edit(trade)}
+                                >
+                                    <View style={styles.tradeMain}>
+                                        <Text style={styles.tradeText}>{tradeUnits(trade, holding.type)}</Text>
+                                        <Text style={styles.tradeNote}>
+                                            {dayFormat.format(new Date(trade.day))} · {tradeNote(trade)}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.tradeFigures}>
+                                        <Text style={styles.tradeText}>{formatMoney(trade.cost)}</Text>
+                                        {gain && (
+                                            <Text style={[styles.tradeNote, gain.favourable && styles.up]}>
+                                                {gain.text}
+                                            </Text>
+                                        )}
+                                    </View>
+                                </Pressable>
+                            );
+                        })}
+                    </View>
+                ) : (
+                    <Text style={styles.total}>
+                        {trades.isPending
+                            ? online
+                                ? "Loading buys…"
+                                : "Buys need a connection"
+                            : "No buys recorded yet"}
+                    </Text>
+                )
+            ) : mode === "sell" ? (
                 <>
                     <View style={styles.pair}>
                         <View style={styles.half}>
@@ -273,6 +439,29 @@ const makeStyles = (colors: Colors) =>
         label: { fontFamily: fonts.regular, fontSize: 12, color: colors.quiet },
         dateInput: { justifyContent: "center" },
         dateText: { fontFamily: fonts.regular, fontSize: 15, color: colors.text },
+        trade: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            paddingVertical: 9,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: colors.hairline,
+        },
+        tradeMain: { flex: 1, gap: 2 },
+        tradeFigures: { alignItems: "flex-end", gap: 2 },
+        tradeText: {
+            fontFamily: fonts.regular,
+            fontSize: 14,
+            color: colors.text,
+            fontVariant: ["tabular-nums"],
+        },
+        tradeNote: {
+            fontFamily: fonts.regular,
+            fontSize: 11,
+            color: colors.muted,
+            fontVariant: ["tabular-nums"],
+        },
+        up: { color: colors.accentStrong },
         total: {
             fontFamily: fonts.regular,
             fontSize: 12,

@@ -1,7 +1,7 @@
 import { currencyFormat, wholeNumber } from "./intl";
 import { amountFor } from "./transaction";
 import { byRecency, displayCurrency, holdingGain, periodOf, withSymbol } from "@lofit/domain";
-import type { Account, AccountChange, Currency, Holding, Transaction } from "@lofit/domain";
+import type { Account, AccountChange, AssetType, Currency, Holding, Trade, Transaction } from "@lofit/domain";
 
 const timeFormat = new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
@@ -68,13 +68,28 @@ export function signedWholeMoney(amount: number): string {
     return `${amount < 0 ? "−" : "+"}${withSymbol(wholeNumber(Math.round(Math.abs(amount) / 100)))}`;
 }
 
-export function gainLabel(holding: Holding): { text: string; favourable: boolean } {
+export function tradeUnits(trade: Pick<Trade, "quantity" | "price" | "currency">, type: AssetType): string {
+    const format = type === "crypto" ? unitFormat : shareFormat;
+    return `${format.format(trade.quantity)} × ${inCurrency(trade, trade.price)}`;
+}
+
+export function tradeNote(trade: Pick<Trade, "side" | "source">): string {
+    if (trade.side === "sell") return "Sold";
+    if (trade.source === "opening") return "Before tracking";
+    return trade.source === "recurring" ? "Repeating buy" : "Bought";
+}
+
+export function gainLabel(holding: Pick<Holding, "quantity" | "price" | "cost">): { text: string; favourable: boolean } {
     const gain = holdingGain(holding);
     const sign = gain.amount < 0 ? "−" : "+";
     return {
         text: `${signedWholeMoney(gain.amount)} · ${sign}${Math.abs(gain.pct).toFixed(1)}%`,
         favourable: gain.favourable,
     };
+}
+
+export function tradeGainLabel(trade: Pick<Trade, "quantity" | "cost">, holding: Pick<Holding, "price">) {
+    return gainLabel({ quantity: trade.quantity, price: holding.price, cost: trade.cost });
 }
 
 export function latestPricing(holdings: readonly Holding[]): string | undefined {

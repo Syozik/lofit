@@ -22,6 +22,7 @@ import {
     accounts,
     budgets,
     groups,
+    holdingTrades,
     holdings,
     recurring,
     recurringBuys,
@@ -203,7 +204,7 @@ async function seed() {
             return id;
         };
 
-        await tx.insert(holdings).values(
+        const held = await tx.insert(holdings).values(
             priced.map(({ holding, quote, scale }) => ({
                 userId: user.id,
                 symbol: holding.symbol,
@@ -218,6 +219,21 @@ async function seed() {
                 heldSince: holding.heldSince,
                 pricedAt: holding.pricedAt ? now : null,
                 quote: holding.quote ?? null,
+            })),
+        ).returning();
+
+        await tx.insert(holdingTrades).values(
+            held.map((row) => ({
+                userId: user.id,
+                holdingId: row.id,
+                side: "buy" as const,
+                source: "opening" as const,
+                day: row.heldSince,
+                quantity: row.quantity,
+                price: Math.round(row.cost / row.quantity) as Cents,
+                currency: row.costCurrency,
+                cost: row.cost,
+                costCurrency: row.costCurrency,
             })),
         );
 

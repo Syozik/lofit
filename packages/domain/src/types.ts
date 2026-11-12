@@ -28,6 +28,14 @@ export interface AccountDetail {
     value: string;
 }
 
+export const TRADE_SIDES = ["buy", "sell"] as const;
+
+export type TradeSide = (typeof TRADE_SIDES)[number];
+
+export const TRADE_SOURCES = ["manual", "recurring", "opening"] as const;
+
+export type TradeSource = (typeof TRADE_SOURCES)[number];
+
 export const TRANSACTION_KINDS = ["expense", "income", "transfer"] as const;
 
 export type TransactionKind = (typeof TRANSACTION_KINDS)[number];

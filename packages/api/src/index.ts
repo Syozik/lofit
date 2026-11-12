@@ -24,18 +24,23 @@ export { useUpdateTransaction } from "./useUpdateTransaction";
 export {
     addHolding,
     deleteHolding,
+    deleteHoldingTrade,
     fetchHoldingHistory,
+    fetchHoldingTrades,
+    fetchTrades,
     fetchHoldings,
     sellHolding,
     updateHolding,
+    updateHoldingTrade,
 } from "./holdings";
 export { useHoldingHistory } from "./useHoldingHistory";
+export { useHoldingTrades, useTrades } from "./useHoldingTrades";
 export type { RefreshReport } from "./prices";
 export { refreshPrices } from "./prices";
 export { useRefreshPrices } from "./useRefreshPrices";
 export { useHoldings } from "./useHoldings";
 export { useAddHolding } from "./useAddHolding";
-export { useDeleteHolding, useSellHolding, useUpdateHolding } from "./useHoldingActions";
+export { useDeleteHolding, useDeleteTrade, useSellHolding, useUpdateHolding, useUpdateTrade } from "./useHoldingActions";
 export { addGroup, fetchGroups } from "./groups";
 export { useGroups } from "./useGroups";
 export { useAddGroup } from "./useAddGroup";

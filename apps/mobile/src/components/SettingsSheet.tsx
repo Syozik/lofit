@@ -160,29 +160,30 @@ function RecurringRow(props: RowProps) {
 
     return (
         <View style={[styles.item, !props.first && styles.itemDivided]}>
-            <View style={[styles.itemRow, props.paused && styles.paused]}>
-                <View style={styles.badge}>{props.icon}</View>
-                <View style={styles.settingText}>
-                    <Text style={styles.itemName} numberOfLines={1}>
-                        {props.title}
-                    </Text>
-                    <Text style={styles.settingHint}>{props.detail}</Text>
+            <View style={styles.itemRow}>
+                <View style={[styles.itemMain, props.paused && styles.paused]}>
+                    <View style={styles.badge}>{props.icon}</View>
+                    <View style={styles.settingText}>
+                        <Text style={styles.itemName}>{props.title}</Text>
+                        <Text style={styles.settingHint}>{props.detail}</Text>
+                    </View>
+                    <Text style={[styles.itemValue, props.gain && { color: colors.gain }]}>{props.value}</Text>
                 </View>
-                <Text style={[styles.itemValue, props.gain && { color: colors.gain }]}>{props.value}</Text>
+                {size === null && (
+                    <View style={styles.actions}>
+                        <IconAction label={`Edit ${props.sizeLabel.toLowerCase()}`} onPress={() => setSize(props.initialSize)}>
+                            <Pencil size={15} strokeWidth={1.75} color={colors.quiet} />
+                        </IconAction>
+                        <IconAction label={props.paused ? "Resume" : "Pause"} disabled={props.busy} onPress={props.onPause}>
+                            {props.paused ? <Play size={15} strokeWidth={1.75} color={colors.quiet} /> : <Pause size={15} strokeWidth={1.75} color={colors.quiet} />}
+                        </IconAction>
+                        <IconAction label="Delete" disabled={props.busy} onPress={props.onDelete}>
+                            <Trash2 size={15} strokeWidth={1.75} color={colors.danger} />
+                        </IconAction>
+                    </View>
+                )}
             </View>
-            {size === null ? (
-                <View style={styles.actions}>
-                    <IconAction label={`Edit ${props.sizeLabel.toLowerCase()}`} onPress={() => setSize(props.initialSize)}>
-                        <Pencil size={15} strokeWidth={1.75} color={colors.quiet} />
-                    </IconAction>
-                    <IconAction label={props.paused ? "Resume" : "Pause"} disabled={props.busy} onPress={props.onPause}>
-                        {props.paused ? <Play size={15} strokeWidth={1.75} color={colors.quiet} /> : <Pause size={15} strokeWidth={1.75} color={colors.quiet} />}
-                    </IconAction>
-                    <IconAction label="Delete" disabled={props.busy} onPress={props.onDelete}>
-                        <Trash2 size={15} strokeWidth={1.75} color={colors.danger} />
-                    </IconAction>
-                </View>
-            ) : (
+            {size !== null && (
                 <View style={styles.editor}>
                     <Field
                         label={props.sizeLabel}
@@ -437,9 +438,10 @@ const makeStyles = (colors: Colors) =>
             borderRadius: radius.lg,
             overflow: "hidden",
         },
-        item: { paddingHorizontal: space[4], paddingTop: space[4], paddingBottom: space[2], gap: space[1] },
+        item: { paddingLeft: space[4], paddingRight: space[2], paddingVertical: space[3], gap: space[2] },
         itemDivided: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.hairline },
-        itemRow: { flexDirection: "row", alignItems: "center", gap: space[4] },
+        itemRow: { flexDirection: "row", alignItems: "center", gap: space[2] },
+        itemMain: { flex: 1, flexDirection: "row", alignItems: "center", gap: space[3] },
         paused: { opacity: 0.55 },
         badge: {
             width: 32,
@@ -451,8 +453,8 @@ const makeStyles = (colors: Colors) =>
         },
         itemName: { fontFamily: fonts.medium, fontSize: 14, color: colors.text },
         itemValue: { fontFamily: fonts.medium, fontSize: 14, color: colors.text, fontVariant: ["tabular-nums"] },
-        actions: { flexDirection: "row", justifyContent: "flex-end", gap: space[1] },
-        iconAction: { width: 34, height: 30, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+        actions: { flexDirection: "row" },
+        iconAction: { width: 30, height: 30, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
         dim: { opacity: 0.5 },
         editor: { gap: space[3], paddingTop: space[2], paddingBottom: space[2] },
         settingRow: { flexDirection: "row", alignItems: "center", gap: space[4] },

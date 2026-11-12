@@ -14,7 +14,7 @@ import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import type { LayoutChangeEvent } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Svg, { ClipPath, Defs, G, Line, Path, Rect } from "react-native-svg";
+import Svg, { Circle, ClipPath, Defs, G, Line, Path, Rect } from "react-native-svg";
 import type { Colors } from "../theme";
 import { fonts, radius, useStyles, useTheme } from "../theme";
 
@@ -28,6 +28,7 @@ type Props = {
     guide?: readonly LinePoint[];
     level?: { value: number; label: string };
     marker?: number;
+    dots?: readonly LinePoint[];
     currency?: string;
 };
 
@@ -38,6 +39,7 @@ export function LineChart({
     guide,
     level,
     marker,
+    dots,
     currency = displayCurrency(),
 }: Props) {
     const { colors } = useTheme();
@@ -132,6 +134,17 @@ export function LineChart({
                                 strokeWidth={2}
                                 strokeLinejoin="round"
                             />
+                            {dots?.map((dot, index) => (
+                                <Circle
+                                    key={index}
+                                    cx={x(dot.t)}
+                                    cy={y(dot.value)}
+                                    r={3}
+                                    fill={colors.surface}
+                                    stroke={colors.accent}
+                                    strokeWidth={1.5}
+                                />
+                            ))}
                             {focus && (
                                 <Line
                                     x1={x(focus.t)}
