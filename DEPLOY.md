@@ -51,3 +51,17 @@ Rotating `AUTH_SECRET` signs everyone out.
 
 Backups are not configured. For a single VPS, a nightly `pg_dump` into off-box storage is
 the smallest thing that works.
+
+## Moving to another machine
+
+1. Old machine: `./scripts/db-dump.sh` writes `lofit.dump` from the compose database, then
+   `docker compose stop api` so nothing changes after the dump.
+2. New machine: clone the repo, copy the old `.env` (keep `AUTH_SECRET` so nobody is signed
+   out) and put `lofit.dump` in the repo root.
+3. `./scripts/db-restore.sh` starts Postgres alone and loads the dump, then
+   `docker compose up -d --build` runs migrations and the app on port 8080.
+4. Tunnel, on the new machine's host: `cloudflared tunnel login`, `cloudflared tunnel create
+   lofit`, `cloudflared tunnel route dns -f lofit lofit.syozik.dev`, and a
+   `~/.cloudflared/config.yml` routing `lofit.syozik.dev` to `http://localhost:8080`.
+   Run it as a user service with lingering enabled.
+5. Old machine: drop `lofit.syozik.dev` from its tunnel config and restart that tunnel.
